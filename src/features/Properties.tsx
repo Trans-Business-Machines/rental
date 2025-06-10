@@ -42,6 +42,7 @@ const mockProperties = [
 		rent: 1200,
 		status: "active",
 		description: "Modern apartment complex with amenities",
+		image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=60",
 	},
 	{
 		id: 2,
@@ -53,6 +54,7 @@ const mockProperties = [
 		rent: 950,
 		status: "active",
 		description: "Cozy studio apartments with garden views",
+		image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&auto=format&fit=crop&q=60",
 	},
 	{
 		id: 3,
@@ -64,6 +66,7 @@ const mockProperties = [
 		rent: 2500,
 		status: "active",
 		description: "Luxury condominiums for executives",
+		image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=60",
 	},
 	{
 		id: 4,
@@ -75,6 +78,7 @@ const mockProperties = [
 		rent: 800,
 		status: "active",
 		description: "Affordable housing near university",
+		image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=60",
 	},
 ];
 
@@ -90,6 +94,7 @@ export function Properties() {
 		units: "",
 		rent: "",
 		description: "",
+		image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=60",
 	});
 
 	const filteredProperties = properties.filter(
@@ -109,6 +114,7 @@ export function Properties() {
 			rent: parseInt(formData.rent),
 			status: "active",
 			description: formData.description,
+			image: formData.image,
 		};
 
 		setProperties([...properties, newProperty]);
@@ -120,6 +126,7 @@ export function Properties() {
 			units: "",
 			rent: "",
 			description: "",
+			image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=60",
 		});
 	};
 
@@ -163,112 +170,162 @@ export function Properties() {
 						<DialogHeader>
 							<DialogTitle>Add New Property</DialogTitle>
 						</DialogHeader>
-						<div className="space-y-4">
-							<div>
-								<Label htmlFor="name">Property Name</Label>
-								<Input
-									id="name"
-									value={formData.name}
-									onChange={(e) =>
-										setFormData({
-											...formData,
-											name: e.target.value,
-										})
-									}
-									placeholder="Enter property name"
-								/>
-							</div>
-							<div>
-								<Label htmlFor="address">Address</Label>
-								<Input
-									id="address"
-									value={formData.address}
-									onChange={(e) =>
-										setFormData({
-											...formData,
-											address: e.target.value,
-										})
-									}
-									placeholder="Enter full address"
-								/>
-							</div>
-							<div>
-								<Label htmlFor="type">Property Type</Label>
-								<Select
-									value={formData.type}
-									onValueChange={(value) =>
-										setFormData({
-											...formData,
-											type: value,
-										})
-									}
-								>
-									<SelectTrigger>
-										<SelectValue placeholder="Select type" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="apartment">
-											Apartment
-										</SelectItem>
-										<SelectItem value="studio">
-											Studio
-										</SelectItem>
-										<SelectItem value="condo">
-											Condo
-										</SelectItem>
-										<SelectItem value="house">
-											House
-										</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-							<div className="grid grid-cols-2 gap-4">
+						<div className="space-y-6">
+							<div className="space-y-4">
 								<div>
-									<Label htmlFor="units">
-										Number of Units
+									<Label
+										htmlFor="name"
+										className="mb-1.5 block"
+									>
+										Property Name
 									</Label>
 									<Input
-										id="units"
-										type="number"
-										value={formData.units}
+										id="name"
+										value={formData.name}
 										onChange={(e) =>
 											setFormData({
 												...formData,
-												units: e.target.value,
+												name: e.target.value,
 											})
 										}
-										placeholder="0"
+										placeholder="Enter property name"
 									/>
 								</div>
 								<div>
-									<Label htmlFor="rent">Base Rent ($)</Label>
+									<Label
+										htmlFor="address"
+										className="mb-1.5 block"
+									>
+										Address
+									</Label>
 									<Input
-										id="rent"
-										type="number"
-										value={formData.rent}
+										id="address"
+										value={formData.address}
 										onChange={(e) =>
 											setFormData({
 												...formData,
-												rent: e.target.value,
+												address: e.target.value,
 											})
 										}
-										placeholder="0"
+										placeholder="Enter full address"
 									/>
 								</div>
-							</div>
-							<div>
-								<Label htmlFor="description">Description</Label>
-								<Textarea
-									id="description"
-									value={formData.description}
-									onChange={(e) =>
-										setFormData({
-											...formData,
-											description: e.target.value,
-										})
-									}
-									placeholder="Property description..."
-								/>
+								<div>
+									<Label
+										htmlFor="type"
+										className="mb-1.5 block"
+									>
+										Property Type
+									</Label>
+									<Select
+										value={formData.type}
+										onValueChange={(value) =>
+											setFormData({
+												...formData,
+												type: value,
+											})
+										}
+									>
+										<SelectTrigger>
+											<SelectValue placeholder="Select type" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="apartment">
+												Apartment
+											</SelectItem>
+											<SelectItem value="studio">
+												Studio
+											</SelectItem>
+											<SelectItem value="condo">
+												Condo
+											</SelectItem>
+											<SelectItem value="house">
+												House
+											</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="grid grid-cols-2 gap-4">
+									<div>
+										<Label
+											htmlFor="units"
+											className="mb-1.5 block"
+										>
+											Number of Units
+										</Label>
+										<Input
+											id="units"
+											type="number"
+											value={formData.units}
+											onChange={(e) =>
+												setFormData({
+													...formData,
+													units: e.target.value,
+												})
+											}
+											placeholder="0"
+										/>
+									</div>
+									<div>
+										<Label
+											htmlFor="rent"
+											className="mb-1.5 block"
+										>
+											Base Rent ($)
+										</Label>
+										<Input
+											id="rent"
+											type="number"
+											value={formData.rent}
+											onChange={(e) =>
+												setFormData({
+													...formData,
+													rent: e.target.value,
+												})
+											}
+											placeholder="0"
+										/>
+									</div>
+								</div>
+								<div>
+									<Label
+										htmlFor="image"
+										className="mb-1.5 block"
+									>
+										Image URL
+									</Label>
+									<Input
+										id="image"
+										value={formData.image}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												image: e.target.value,
+											})
+										}
+										placeholder="Enter image URL"
+									/>
+								</div>
+								<div>
+									<Label
+										htmlFor="description"
+										className="mb-1.5 block"
+									>
+										Description
+									</Label>
+									<Textarea
+										id="description"
+										value={formData.description}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												description: e.target.value,
+											})
+										}
+										placeholder="Property description..."
+										className="min-h-[100px]"
+									/>
+								</div>
 							</div>
 							<Button
 								onClick={handleAddProperty}
@@ -299,8 +356,15 @@ export function Properties() {
 				{filteredProperties.map((property) => (
 					<Card
 						key={property.id}
-						className="hover:shadow-lg transition-shadow"
+						className="hover:shadow-lg transition-shadow p-0"
 					>
+						<div className="relative h-48 w-full overflow-hidden rounded-t-lg">
+							<img
+								src={property.image}
+								alt={property.name}
+								className="object-cover w-full h-full"
+							/>
+						</div>
 						<CardHeader>
 							<div className="flex items-start justify-between">
 								<div className="space-y-1">

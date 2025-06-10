@@ -541,7 +541,7 @@ export function RentalAgreements() {
 
 				{/* Active Leases */}
 				<TabsContent value="active" className="space-y-4">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 						{activeAgreements.map((agreement) => {
 							const StatusIcon = getStatusIcon(agreement.status);
 							const daysUntilExpiry = agreement.endDate
@@ -705,7 +705,7 @@ export function RentalAgreements() {
 
 				{/* Pending Leases */}
 				<TabsContent value="pending" className="space-y-4">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 						{pendingAgreements.map((agreement) => {
 							const StatusIcon = getStatusIcon(agreement.status);
 
@@ -819,7 +819,7 @@ export function RentalAgreements() {
 
 				{/* Expiring Leases */}
 				<TabsContent value="expiring" className="space-y-4">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 						{expiringAgreements.map((agreement) => {
 							const daysUntilExpiry = getDaysUntilExpiry(
 								agreement.endDate!
@@ -909,7 +909,7 @@ export function RentalAgreements() {
 
 				{/* Expired Leases */}
 				<TabsContent value="expired" className="space-y-4">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 						{expiredAgreements.map((agreement) => {
 							const StatusIcon = getStatusIcon(agreement.status);
 

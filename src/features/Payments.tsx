@@ -491,7 +491,7 @@ export function Payments() {
 					</div>
 
 					{/* Payments List */}
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 						{filteredPayments.map((payment) => {
 							const StatusIcon = getStatusIcon(payment.status);
 							const totalAmount =
@@ -657,7 +657,7 @@ export function Payments() {
 
 				{/* Pending Payments */}
 				<TabsContent value="pending" className="space-y-4">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 						{pendingPayments.map((payment) => {
 							const StatusIcon = getStatusIcon(payment.status);
 
@@ -749,7 +749,7 @@ export function Payments() {
 
 				{/* Overdue Payments */}
 				<TabsContent value="overdue" className="space-y-4">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 						{overduePayments.map((payment) => {
 							const StatusIcon = getStatusIcon(payment.status);
 							const daysOverdue = Math.floor(
@@ -849,7 +849,7 @@ export function Payments() {
 
 				{/* Reports */}
 				<TabsContent value="reports" className="space-y-6">
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 						<Card>
 							<CardHeader>
 								<CardTitle>Monthly Revenue Report</CardTitle>

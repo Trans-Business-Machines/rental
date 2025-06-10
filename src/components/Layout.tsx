@@ -21,11 +21,10 @@ import {
 	X,
 } from "lucide-react";
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 interface LayoutProps {
 	children: React.ReactNode;
-	currentPage: string;
-	onPageChange: (page: string) => void;
 }
 
 const navItems = [
@@ -42,8 +41,12 @@ const amenitiesItems = [
 	{ id: "booking-requests", label: "Booking Requests" },
 ];
 
-export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
+export function Layout({ children }: LayoutProps) {
 	const [sidebarOpen, setSidebarOpen] = useState(false);
+	const location = useLocation();
+	const navigate = useNavigate();
+	const currentPage = location.pathname.slice(1) || "dashboard";
+
 	const [amenitiesOpen, setAmenitiesOpen] = useState(
 		currentPage === "amenities-management" ||
 			currentPage === "booking-requests"
@@ -96,7 +99,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
 							<button
 								key={item.id}
 								onClick={() => {
-									onPageChange(item.id);
+									navigate(`/${item.id}`);
 									setSidebarOpen(false);
 								}}
 								className={cn(
@@ -142,7 +145,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
 								<button
 									key={subItem.id}
 									onClick={() => {
-										onPageChange(subItem.id);
+										navigate(`/${subItem.id}`);
 										setSidebarOpen(false);
 									}}
 									className={cn(
@@ -169,7 +172,7 @@ export function Layout({ children, currentPage, onPageChange }: LayoutProps) {
 								? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
 								: "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
 						)}
-						onClick={() => onPageChange("settings")}
+						onClick={() => navigate("/settings")}
 					>
 						<Settings className="h-5 w-5 mr-3" />
 						Settings

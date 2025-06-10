@@ -8,39 +8,34 @@ import { Properties } from "@/features/Properties";
 import { RentalAgreements } from "@/features/RentalAgreements";
 import { Settings } from "@/features/Settings";
 import { Tenants } from "@/features/Tenants";
-import { useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 export default function App() {
-	const [currentPage, setCurrentPage] = useState("dashboard");
-
-	const renderPage = () => {
-		switch (currentPage) {
-			case "dashboard":
-				return <Dashboard />;
-			case "properties":
-				return <Properties />;
-			case "tenants":
-				return <Tenants />;
-			case "amenities-management":
-				return <AmenitiesManagement />;
-			case "booking-requests":
-				return <BookingRequests />;
-			case "rentals":
-				return <RentalAgreements />;
-			case "payments":
-				return <Payments />;
-			case "maintenance":
-				return <Maintenance />;
-			case "settings":
-				return <Settings />;
-			default:
-				return <Dashboard />;
-		}
-	};
-
 	return (
-		<Layout currentPage={currentPage} onPageChange={setCurrentPage}>
-			{renderPage()}
-		</Layout>
+		<BrowserRouter>
+			<Layout>
+				<Routes>
+					<Route
+						path="/"
+						element={<Navigate to="/dashboard" replace />}
+					/>
+					<Route path="/dashboard" element={<Dashboard />} />
+					<Route path="/properties" element={<Properties />} />
+					<Route path="/tenants" element={<Tenants />} />
+					<Route
+						path="/amenities-management"
+						element={<AmenitiesManagement />}
+					/>
+					<Route
+						path="/booking-requests"
+						element={<BookingRequests />}
+					/>
+					<Route path="/rentals" element={<RentalAgreements />} />
+					<Route path="/payments" element={<Payments />} />
+					<Route path="/maintenance" element={<Maintenance />} />
+					<Route path="/settings" element={<Settings />} />
+				</Routes>
+			</Layout>
+		</BrowserRouter>
 	);
 }
