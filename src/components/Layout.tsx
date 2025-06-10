@@ -7,6 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
 	BarChart3,
+	Bell,
 	Building2,
 	Calendar,
 	ChevronDown,
@@ -15,7 +16,9 @@ import {
 	FileText,
 	Home,
 	Menu,
+	Search,
 	Settings,
+	User,
 	Users,
 	Wrench,
 	X,
@@ -46,6 +49,7 @@ export function Layout({ children }: LayoutProps) {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const currentPage = location.pathname.slice(1) || "dashboard";
+	const [searchQuery, setSearchQuery] = useState("");
 
 	const [amenitiesOpen, setAmenitiesOpen] = useState(
 		currentPage === "amenities-management" ||
@@ -183,18 +187,62 @@ export function Layout({ children }: LayoutProps) {
 			{/* Main content */}
 			<div className="lg:ml-64">
 				{/* Top bar */}
-				<div className="bg-card border-b border-border px-4 py-3 flex items-center justify-between">
-					<Button
-						variant="ghost"
-						size="sm"
-						className="lg:hidden"
-						onClick={() => setSidebarOpen(true)}
-					>
-						<Menu className="h-5 w-5" />
-					</Button>
-					<div className="flex items-center space-x-4 ml-auto">
-						<div className="text-sm text-muted-foreground">
-							Welcome back, Property Manager
+				<div className="bg-card border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 z-30 backdrop-blur-sm bg-background/95">
+					<div className="flex items-center gap-4 flex-1">
+						<Button
+							variant="ghost"
+							size="sm"
+							className="lg:hidden"
+							onClick={() => setSidebarOpen(true)}
+						>
+							<Menu className="h-5 w-5" />
+						</Button>
+
+						{/* Search Bar */}
+						<div className="hidden md:flex items-center flex-1 max-w-md">
+							<div className="relative w-full">
+								<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+								<input
+									type="text"
+									placeholder="Search properties, tenants, or payments..."
+									className="w-full pl-10 pr-4 py-2 rounded-lg bg-muted/50 border border-border focus:outline-none focus:ring-2 focus:ring-primary/20"
+									value={searchQuery}
+									onChange={(e) =>
+										setSearchQuery(e.target.value)
+									}
+								/>
+							</div>
+						</div>
+					</div>
+
+					<div className="flex items-center gap-4">
+						{/* Notifications */}
+						<Button
+							variant="ghost"
+							size="icon"
+							className="relative"
+						>
+							<Bell className="h-5 w-5" />
+							<span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
+						</Button>
+
+						{/* User Profile */}
+						<div className="flex items-center gap-3">
+							<div className="hidden md:block text-right">
+								<p className="text-sm font-medium">
+									Property Manager
+								</p>
+								<p className="text-xs text-muted-foreground">
+									Admin
+								</p>
+							</div>
+							<Button
+								variant="ghost"
+								size="icon"
+								className="rounded-full"
+							>
+								<User className="h-5 w-5" />
+							</Button>
 						</div>
 					</div>
 				</div>
