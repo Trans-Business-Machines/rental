@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
 import {
 	Calendar,
 	Car,
@@ -35,7 +36,23 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-const mockAmenities = [
+type Amenity = {
+	id: number;
+	name: string;
+	type: string;
+	total: number;
+	available: number;
+	occupied: number;
+	icon: LucideIcon;
+	image: string;
+	description: string;
+	rules: string;
+	maxBookingHours: number;
+	hourlyRate: number;
+	status: string;
+};
+
+const mockAmenities: Amenity[] = [
 	{
 		id: 1,
 		name: "Parking Spots",
@@ -129,9 +146,13 @@ const mockAmenities = [
 ];
 
 export function AmenitiesManagement() {
-	const [amenities, setAmenities] = useState(mockAmenities);
+	const [amenities, setAmenities] = useState<Amenity[]>(mockAmenities);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+	const [selectedAmenity, setSelectedAmenity] = useState<Amenity | null>(
+		null
+	);
 	const [formData, setFormData] = useState({
 		name: "",
 		type: "",
@@ -171,6 +192,56 @@ export function AmenitiesManagement() {
 
 		setAmenities([...amenities, newAmenity]);
 		setIsAddDialogOpen(false);
+		setFormData({
+			name: "",
+			type: "",
+			total: "",
+			description: "",
+			rules: "",
+			maxBookingHours: "",
+			hourlyRate: "",
+			image: "",
+		});
+	};
+
+	const handleEditAmenity = (amenity: Amenity) => {
+		setSelectedAmenity(amenity);
+		setFormData({
+			name: amenity.name,
+			type: amenity.type,
+			total: amenity.total.toString(),
+			description: amenity.description,
+			rules: amenity.rules,
+			maxBookingHours: amenity.maxBookingHours.toString(),
+			hourlyRate: amenity.hourlyRate.toString(),
+			image: amenity.image,
+		});
+		setIsEditDialogOpen(true);
+	};
+
+	const handleUpdateAmenity = () => {
+		const updatedAmenities = amenities.map((amenity) =>
+			amenity.id === selectedAmenity?.id
+				? {
+						...amenity,
+						name: formData.name,
+						type: formData.type,
+						total: parseInt(formData.total),
+						description: formData.description,
+						rules: formData.rules,
+						maxBookingHours: parseInt(formData.maxBookingHours),
+						hourlyRate: parseInt(formData.hourlyRate) || 0,
+						image:
+							formData.image ||
+							getDefaultAmenityImage(formData.type),
+						icon: getAmenityIcon(formData.type),
+				  }
+				: amenity
+		);
+
+		setAmenities(updatedAmenities);
+		setIsEditDialogOpen(false);
+		setSelectedAmenity(null);
 		setFormData({
 			name: "",
 			type: "",
@@ -273,7 +344,9 @@ export function AmenitiesManagement() {
 						</DialogHeader>
 						<div className="space-y-4">
 							<div>
-								<Label htmlFor="name">Amenity Name</Label>
+								<Label htmlFor="name" className="mb-2 block">
+									Amenity Name
+								</Label>
 								<Input
 									id="name"
 									value={formData.name}
@@ -287,7 +360,9 @@ export function AmenitiesManagement() {
 								/>
 							</div>
 							<div>
-								<Label htmlFor="type">Amenity Type</Label>
+								<Label htmlFor="type" className="mb-2 block">
+									Amenity Type
+								</Label>
 								<Select
 									value={formData.type}
 									onValueChange={(value) =>
@@ -323,7 +398,7 @@ export function AmenitiesManagement() {
 								</Select>
 							</div>
 							<div>
-								<Label htmlFor="image">
+								<Label htmlFor="image" className="mb-2 block">
 									Image URL (optional)
 								</Label>
 								<Input
@@ -340,7 +415,10 @@ export function AmenitiesManagement() {
 							</div>
 							<div className="grid grid-cols-2 gap-4">
 								<div>
-									<Label htmlFor="total">
+									<Label
+										htmlFor="total"
+										className="mb-2 block"
+									>
 										Total Capacity
 									</Label>
 									<Input
@@ -357,7 +435,10 @@ export function AmenitiesManagement() {
 									/>
 								</div>
 								<div>
-									<Label htmlFor="maxBookingHours">
+									<Label
+										htmlFor="maxBookingHours"
+										className="mb-2 block"
+									>
 										Max Hours
 									</Label>
 									<Input
@@ -375,7 +456,10 @@ export function AmenitiesManagement() {
 								</div>
 							</div>
 							<div>
-								<Label htmlFor="hourlyRate">
+								<Label
+									htmlFor="hourlyRate"
+									className="mb-2 block"
+								>
 									Hourly Rate ($)
 								</Label>
 								<Input
@@ -392,7 +476,12 @@ export function AmenitiesManagement() {
 								/>
 							</div>
 							<div>
-								<Label htmlFor="description">Description</Label>
+								<Label
+									htmlFor="description"
+									className="mb-2 block"
+								>
+									Description
+								</Label>
 								<Textarea
 									id="description"
 									value={formData.description}
@@ -406,7 +495,7 @@ export function AmenitiesManagement() {
 								/>
 							</div>
 							<div>
-								<Label htmlFor="rules">
+								<Label htmlFor="rules" className="mb-2 block">
 									Rules & Guidelines
 								</Label>
 								<Textarea
@@ -527,7 +616,7 @@ export function AmenitiesManagement() {
 					return (
 						<Card
 							key={amenity.id}
-							className="hover:shadow-lg transition-shadow overflow-hidden"
+							className="hover:shadow-lg transition-shadow overflow-hidden pt-0"
 						>
 							<div className="relative h-48 w-full">
 								<ImageWithFallback
@@ -653,6 +742,9 @@ export function AmenitiesManagement() {
 										variant="outline"
 										size="sm"
 										className="flex-1"
+										onClick={() =>
+											handleEditAmenity(amenity)
+										}
 									>
 										<Edit className="h-4 w-4 mr-2" />
 										Edit
@@ -681,6 +773,190 @@ export function AmenitiesManagement() {
 					</p>
 				</div>
 			)}
+
+			{/* Edit Dialog */}
+			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+				<DialogContent className="max-w-md">
+					<DialogHeader>
+						<DialogTitle>Edit Amenity</DialogTitle>
+					</DialogHeader>
+					<div className="space-y-4">
+						<div>
+							<Label htmlFor="edit-name" className="mb-2 block">
+								Amenity Name
+							</Label>
+							<Input
+								id="edit-name"
+								value={formData.name}
+								onChange={(e) =>
+									setFormData({
+										...formData,
+										name: e.target.value,
+									})
+								}
+								placeholder="Enter amenity name"
+							/>
+						</div>
+						<div>
+							<Label htmlFor="edit-type" className="mb-2 block">
+								Amenity Type
+							</Label>
+							<Select
+								value={formData.type}
+								onValueChange={(value) =>
+									setFormData({
+										...formData,
+										type: value,
+									})
+								}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Select type" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="parking">
+										Parking
+									</SelectItem>
+									<SelectItem value="gym">
+										Gym/Fitness
+									</SelectItem>
+									<SelectItem value="pool">
+										Swimming Pool
+									</SelectItem>
+									<SelectItem value="community_room">
+										Community Room
+									</SelectItem>
+									<SelectItem value="bbq">
+										BBQ Area
+									</SelectItem>
+									<SelectItem value="garden">
+										Garden/Outdoor
+									</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div>
+							<Label htmlFor="edit-image" className="mb-2 block">
+								Image URL (optional)
+							</Label>
+							<Input
+								id="edit-image"
+								value={formData.image}
+								onChange={(e) =>
+									setFormData({
+										...formData,
+										image: e.target.value,
+									})
+								}
+								placeholder="Enter image URL or leave blank for default"
+							/>
+						</div>
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<Label
+									htmlFor="edit-total"
+									className="mb-2 block"
+								>
+									Total Capacity
+								</Label>
+								<Input
+									id="edit-total"
+									type="number"
+									value={formData.total}
+									onChange={(e) =>
+										setFormData({
+											...formData,
+											total: e.target.value,
+										})
+									}
+									placeholder="0"
+								/>
+							</div>
+							<div>
+								<Label
+									htmlFor="edit-maxBookingHours"
+									className="mb-2 block"
+								>
+									Max Hours
+								</Label>
+								<Input
+									id="edit-maxBookingHours"
+									type="number"
+									value={formData.maxBookingHours}
+									onChange={(e) =>
+										setFormData({
+											...formData,
+											maxBookingHours: e.target.value,
+										})
+									}
+									placeholder="0"
+								/>
+							</div>
+						</div>
+						<div>
+							<Label
+								htmlFor="edit-hourlyRate"
+								className="mb-2 block"
+							>
+								Hourly Rate ($)
+							</Label>
+							<Input
+								id="edit-hourlyRate"
+								type="number"
+								value={formData.hourlyRate}
+								onChange={(e) =>
+									setFormData({
+										...formData,
+										hourlyRate: e.target.value,
+									})
+								}
+								placeholder="0 (free)"
+							/>
+						</div>
+						<div>
+							<Label
+								htmlFor="edit-description"
+								className="mb-2 block"
+							>
+								Description
+							</Label>
+							<Textarea
+								id="edit-description"
+								value={formData.description}
+								onChange={(e) =>
+									setFormData({
+										...formData,
+										description: e.target.value,
+									})
+								}
+								placeholder="Amenity description..."
+							/>
+						</div>
+						<div>
+							<Label htmlFor="edit-rules" className="mb-2 block">
+								Rules & Guidelines
+							</Label>
+							<Textarea
+								id="edit-rules"
+								value={formData.rules}
+								onChange={(e) =>
+									setFormData({
+										...formData,
+										rules: e.target.value,
+									})
+								}
+								placeholder="Booking rules and usage guidelines..."
+							/>
+						</div>
+						<Button
+							onClick={handleUpdateAmenity}
+							className="w-full"
+						>
+							Update Amenity
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
