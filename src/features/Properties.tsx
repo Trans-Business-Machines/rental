@@ -18,6 +18,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import type { Property } from "@/data/properties";
+import { mockProperties } from "@/data/properties";
 import {
 	Building2,
 	DollarSign,
@@ -30,63 +32,17 @@ import {
 	Users,
 } from "lucide-react";
 import { useState } from "react";
-
-const mockProperties = [
-	{
-		id: 1,
-		name: "Sunset Apartments",
-		address: "123 Main Street, Downtown",
-		type: "apartment",
-		units: 12,
-		occupied: 11,
-		rent: 1200,
-		status: "active",
-		description: "Modern apartment complex with amenities",
-		image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=60",
-	},
-	{
-		id: 2,
-		name: "Garden View Studios",
-		address: "456 Oak Avenue, Midtown",
-		type: "studio",
-		units: 8,
-		occupied: 7,
-		rent: 950,
-		status: "active",
-		description: "Cozy studio apartments with garden views",
-		image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&auto=format&fit=crop&q=60",
-	},
-	{
-		id: 3,
-		name: "Executive Condos",
-		address: "789 Pine Street, Uptown",
-		type: "condo",
-		units: 6,
-		occupied: 6,
-		rent: 2500,
-		status: "active",
-		description: "Luxury condominiums for executives",
-		image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=60",
-	},
-	{
-		id: 4,
-		name: "Student Housing Complex",
-		address: "321 University Drive, Campus",
-		type: "apartment",
-		units: 20,
-		occupied: 18,
-		rent: 800,
-		status: "active",
-		description: "Affordable housing near university",
-		image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=60",
-	},
-];
+import { useNavigate } from "react-router-dom";
 
 export function Properties() {
-	const [properties, setProperties] = useState(mockProperties);
+	const navigate = useNavigate();
+	const [properties, setProperties] = useState<Property[]>(mockProperties);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-	const [selectedProperty, setSelectedProperty] = useState<any>(null);
+	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+	const [selectedProperty, setSelectedProperty] = useState<Property | null>(
+		null
+	);
 	const [formData, setFormData] = useState({
 		name: "",
 		address: "",
@@ -104,7 +60,7 @@ export function Properties() {
 	);
 
 	const handleAddProperty = () => {
-		const newProperty = {
+		const newProperty: Property = {
 			id: properties.length + 1,
 			name: formData.name,
 			address: formData.address,
@@ -115,6 +71,8 @@ export function Properties() {
 			status: "active",
 			description: formData.description,
 			image: formData.image,
+			tenants: [],
+			amenities: [],
 		};
 
 		setProperties([...properties, newProperty]);
@@ -128,6 +86,52 @@ export function Properties() {
 			description: "",
 			image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=60",
 		});
+	};
+
+	const handleEditProperty = () => {
+		if (!selectedProperty) return;
+
+		const updatedProperties = properties.map((property) =>
+			property.id === selectedProperty.id
+				? {
+						...property,
+						name: formData.name,
+						address: formData.address,
+						type: formData.type,
+						units: parseInt(formData.units),
+						rent: parseInt(formData.rent),
+						description: formData.description,
+						image: formData.image,
+				  }
+				: property
+		);
+
+		setProperties(updatedProperties);
+		setIsEditDialogOpen(false);
+		setSelectedProperty(null);
+		setFormData({
+			name: "",
+			address: "",
+			type: "",
+			units: "",
+			rent: "",
+			description: "",
+			image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=60",
+		});
+	};
+
+	const handleEditClick = (property: Property) => {
+		setSelectedProperty(property);
+		setFormData({
+			name: property.name,
+			address: property.address,
+			type: property.type,
+			units: property.units.toString(),
+			rent: property.rent.toString(),
+			description: property.description,
+			image: property.image,
+		});
+		setIsEditDialogOpen(true);
 	};
 
 	const getStatusColor = (status: string) => {
@@ -351,12 +355,182 @@ export function Properties() {
 				</div>
 			</div>
 
+			{/* Edit Property Dialog */}
+			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+				<DialogContent className="max-w-md">
+					<DialogHeader>
+						<DialogTitle>Edit Property</DialogTitle>
+					</DialogHeader>
+					<div className="space-y-6">
+						<div className="space-y-4">
+							<div>
+								<Label
+									htmlFor="edit-name"
+									className="mb-1.5 block"
+								>
+									Property Name
+								</Label>
+								<Input
+									id="edit-name"
+									value={formData.name}
+									onChange={(e) =>
+										setFormData({
+											...formData,
+											name: e.target.value,
+										})
+									}
+									placeholder="Enter property name"
+								/>
+							</div>
+							<div>
+								<Label
+									htmlFor="edit-address"
+									className="mb-1.5 block"
+								>
+									Address
+								</Label>
+								<Input
+									id="edit-address"
+									value={formData.address}
+									onChange={(e) =>
+										setFormData({
+											...formData,
+											address: e.target.value,
+										})
+									}
+									placeholder="Enter full address"
+								/>
+							</div>
+							<div>
+								<Label
+									htmlFor="edit-type"
+									className="mb-1.5 block"
+								>
+									Property Type
+								</Label>
+								<Select
+									value={formData.type}
+									onValueChange={(value) =>
+										setFormData({
+											...formData,
+											type: value,
+										})
+									}
+								>
+									<SelectTrigger>
+										<SelectValue placeholder="Select type" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="apartment">
+											Apartment
+										</SelectItem>
+										<SelectItem value="studio">
+											Studio
+										</SelectItem>
+										<SelectItem value="condo">
+											Condo
+										</SelectItem>
+										<SelectItem value="house">
+											House
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<Label
+										htmlFor="edit-units"
+										className="mb-1.5 block"
+									>
+										Number of Units
+									</Label>
+									<Input
+										id="edit-units"
+										type="number"
+										value={formData.units}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												units: e.target.value,
+											})
+										}
+										placeholder="0"
+									/>
+								</div>
+								<div>
+									<Label
+										htmlFor="edit-rent"
+										className="mb-1.5 block"
+									>
+										Base Rent ($)
+									</Label>
+									<Input
+										id="edit-rent"
+										type="number"
+										value={formData.rent}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												rent: e.target.value,
+											})
+										}
+										placeholder="0"
+									/>
+								</div>
+							</div>
+							<div>
+								<Label
+									htmlFor="edit-image"
+									className="mb-1.5 block"
+								>
+									Image URL
+								</Label>
+								<Input
+									id="edit-image"
+									value={formData.image}
+									onChange={(e) =>
+										setFormData({
+											...formData,
+											image: e.target.value,
+										})
+									}
+									placeholder="Enter image URL"
+								/>
+							</div>
+							<div>
+								<Label
+									htmlFor="edit-description"
+									className="mb-1.5 block"
+								>
+									Description
+								</Label>
+								<Textarea
+									id="edit-description"
+									value={formData.description}
+									onChange={(e) =>
+										setFormData({
+											...formData,
+											description: e.target.value,
+										})
+									}
+									placeholder="Property description..."
+									className="min-h-[100px]"
+								/>
+							</div>
+						</div>
+						<Button onClick={handleEditProperty} className="w-full">
+							Save Changes
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
+
 			{/* Properties Grid */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 				{filteredProperties.map((property) => (
 					<Card
 						key={property.id}
-						className="hover:shadow-lg transition-shadow p-0"
+						className="hover:shadow-lg transition-shadow p-0 pb-6"
 					>
 						<div className="relative h-48 w-full overflow-hidden rounded-t-lg">
 							<img
@@ -434,6 +608,9 @@ export function Properties() {
 									variant="outline"
 									size="sm"
 									className="flex-1"
+									onClick={() =>
+										navigate(`/properties/${property.id}`)
+									}
 								>
 									<Eye className="h-4 w-4 mr-2" />
 									View
@@ -442,6 +619,7 @@ export function Properties() {
 									variant="outline"
 									size="sm"
 									className="flex-1"
+									onClick={() => handleEditClick(property)}
 								>
 									<Edit className="h-4 w-4 mr-2" />
 									Edit

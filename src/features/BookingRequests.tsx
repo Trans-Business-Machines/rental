@@ -441,7 +441,7 @@ export function BookingRequests() {
 								return (
 									<Card
 										key={request.id}
-										className="hover:shadow-lg transition-shadow border-l-4 border-l-orange-500"
+										className="hover:shadow-lg transition-shadow overflow-hidden"
 									>
 										<CardHeader>
 											<div className="flex items-start justify-between">
@@ -481,45 +481,49 @@ export function BookingRequests() {
 														</div>
 													</div>
 												</div>
-												<IconComponent className="h-6 w-6 text-muted-foreground" />
+												<div className="bg-muted rounded-full p-2">
+													<IconComponent className="h-5 w-5" />
+												</div>
 											</div>
 										</CardHeader>
 										<CardContent className="space-y-4">
-											<div className="space-y-2">
-												<div className="flex items-center justify-between">
+											<div className="space-y-3">
+												<div>
 													<span className="text-sm text-muted-foreground">
 														Amenity
 													</span>
-													<span className="font-medium">
+													<p className="font-medium">
 														{request.amenityName}
-													</span>
+													</p>
 												</div>
-												<div className="flex items-center justify-between">
-													<span className="text-sm text-muted-foreground">
-														Date
-													</span>
-													<span className="font-medium">
-														{formatDate(
-															request.bookingDate
-														)}
-													</span>
+												<div className="grid grid-cols-2 gap-4">
+													<div>
+														<span className="text-sm text-muted-foreground">
+															Date
+														</span>
+														<p className="font-medium">
+															{formatDate(
+																request.bookingDate
+															)}
+														</p>
+													</div>
+													<div>
+														<span className="text-sm text-muted-foreground">
+															Duration
+														</span>
+														<p className="font-medium">
+															{request.duration}
+														</p>
+													</div>
 												</div>
-												<div className="flex items-center justify-between">
+												<div>
 													<span className="text-sm text-muted-foreground">
 														Time
 													</span>
-													<span className="font-medium">
+													<p className="font-medium">
 														{request.startTime} -{" "}
 														{request.endTime}
-													</span>
-												</div>
-												<div className="flex items-center justify-between">
-													<span className="text-sm text-muted-foreground">
-														Duration
-													</span>
-													<span className="font-medium">
-														{request.duration}
-													</span>
+													</p>
 												</div>
 											</div>
 
@@ -644,7 +648,7 @@ export function BookingRequests() {
 
 				{/* Approved Requests */}
 				<TabsContent value="approved" className="space-y-4">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 						{approvedRequests.map((request) => {
 							const IconComponent = getAmenityIcon(
 								request.amenityType
@@ -652,7 +656,7 @@ export function BookingRequests() {
 							return (
 								<Card
 									key={request.id}
-									className="border-l-4 border-l-green-500"
+									className="hover:shadow-lg transition-shadow overflow-hidden"
 								>
 									<CardHeader>
 										<div className="flex items-start justify-between">
@@ -680,37 +684,41 @@ export function BookingRequests() {
 													</Badge>
 												</div>
 											</div>
-											<IconComponent className="h-6 w-6 text-muted-foreground" />
+											<div className="bg-muted rounded-full p-2">
+												<IconComponent className="h-5 w-5" />
+											</div>
 										</div>
 									</CardHeader>
 									<CardContent className="space-y-4">
-										<div className="space-y-2">
-											<div className="flex items-center justify-between">
+										<div className="space-y-3">
+											<div>
 												<span className="text-sm text-muted-foreground">
 													Amenity
 												</span>
-												<span className="font-medium">
+												<p className="font-medium">
 													{request.amenityName}
-												</span>
+												</p>
 											</div>
-											<div className="flex items-center justify-between">
-												<span className="text-sm text-muted-foreground">
-													Date
-												</span>
-												<span className="font-medium">
-													{formatDate(
-														request.bookingDate
-													)}
-												</span>
-											</div>
-											<div className="flex items-center justify-between">
-												<span className="text-sm text-muted-foreground">
-													Time
-												</span>
-												<span className="font-medium">
-													{request.startTime} -{" "}
-													{request.endTime}
-												</span>
+											<div className="grid grid-cols-2 gap-4">
+												<div>
+													<span className="text-sm text-muted-foreground">
+														Date
+													</span>
+													<p className="font-medium">
+														{formatDate(
+															request.bookingDate
+														)}
+													</p>
+												</div>
+												<div>
+													<span className="text-sm text-muted-foreground">
+														Time
+													</span>
+													<p className="font-medium">
+														{request.startTime} -{" "}
+														{request.endTime}
+													</p>
+												</div>
 											</div>
 										</div>
 										{request.approvedAt && (
@@ -732,7 +740,7 @@ export function BookingRequests() {
 
 				{/* Rejected Requests */}
 				<TabsContent value="rejected" className="space-y-4">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 						{rejectedRequests.map((request) => {
 							const IconComponent = getAmenityIcon(
 								request.amenityType
@@ -740,7 +748,7 @@ export function BookingRequests() {
 							return (
 								<Card
 									key={request.id}
-									className="border-l-4 border-l-red-500"
+									className="hover:shadow-lg transition-shadow overflow-hidden"
 								>
 									<CardHeader>
 										<div className="flex items-start justify-between">
@@ -768,37 +776,41 @@ export function BookingRequests() {
 													</Badge>
 												</div>
 											</div>
-											<IconComponent className="h-6 w-6 text-muted-foreground" />
+											<div className="bg-muted rounded-full p-2">
+												<IconComponent className="h-5 w-5" />
+											</div>
 										</div>
 									</CardHeader>
 									<CardContent className="space-y-4">
-										<div className="space-y-2">
-											<div className="flex items-center justify-between">
+										<div className="space-y-3">
+											<div>
 												<span className="text-sm text-muted-foreground">
 													Amenity
 												</span>
-												<span className="font-medium">
+												<p className="font-medium">
 													{request.amenityName}
-												</span>
+												</p>
 											</div>
-											<div className="flex items-center justify-between">
-												<span className="text-sm text-muted-foreground">
-													Date
-												</span>
-												<span className="font-medium">
-													{formatDate(
-														request.bookingDate
-													)}
-												</span>
-											</div>
-											<div className="flex items-center justify-between">
-												<span className="text-sm text-muted-foreground">
-													Time
-												</span>
-												<span className="font-medium">
-													{request.startTime} -{" "}
-													{request.endTime}
-												</span>
+											<div className="grid grid-cols-2 gap-4">
+												<div>
+													<span className="text-sm text-muted-foreground">
+														Date
+													</span>
+													<p className="font-medium">
+														{formatDate(
+															request.bookingDate
+														)}
+													</p>
+												</div>
+												<div>
+													<span className="text-sm text-muted-foreground">
+														Time
+													</span>
+													<p className="font-medium">
+														{request.startTime} -{" "}
+														{request.endTime}
+													</p>
+												</div>
 											</div>
 										</div>
 										{request.rejectionReason && (

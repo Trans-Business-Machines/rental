@@ -14,8 +14,6 @@ import { Label } from "@/components/ui/label";
 import {
 	Calendar,
 	DollarSign,
-	Edit,
-	Eye,
 	Mail,
 	MapPin,
 	Phone,
@@ -430,25 +428,6 @@ export function Tenants() {
 										{formatDate(tenant.leaseEnd)}
 									</span>
 								</div>
-							</div>
-
-							<div className="flex space-x-2">
-								<Button
-									variant="outline"
-									size="sm"
-									className="flex-1"
-								>
-									<Eye className="h-4 w-4 mr-2" />
-									View
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									className="flex-1"
-								>
-									<Edit className="h-4 w-4 mr-2" />
-									Edit
-								</Button>
 							</div>
 						</CardContent>
 					</Card>

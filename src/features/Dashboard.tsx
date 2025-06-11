@@ -14,15 +14,7 @@ import {
 	TrendingUp,
 	Users,
 } from "lucide-react";
-import {
-	Bar,
-	BarChart,
-	CartesianGrid,
-	Line,
-	LineChart,
-	XAxis,
-	YAxis,
-} from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 
 const revenueData = [
 	{ month: "Jan", revenue: 45000 },
@@ -104,11 +96,31 @@ const upcomingTasks = [
 	},
 ];
 
+function getGreeting() {
+	const hour = new Date().getHours();
+	const name = "User"; // TODO: Replace with actual user name from context
+	let greeting = "";
+
+	if (hour < 12) {
+		greeting = "Good morning";
+	} else if (hour < 18) {
+		greeting = "Good afternoon";
+	} else {
+		greeting = "Good evening";
+	}
+
+	return { greeting, name };
+}
+
 export function Dashboard() {
+	const { greeting, name } = getGreeting();
+
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1>Dashboard</h1>
+				<h1 className="flex items-center gap-2 text-2xl">
+					{greeting}, {name}
+				</h1>
 				<p className="text-muted-foreground">
 					Overview of your rental properties and business metrics
 				</p>
@@ -192,26 +204,35 @@ export function Dashboard() {
 							config={{
 								revenue: {
 									label: "Revenue",
-									color: "hsl(var(--primary))",
+									color: "var(--color-primary)",
 								},
 							}}
 						>
-							<BarChart data={revenueData}>
-								<CartesianGrid strokeDasharray="3 3" />
-								<XAxis dataKey="month" />
-								<YAxis />
+							<BarChart
+								accessibilityLayer
+								data={revenueData}
+								margin={{
+									left: 12,
+									right: 12,
+								}}
+							>
+								<CartesianGrid vertical={false} />
+								<XAxis
+									dataKey="month"
+									tickLine={false}
+									axisLine={false}
+									tickMargin={8}
+								/>
+								<ChartTooltip
+									cursor={false}
+									content={
+										<ChartTooltipContent indicator="line" />
+									}
+								/>
 								<Bar
 									dataKey="revenue"
 									fill="var(--color-revenue)"
-								/>
-								<ChartTooltip
-									content={
-										<ChartTooltipContent
-											labelFormatter={(label) =>
-												`Revenue: ${label}`
-											}
-										/>
-									}
+									radius={4}
 								/>
 							</BarChart>
 						</ChartContainer>
@@ -227,30 +248,39 @@ export function Dashboard() {
 							config={{
 								rate: {
 									label: "Occupancy Rate",
-									color: "hsl(var(--primary))",
+									color: "var(--chart-2)",
 								},
 							}}
 						>
-							<LineChart data={occupancyData}>
-								<CartesianGrid strokeDasharray="3 3" />
-								<XAxis dataKey="month" />
-								<YAxis />
-								<Line
-									type="monotone"
-									dataKey="rate"
-									stroke="var(--color-rate)"
-									strokeWidth={2}
+							<AreaChart
+								accessibilityLayer
+								data={occupancyData}
+								margin={{
+									left: 12,
+									right: 12,
+								}}
+							>
+								<CartesianGrid vertical={false} />
+								<XAxis
+									dataKey="month"
+									tickLine={false}
+									axisLine={false}
+									tickMargin={8}
 								/>
 								<ChartTooltip
+									cursor={false}
 									content={
-										<ChartTooltipContent
-											labelFormatter={(label) =>
-												`Occupancy Rate: ${label}%`
-											}
-										/>
+										<ChartTooltipContent indicator="line" />
 									}
 								/>
-							</LineChart>
+								<Area
+									dataKey="rate"
+									type="natural"
+									fill="var(--color-rate)"
+									fillOpacity={0.4}
+									stroke="var(--color-rate)"
+								/>
+							</AreaChart>
 						</ChartContainer>
 					</CardContent>
 				</Card>

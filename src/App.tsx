@@ -9,6 +9,7 @@ import { RentalAgreements } from "@/features/RentalAgreements";
 import { Settings } from "@/features/Settings";
 import { Tenants } from "@/features/Tenants";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { PropertyView } from "./features/PropertyView";
 
 export default function App() {
 	return (
@@ -21,6 +22,7 @@ export default function App() {
 					/>
 					<Route path="/dashboard" element={<Dashboard />} />
 					<Route path="/properties" element={<Properties />} />
+					<Route path="/properties/:id" element={<PropertyView />} />
 					<Route path="/tenants" element={<Tenants />} />
 					<Route
 						path="/amenities-management"
