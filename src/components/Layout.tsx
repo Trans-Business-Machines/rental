@@ -21,7 +21,7 @@ import {
 	User,
 	Users,
 	Wrench,
-	X,
+	X
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -30,18 +30,39 @@ interface LayoutProps {
 	children: React.ReactNode;
 }
 
-const navItems = [
+interface NavItem {
+	id: string;
+	label: string;
+	icon?: React.ComponentType<{ className?: string }>;
+	items?: NavItem[];
+}
+
+const navigationConfig: NavItem[] = [
 	{ id: "dashboard", label: "Dashboard", icon: BarChart3 },
 	{ id: "properties", label: "Properties", icon: Building2 },
 	{ id: "tenants", label: "Tenants", icon: Users },
 	{ id: "rentals", label: "Rentals", icon: FileText },
 	{ id: "payments", label: "Payments", icon: CreditCard },
 	{ id: "maintenance", label: "Maintenance", icon: Wrench },
-];
-
-const amenitiesItems = [
-	{ id: "amenities-management", label: "Amenities" },
-	{ id: "booking-requests", label: "Booking Requests" },
+	{
+		id: "short-term-rentals",
+		label: "Short Term",
+		icon: Calendar,
+		items: [
+			{ id: "inventory", label: "Inventory" },
+			{ id: "bookings", label: "Bookings" },
+			{ id: "guests", label: "Guests" },
+		],
+	},
+	{
+		id: "amenities",
+		label: "Amenities",
+		icon: Calendar,
+		items: [
+			{ id: "amenities-management", label: "Amenities" },
+			{ id: "booking-requests", label: "Booking Requests" },
+		],
+	},
 ];
 
 export function Layout({ children }: LayoutProps) {
@@ -51,14 +72,118 @@ export function Layout({ children }: LayoutProps) {
 	const currentPage = location.pathname.slice(1) || "dashboard";
 	const [searchQuery, setSearchQuery] = useState("");
 
-	const [amenitiesOpen, setAmenitiesOpen] = useState(
-		currentPage === "amenities-management" ||
-			currentPage === "booking-requests"
-	);
+	// Track which collapsible menus are open
+	const [openMenus, setOpenMenus] = useState<Set<string>>(() => {
+		const initialOpen = new Set<string>();
+		// Open menu if current page is a nested item
+		navigationConfig.forEach((item) => {
+			if (item.items) {
+				const hasActiveChild = item.items.some(
+					(subItem) => subItem.id === currentPage
+				);
+				if (hasActiveChild) {
+					initialOpen.add(item.id);
+				}
+			}
+		});
+		return initialOpen;
+	});
 
-	const isAmenitiesActive =
-		currentPage === "amenities-management" ||
-		currentPage === "booking-requests";
+	const isItemActive = (item: NavItem): boolean => {
+		if (item.id === currentPage) return true;
+		if (item.items) {
+			return item.items.some((subItem) => subItem.id === currentPage);
+		}
+		return false;
+	};
+
+	const toggleMenu = (menuId: string) => {
+		setOpenMenus((prev) => {
+			const newSet = new Set(prev);
+			if (newSet.has(menuId)) {
+				newSet.delete(menuId);
+			} else {
+				newSet.add(menuId);
+			}
+			return newSet;
+		});
+	};
+
+	const renderNavItem = (item: NavItem) => {
+		const Icon = item.icon;
+		const isActive = isItemActive(item);
+		const isOpen = openMenus.has(item.id);
+
+		if (item.items) {
+			// Render collapsible menu
+			return (
+				<Collapsible
+					key={item.id}
+					open={isOpen}
+					onOpenChange={() => toggleMenu(item.id)}
+				>
+					<CollapsibleTrigger asChild>
+						<button
+							className={cn(
+								"w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
+								isActive
+									? "bg-sidebar-primary text-sidebar-primary-foreground"
+									: "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+							)}
+						>
+							{Icon && <Icon className="h-5 w-5" />}
+							<span className="flex-1 text-left">{item.label}</span>
+							{isOpen ? (
+								<ChevronDown className="h-4 w-4" />
+							) : (
+								<ChevronRight className="h-4 w-4" />
+							)}
+						</button>
+					</CollapsibleTrigger>
+					<CollapsibleContent className="space-y-1 mt-1">
+						{item.items.map((subItem) => (
+							<button
+								key={subItem.id}
+								onClick={() => {
+									navigate(`/${subItem.id}`);
+									setSidebarOpen(false);
+								}}
+								className={cn(
+									"w-full flex items-center space-x-3 px-3 py-2 ml-6 rounded-lg transition-colors text-sm",
+									currentPage === subItem.id
+										? "bg-sidebar-primary text-sidebar-primary-foreground"
+										: "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+								)}
+							>
+								<div className="w-1 h-1 bg-current rounded-full" />
+								<span>{subItem.label}</span>
+							</button>
+						))}
+					</CollapsibleContent>
+				</Collapsible>
+			);
+		}
+
+		// Render regular menu item
+		return (
+			<button
+				key={item.id}
+				onClick={() => {
+					navigate(`/${item.id}`);
+					setSidebarOpen(false);
+				}}
+				className={cn(
+					"w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
+					isActive
+						? "bg-sidebar-primary text-sidebar-primary-foreground"
+						: "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+				)}
+			>
+				{Icon && <Icon className="h-5 w-5" />}
+				<span>{item.label}</span>
+			</button>
+		);
+	};
 
 	return (
 		<div className="min-h-screen bg-background">
@@ -97,74 +222,7 @@ export function Layout({ children }: LayoutProps) {
 				</div>
 
 				<nav className="p-4 space-y-2">
-					{navItems.map((item) => {
-						const Icon = item.icon;
-						return (
-							<button
-								key={item.id}
-								onClick={() => {
-									navigate(`/${item.id}`);
-									setSidebarOpen(false);
-								}}
-								className={cn(
-									"w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
-									currentPage === item.id
-										? "bg-sidebar-primary text-sidebar-primary-foreground"
-										: "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-								)}
-							>
-								<Icon className="h-5 w-5" />
-								<span>{item.label}</span>
-							</button>
-						);
-					})}
-
-					{/* Expandable Amenities Menu */}
-					<Collapsible
-						open={amenitiesOpen}
-						onOpenChange={setAmenitiesOpen}
-					>
-						<CollapsibleTrigger asChild>
-							<button
-								className={cn(
-									"w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
-									isAmenitiesActive
-										? "bg-sidebar-primary text-sidebar-primary-foreground"
-										: "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-								)}
-							>
-								<Calendar className="h-5 w-5" />
-								<span className="flex-1 text-left">
-									Amenities
-								</span>
-								{amenitiesOpen ? (
-									<ChevronDown className="h-4 w-4" />
-								) : (
-									<ChevronRight className="h-4 w-4" />
-								)}
-							</button>
-						</CollapsibleTrigger>
-						<CollapsibleContent className="space-y-1 mt-1">
-							{amenitiesItems.map((subItem) => (
-								<button
-									key={subItem.id}
-									onClick={() => {
-										navigate(`/${subItem.id}`);
-										setSidebarOpen(false);
-									}}
-									className={cn(
-										"w-full flex items-center space-x-3 px-3 py-2 ml-6 rounded-lg transition-colors text-sm",
-										currentPage === subItem.id
-											? "bg-sidebar-primary text-sidebar-primary-foreground"
-											: "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-									)}
-								>
-									<div className="w-1 h-1 bg-current rounded-full" />
-									<span>{subItem.label}</span>
-								</button>
-							))}
-						</CollapsibleContent>
-					</Collapsible>
+					{navigationConfig.map(renderNavItem)}
 				</nav>
 
 				<div className="absolute bottom-4 left-4 right-4">
@@ -187,7 +245,7 @@ export function Layout({ children }: LayoutProps) {
 			{/* Main content */}
 			<div className="lg:ml-64">
 				{/* Top bar */}
-				<div className="bg-card border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 z-30 backdrop-blur-sm bg-background/95">
+				<div className="bg-card border-b border-border px-4 py-[15px] flex items-center justify-between sticky top-0 z-30 backdrop-blur-sm bg-background/95">
 					<div className="flex items-center gap-4 flex-1">
 						<Button
 							variant="ghost"
