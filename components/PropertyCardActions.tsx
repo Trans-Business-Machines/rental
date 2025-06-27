@@ -17,10 +17,14 @@ interface Property {
     name: string
     address: string
     type: string
-    units: number
+    totalUnits?: number
+    occupied: number
     rent: number
+    status: string
     description: string
     image: string
+    createdAt: Date
+    updatedAt: Date
 }
 
 interface PropertyCardActionsProps {

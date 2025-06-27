@@ -3,118 +3,129 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getBookings } from "@/lib/actions/bookings";
+import { getGuests } from "@/lib/actions/guests";
+import { getInventoryItems } from "@/lib/actions/inventory";
+import { getProperties } from "@/lib/actions/properties";
 import {
-    ChartContainer,
-    ChartTooltip,
-    ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-    AlertTriangle,
-    Building2,
-    Calendar,
-    DollarSign,
-    TrendingUp,
-    Users,
+	AlertTriangle,
+	Building2,
+	Calendar,
+	DollarSign,
+	TrendingUp,
+	Users,
 } from "lucide-react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 
-const revenueData = [
-	{ month: "Jan", revenue: 45000 },
-	{ month: "Feb", revenue: 52000 },
-	{ month: "Mar", revenue: 48000 },
-	{ month: "Apr", revenue: 58000 },
-	{ month: "May", revenue: 55000 },
-	{ month: "Jun", revenue: 62000 },
-];
+export default async function DashboardPage() {
+	// Fetch real data from database
+	const properties = await getProperties();
+	const guests = await getGuests();
+	const bookings = await getBookings();
+	const inventoryItems = await getInventoryItems();
 
-const occupancyData = [
-	{ month: "Jan", rate: 85 },
-	{ month: "Feb", rate: 92 },
-	{ month: "Mar", rate: 88 },
-	{ month: "Apr", rate: 95 },
-	{ month: "May", rate: 91 },
-	{ month: "Jun", rate: 97 },
-];
+	// Calculate real metrics
+	const totalProperties = properties.length;
+	const totalUnits = properties.reduce((sum, property) => sum + (property.totalUnits || 0), 0);
+	const activeGuests = guests.filter(g => g.verificationStatus === 'verified').length;
+	const totalBookingsCount = bookings.length;
+	const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
+	const completedBookings = bookings.filter(b => b.status === 'completed').length;
+	
+	// Calculate revenue (mock calculation based on bookings)
+	const totalRevenue = bookings.reduce((sum, booking) => sum + booking.totalAmount, 0);
+	const monthlyRevenue = totalRevenue / 6; // Assuming 6 months of data
+	
+	// Calculate occupancy rate
+	const occupiedUnits = confirmedBookings + completedBookings;
+	const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
 
-const recentActivities = [
-	{
-		id: 1,
-		type: "payment",
-		title: "Rent payment received",
-		description: "John Doe - Apartment 2A",
-		time: "2 hours ago",
-		amount: "$1,200",
-	},
-	{
-		id: 2,
-		type: "maintenance",
-		title: "Maintenance request",
-		description: "Leaky faucet - Unit 1B",
-		time: "4 hours ago",
-		status: "pending",
-	},
-	{
-		id: 3,
-		type: "lease",
-		title: "New lease signed",
-		description: "Sarah Johnson - Studio 3C",
-		time: "1 day ago",
-		amount: "$950",
-	},
-	{
-		id: 4,
-		type: "payment",
-		title: "Late payment reminder sent",
-		description: "Mike Wilson - Apartment 4A",
-		time: "2 days ago",
-		status: "overdue",
-	},
-];
+	// Recent activities (mock data for now)
+	const recentActivities = [
+		{
+			id: 1,
+			type: "payment",
+			title: "Booking payment received",
+			description: `${guests[0]?.firstName || 'Guest'} - ${properties[0]?.name || 'Property'}`,
+			time: "2 hours ago",
+			amount: formatCurrency(bookings[0]?.totalAmount || 0),
+		},
+		{
+			id: 2,
+			type: "maintenance",
+			title: "Inventory item damaged",
+			description: `${inventoryItems.find(item => item.status === 'damaged')?.itemName || 'Item'} - ${properties[0]?.name || 'Property'}`,
+			time: "4 hours ago",
+			status: "pending",
+		},
+		{
+			id: 3,
+			type: "lease",
+			title: "New booking created",
+			description: `${guests[1]?.firstName || 'Guest'} - ${properties[1]?.name || 'Property'}`,
+			time: "1 day ago",
+			amount: formatCurrency(bookings[1]?.totalAmount || 0),
+		},
+		{
+			id: 4,
+			type: "payment",
+			title: "Guest checked out",
+			description: `${guests[2]?.firstName || 'Guest'} - ${properties[0]?.name || 'Property'}`,
+			time: "2 days ago",
+			status: "completed",
+		},
+	];
 
-const upcomingTasks = [
-	{
-		id: 1,
-		title: "Lease renewal discussion",
-		tenant: "Emma Davis",
-		unit: "Apartment 2B",
-		date: "2025-06-08",
-		priority: "high",
-	},
-	{
-		id: 2,
-		title: "Property inspection",
-		tenant: "Robert Chen",
-		unit: "Studio 1A",
-		date: "2025-06-10",
-		priority: "medium",
-	},
-	{
-		id: 3,
-		title: "Maintenance follow-up",
-		tenant: "Lisa Park",
-		unit: "Apartment 3A",
-		date: "2025-06-12",
-		priority: "low",
-	},
-];
+	// Upcoming tasks (mock data for now)
+	const upcomingTasks = [
+		{
+			id: 1,
+			title: "Guest check-in",
+			tenant: guests[0]?.firstName || 'Guest',
+			unit: properties[0]?.name || 'Property',
+			date: "2025-06-08",
+			priority: "high",
+		},
+		{
+			id: 2,
+			title: "Property inspection",
+			tenant: guests[1]?.firstName || 'Guest',
+			unit: properties[1]?.name || 'Property',
+			date: "2025-06-10",
+			priority: "medium",
+		},
+		{
+			id: 3,
+			title: "Inventory check",
+			tenant: guests[2]?.firstName || 'Guest',
+			unit: properties[0]?.name || 'Property',
+			date: "2025-06-12",
+			priority: "low",
+		},
+	];
 
-function getGreeting() {
-	const hour = new Date().getHours();
-	const name = "User"; // TODO: Replace with actual user name from context
-	let greeting = "";
+	function getGreeting() {
+		const hour = new Date().getHours();
+		const name = "User"; // TODO: Replace with actual user name from context
+		let greeting = "";
 
-	if (hour < 12) {
-		greeting = "Good morning";
-	} else if (hour < 18) {
-		greeting = "Good afternoon";
-	} else {
-		greeting = "Good evening";
+		if (hour < 12) {
+			greeting = "Good morning";
+		} else if (hour < 18) {
+			greeting = "Good afternoon";
+		} else {
+			greeting = "Good evening";
+		}
+
+		return { greeting, name };
 	}
 
-	return { greeting, name };
-}
+	function formatCurrency(amount: number) {
+		return new Intl.NumberFormat('en-KE', {
+			style: 'currency',
+			currency: 'KES'
+		}).format(amount);
+	}
 
-export default function DashboardPage() {
 	const { greeting, name } = getGreeting();
 
 	return (
@@ -138,10 +149,9 @@ export default function DashboardPage() {
 						<Building2 className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">24</div>
+						<div className="text-2xl font-bold">{totalProperties}</div>
 						<p className="text-xs text-muted-foreground">
-							<span className="text-green-600">+2</span> from last
-							month
+							{totalUnits} total units
 						</p>
 					</CardContent>
 				</Card>
@@ -149,15 +159,14 @@ export default function DashboardPage() {
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium">
-							Active Tenants
+							Active Guests
 						</CardTitle>
 						<Users className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">87</div>
+						<div className="text-2xl font-bold">{activeGuests}</div>
 						<p className="text-xs text-muted-foreground">
-							<span className="text-green-600">+5</span> from last
-							month
+							{guests.length} total registered
 						</p>
 					</CardContent>
 				</Card>
@@ -170,10 +179,9 @@ export default function DashboardPage() {
 						<DollarSign className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">$62,400</div>
+						<div className="text-2xl font-bold">{formatCurrency(monthlyRevenue)}</div>
 						<p className="text-xs text-muted-foreground">
-							<span className="text-green-600">+12.5%</span> from
-							last month
+							{totalBookingsCount} total bookings
 						</p>
 					</CardContent>
 				</Card>
@@ -186,152 +194,78 @@ export default function DashboardPage() {
 						<TrendingUp className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">97%</div>
+						<div className="text-2xl font-bold">{occupancyRate}%</div>
 						<p className="text-xs text-muted-foreground">
-							<span className="text-green-600">+2%</span> from
-							last month
+							{occupiedUnits} of {totalUnits} units
 						</p>
 					</CardContent>
 				</Card>
 			</div>
 
-			{/* Charts */}
+			{/* Recent Activities & Upcoming Tasks */}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 				<Card>
 					<CardHeader>
-						<CardTitle>Monthly Revenue</CardTitle>
+						<CardTitle>Recent Activities</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<ChartContainer
-							config={{
-								revenue: {
-									label: "Revenue",
-									color: "var(--color-primary)",
-								},
-							}}
-						>
-							<BarChart
-								accessibilityLayer
-								data={revenueData}
-								margin={{
-									left: 12,
-									right: 12,
-								}}
-							>
-								<CartesianGrid vertical={false} />
-								<XAxis
-									dataKey="month"
-									tickLine={false}
-									axisLine={false}
-									tickMargin={8}
-								/>
-								<ChartTooltip
-									cursor={false}
-									content={
-										<ChartTooltipContent indicator="line" />
-									}
-								/>
-								<Bar
-									dataKey="revenue"
-									fill="var(--color-revenue)"
-									radius={4}
-								/>
-							</BarChart>
-						</ChartContainer>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader>
-						<CardTitle>Occupancy Rate Trend</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<ChartContainer
-							config={{
-								rate: {
-									label: "Occupancy Rate",
-									color: "var(--chart-2)",
-								},
-							}}
-						>
-							<AreaChart
-								accessibilityLayer
-								data={occupancyData}
-								margin={{
-									left: 12,
-									right: 12,
-								}}
-							>
-								<CartesianGrid vertical={false} />
-								<XAxis
-									dataKey="month"
-									tickLine={false}
-									axisLine={false}
-									tickMargin={8}
-								/>
-								<ChartTooltip
-									cursor={false}
-									content={
-										<ChartTooltipContent indicator="line" />
-									}
-								/>
-								<Area
-									dataKey="rate"
-									type="natural"
-									fill="var(--color-rate)"
-									fillOpacity={0.4}
-									stroke="var(--color-rate)"
-								/>
-							</AreaChart>
-						</ChartContainer>
-					</CardContent>
-				</Card>
-			</div>
-
-			{/* Activity and Tasks */}
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-				<Card>
-					<CardHeader>
-						<CardTitle>Recent Activity</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						{recentActivities.map((activity) => (
-							<div
-								key={activity.id}
-								className="flex items-start space-x-3 p-3 rounded-lg border"
-							>
-								<div className="flex-1 space-y-1">
-									<div className="flex items-center justify-between">
-										<p className="font-medium">
-											{activity.title}
-										</p>
-										{activity.amount && (
-											<span className="text-green-600">
-												{activity.amount}
-											</span>
+						<div className="space-y-4">
+							{recentActivities.map((activity) => (
+								<div
+									key={activity.id}
+									className="flex items-start space-x-3"
+								>
+									<div className="flex-shrink-0">
+										{activity.type === "payment" && (
+											<div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+												<DollarSign className="h-4 w-4 text-green-600" />
+											</div>
 										)}
-										{activity.status && (
-											<Badge
-												variant={
-													activity.status ===
-													"overdue"
-														? "destructive"
-														: "secondary"
-												}
-											>
-												{activity.status}
-											</Badge>
+										{activity.type === "maintenance" && (
+											<div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+												<AlertTriangle className="h-4 w-4 text-orange-600" />
+											</div>
+										)}
+										{activity.type === "lease" && (
+											<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+												<Calendar className="h-4 w-4 text-blue-600" />
+											</div>
 										)}
 									</div>
-									<p className="text-sm text-muted-foreground">
-										{activity.description}
-									</p>
-									<p className="text-xs text-muted-foreground">
-										{activity.time}
-									</p>
+									<div className="flex-1 min-w-0">
+										<p className="text-sm font-medium">
+											{activity.title}
+										</p>
+										<p className="text-sm text-muted-foreground">
+											{activity.description}
+										</p>
+										<div className="flex items-center space-x-2 mt-1">
+											<span className="text-xs text-muted-foreground">
+												{activity.time}
+											</span>
+											{activity.amount && (
+												<Badge variant="outline" className="text-xs">
+													{activity.amount}
+												</Badge>
+											)}
+											{activity.status && (
+												<Badge
+													variant={
+														activity.status ===
+														"pending"
+															? "secondary"
+															: "destructive"
+													}
+													className="text-xs"
+												>
+													{activity.status}
+												</Badge>
+											)}
+										</div>
+									</div>
 								</div>
-							</div>
-						))}
+							))}
+						</div>
 					</CardContent>
 				</Card>
 
@@ -339,71 +273,47 @@ export default function DashboardPage() {
 					<CardHeader>
 						<CardTitle>Upcoming Tasks</CardTitle>
 					</CardHeader>
-					<CardContent className="space-y-4">
-						{upcomingTasks.map((task) => (
-							<div
-								key={task.id}
-								className="flex items-start space-x-3 p-3 rounded-lg border"
-							>
-								<Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-								<div className="flex-1 space-y-1">
-									<div className="flex items-center justify-between">
-										<p className="font-medium">
-											{task.title}
-										</p>
+					<CardContent>
+						<div className="space-y-4">
+							{upcomingTasks.map((task) => (
+								<div
+									key={task.id}
+									className="flex items-start space-x-3"
+								>
+									<div className="flex-shrink-0">
 										<Badge
 											variant={
 												task.priority === "high"
 													? "destructive"
 													: task.priority === "medium"
-													? "default"
-													: "secondary"
+													? "secondary"
+													: "outline"
 											}
+											className="text-xs"
 										>
 											{task.priority}
 										</Badge>
 									</div>
-									<p className="text-sm text-muted-foreground">
-										{task.tenant} - {task.unit}
-									</p>
-									<p className="text-xs text-muted-foreground">
-										{task.date}
-									</p>
+									<div className="flex-1 min-w-0">
+										<p className="text-sm font-medium">
+											{task.title}
+										</p>
+										<p className="text-sm text-muted-foreground">
+											{task.tenant} - {task.unit}
+										</p>
+										<p className="text-xs text-muted-foreground mt-1">
+											{task.date}
+										</p>
+									</div>
+									<Button variant="outline" size="sm">
+										View
+									</Button>
 								</div>
-							</div>
-						))}
+							))}
+						</div>
 					</CardContent>
 				</Card>
 			</div>
-
-			{/* Quick Actions */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Quick Actions</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-						<Button className="h-auto p-4 flex-col space-y-2">
-							<Building2 className="h-6 w-6" />
-							<span>Add Property</span>
-						</Button>
-						<Button
-							variant="outline"
-							className="h-auto p-4 flex-col space-y-2"
-						>
-							<Users className="h-6 w-6" />
-							<span>Add Tenant</span>
-						</Button>
-						<Button
-							variant="outline"
-							className="h-auto p-4 flex-col space-y-2"
-						>
-							<AlertTriangle className="h-6 w-6" />
-							<span>View Maintenance</span>
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
 		</div>
 	);
 } 

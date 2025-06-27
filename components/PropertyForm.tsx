@@ -20,10 +20,14 @@ interface Property {
     name: string
     address: string
     type: string
-    units: number
+    totalUnits?: number
+    occupied: number
     rent: number
+    status: string
     description: string
     image: string
+    createdAt: Date
+    updatedAt: Date
 }
 
 interface PropertyFormProps {
@@ -38,7 +42,7 @@ export function PropertyForm({ property, onSuccess, onCancel }: PropertyFormProp
         name: property?.name || "",
         address: property?.address || "",
         type: property?.type || "",
-        units: property?.units?.toString() || "",
+        totalUnits: property?.totalUnits?.toString() || "",
         rent: property?.rent?.toString() || "",
         description: property?.description || "",
         image: property?.image || "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=60",
@@ -53,7 +57,7 @@ export function PropertyForm({ property, onSuccess, onCancel }: PropertyFormProp
                 name: formData.name,
                 address: formData.address,
                 type: formData.type,
-                units: parseInt(formData.units),
+                totalUnits: formData.totalUnits ? parseInt(formData.totalUnits) : undefined,
                 rent: parseInt(formData.rent),
                 description: formData.description,
                 image: formData.image,
@@ -138,21 +142,20 @@ export function PropertyForm({ property, onSuccess, onCancel }: PropertyFormProp
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <Label htmlFor="units" className="mb-1.5 block">
+                    <Label htmlFor="totalUnits" className="mb-1.5 block">
                         Number of Units
                     </Label>
                     <Input
-                        id="units"
+                        id="totalUnits"
                         type="number"
-                        value={formData.units}
+                        value={formData.totalUnits}
                         onChange={(e) =>
                             setFormData({
                                 ...formData,
-                                units: e.target.value,
+                                totalUnits: e.target.value,
                             })
                         }
                         placeholder="0"
-                        required
                     />
                 </div>
                 <div>
@@ -204,14 +207,13 @@ export function PropertyForm({ property, onSuccess, onCancel }: PropertyFormProp
                             description: e.target.value,
                         })
                     }
-                    placeholder="Property description..."
-                    className="min-h-[100px]"
+                    placeholder="Enter property description"
                     required
                 />
             </div>
             <div className="flex space-x-2">
                 <Button type="submit" disabled={isLoading} className="flex-1">
-                    {isLoading ? "Saving..." : property ? "Update Property" : "Add Property"}
+                    {isLoading ? "Saving..." : property ? "Update Property" : "Create Property"}
                 </Button>
                 {onCancel && (
                     <Button type="button" variant="outline" onClick={onCancel}>

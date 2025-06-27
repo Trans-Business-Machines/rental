@@ -41,7 +41,7 @@ export async function createProperty(data: {
 	name: string;
 	address: string;
 	type: string;
-	units: number;
+	totalUnits?: number;
 	rent: number;
 	description: string;
 	image: string;
@@ -56,6 +56,7 @@ export async function createProperty(data: {
 			include: {
 				tenants: true,
 				amenities: true,
+				units: true,
 			},
 		});
 		revalidatePath("/properties");
@@ -72,7 +73,7 @@ export async function updateProperty(
 		name: string;
 		address: string;
 		type: string;
-		units: number;
+		totalUnits?: number;
 		rent: number;
 		description: string;
 		image: string;
@@ -85,6 +86,7 @@ export async function updateProperty(
 			include: {
 				tenants: true,
 				amenities: true,
+				units: true,
 			},
 		});
 		revalidatePath("/properties");
@@ -115,13 +117,11 @@ export async function searchProperties(query: string) {
 					{
 						name: {
 							contains: query,
-							mode: "insensitive",
 						},
 					},
 					{
 						address: {
 							contains: query,
-							mode: "insensitive",
 						},
 					},
 				],
@@ -129,6 +129,7 @@ export async function searchProperties(query: string) {
 			include: {
 				tenants: true,
 				amenities: true,
+				units: true,
 			},
 			orderBy: {
 				createdAt: "desc",
@@ -139,4 +140,11 @@ export async function searchProperties(query: string) {
 		console.error("Error searching properties:", error);
 		throw new Error("Failed to search properties");
 	}
+}
+
+export async function getAllPropertiesWithUnits() {
+	return prisma.property.findMany({
+		include: { units: true },
+		orderBy: { name: "asc" },
+	});
 }

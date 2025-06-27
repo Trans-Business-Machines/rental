@@ -22,42 +22,6 @@ import {
 } from "lucide-react";
 import { Suspense } from "react";
 
-interface Tenant {
-	id: number;
-	name: string;
-	email: string;
-	phone: string;
-	unitNumber: string;
-	leaseStart: string;
-	leaseEnd: string;
-	rent: number;
-	status: string;
-}
-
-interface Amenity {
-	id: number;
-	name: string;
-	description: string;
-	icon: string;
-}
-
-interface Property {
-	id: number;
-	name: string;
-	address: string;
-	type: string;
-	units: number;
-	occupied: number;
-	rent: number;
-	status: string;
-	description: string;
-	image: string;
-	createdAt: Date;
-	updatedAt: Date;
-	tenants?: Tenant[];
-	amenities?: Amenity[];
-}
-
 interface PropertiesPageProps {
 	searchParams: Promise<{ search?: string }>
 }
@@ -83,7 +47,8 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
 		}
 	};
 
-	const getOccupancyRate = (occupied: number, total: number) => {
+	const getOccupancyRate = (occupied: number, total: number | null) => {
+		if (!total || total === 0) return 0;
 		return Math.round((occupied / total) * 100);
 	};
 
@@ -121,7 +86,7 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
 
 			{/* Properties Grid */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-				{properties.map((property: Property) => (
+				{properties.map((property) => (
 					<Card
 						key={property.id}
 						className="hover:shadow-lg transition-shadow p-0 pb-6"
@@ -176,10 +141,10 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
 										Occupancy
 									</span>
 									<span>
-										{property.occupied}/{property.units} (
+										{property.occupied}/{property.totalUnits || 0} (
 										{getOccupancyRate(
 											property.occupied,
-											property.units
+											property.totalUnits
 										)}
 										%)
 									</span>
@@ -190,7 +155,7 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
 										style={{
 											width: `${getOccupancyRate(
 												property.occupied,
-												property.units
+												property.totalUnits
 											)}%`,
 										}}
 									/>
