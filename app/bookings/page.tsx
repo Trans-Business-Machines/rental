@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getBookings } from '@/lib/actions/bookings';
 import { getAllPropertiesWithUnits as getProperties } from '@/lib/actions/properties';
 import {
@@ -198,106 +197,110 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
                 </Select>
             </div>
 
-            {/* Bookings Table */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Bookings</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Guest</TableHead>
-                                <TableHead>Property/Unit</TableHead>
-                                <TableHead>Dates</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Amount</TableHead>
-                                <TableHead>Source</TableHead>
-                                <TableHead>Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredBookings.map((booking) => (
-                                <TableRow key={booking.id}>
-                                    <TableCell>
-                                        <div className="flex items-center space-x-3">
-                                            <Avatar>
-                                                <AvatarFallback>
-                                                    {booking.guest.firstName[0]}{booking.guest.lastName[0]}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-medium">{booking.guest.firstName} {booking.guest.lastName}</p>
-                                                <p className="text-sm text-muted-foreground">{booking.guest.email}</p>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div>
-                                            <p className="font-medium">{booking.property.name}</p>
-                                            <p className="text-sm text-muted-foreground">{booking.unit.name}</p>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="space-y-1">
-                                            <div className="flex items-center space-x-2">
-                                                <Calendar className="h-3 w-3 text-muted-foreground" />
-                                                <span className="text-sm">{formatDate(booking.checkInDate)}</span>
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                <Calendar className="h-3 w-3 text-muted-foreground" />
-                                                <span className="text-sm">{formatDate(booking.checkOutDate)}</span>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={getStatusColor(booking.status) as "default" | "secondary" | "destructive" | "outline"}>
-                                            <div className="flex items-center space-x-1">
-                                                {(() => {
-                                                    const StatusIcon = getStatusIcon(booking.status);
-                                                    return <StatusIcon className="h-3 w-3" />;
-                                                })()}
-                                                <span>{booking.status.replace('_', ' ')}</span>
-                                            </div>
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div>
-                                            <p className="font-medium">{formatCurrency(booking.totalAmount)}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {booking.numberOfGuests} {booking.numberOfGuests === 1 ? 'guest' : 'guests'}
-                                            </p>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div>
-                                            <p className="font-medium capitalize">{booking.source}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {formatDateTime(booking.createdAt)}
-                                            </p>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex space-x-2">
-                                            <Button variant="outline" size="sm">
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="outline" size="sm">
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            {booking.status === 'confirmed' && (
-                                                <Button variant="outline" size="sm">
-                                                    <Bed className="h-4 w-4" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+            {/* Bookings Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredBookings.map((booking) => (
+                    <Card
+                        key={booking.id}
+                        className="hover:shadow-lg transition-shadow"
+                    >
+                        <CardHeader>
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-center space-x-3">
+                                    <Avatar className="h-12 w-12">
+                                        <AvatarFallback className="text-lg">
+                                            {booking.guest.firstName[0]}{booking.guest.lastName[0]}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <CardTitle className="text-lg">
+                                            {booking.guest.firstName} {booking.guest.lastName}
+                                        </CardTitle>
+                                        <p className="text-sm text-muted-foreground">
+                                            {booking.guest.email}
+                                        </p>
+                                    </div>
+                                </div>
+                                <Badge variant={getStatusColor(booking.status) as "default" | "secondary" | "destructive" | "outline"}>
+                                    <div className="flex items-center space-x-1">
+                                        {(() => {
+                                            const StatusIcon = getStatusIcon(booking.status);
+                                            return <StatusIcon className="h-3 w-3" />;
+                                        })()}
+                                        <span>{booking.status.replace('_', ' ')}</span>
+                                    </div>
+                                </Badge>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {/* Property Information */}
+                            <div className="space-y-2">
+                                <div className="flex items-center space-x-2 text-sm">
+                                    <Bed className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium">{booking.property.name}</span>
+                                </div>
+                                <div className="flex items-center space-x-2 text-sm">
+                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">{booking.unit.name}</span>
+                                </div>
+                            </div>
+
+                            {/* Dates */}
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div className="text-center p-2 bg-muted/50 rounded-lg">
+                                    <p className="font-medium">Check-in</p>
+                                    <p className="text-muted-foreground">{formatDate(booking.checkInDate)}</p>
+                                </div>
+                                <div className="text-center p-2 bg-muted/50 rounded-lg">
+                                    <p className="font-medium">Check-out</p>
+                                    <p className="text-muted-foreground">{formatDate(booking.checkOutDate)}</p>
+                                </div>
+                            </div>
+
+                            {/* Financial Info */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-muted-foreground">Total Amount</span>
+                                    <span className="font-medium">{formatCurrency(booking.totalAmount)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-muted-foreground">Guests</span>
+                                    <span className="text-sm">{booking.numberOfGuests} {booking.numberOfGuests === 1 ? 'guest' : 'guests'}</span>
+                                </div>
+                            </div>
+
+                            {/* Source and Created Date */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-muted-foreground">Source</span>
+                                    <span className="text-sm capitalize">{booking.source}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-muted-foreground">Created</span>
+                                    <span className="text-sm">{formatDateTime(booking.createdAt)}</span>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex space-x-2 pt-2">
+                                <Button variant="outline" size="sm" className="flex-1">
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View
+                                </Button>
+                                <Button variant="outline" size="sm" className="flex-1">
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                </Button>
+                                {booking.status === 'confirmed' && (
+                                    <Button variant="outline" size="sm">
+                                        <Bed className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
 
             {filteredBookings.length === 0 && (
                 <div className="text-center py-8">

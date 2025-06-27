@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getGuests } from '@/lib/actions/guests';
 import { getAllPropertiesWithUnits as getProperties } from '@/lib/actions/properties';
 import {
@@ -258,116 +257,110 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                 </Select>
             </div>
 
-            {/* Guests Table */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Guests</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Guest</TableHead>
-                                <TableHead>Contact</TableHead>
-                                <TableHead>Nationality</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Total Stays</TableHead>
-                                <TableHead>Total Spent</TableHead>
-                                <TableHead>Rating</TableHead>
-                                <TableHead>Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredGuests.map((guest) => (
-                                <TableRow key={guest.id}>
-                                    <TableCell>
-                                        <div className="flex items-center space-x-3">
-                                            <Avatar>
-                                                <AvatarFallback>
-                                                    {guest.firstName[0]}{guest.lastName[0]}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-medium">{guest.firstName} {guest.lastName}</p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {guest.occupation || 'Not specified'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="space-y-1">
-                                            <div className="flex items-center space-x-2">
-                                                <Mail className="h-3 w-3 text-muted-foreground" />
-                                                <span className="text-sm">{guest.email}</span>
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                                <Phone className="h-3 w-3 text-muted-foreground" />
-                                                <span className="text-sm">{guest.phone}</span>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center space-x-2">
-                                            <Shield className="h-4 w-4 text-muted-foreground" />
-                                            <span>{guest.nationality}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={getVerificationColor(guest.verificationStatus) as "default" | "secondary" | "destructive" | "outline"}>
-                                            {guest.verificationStatus}
+            {/* Guests Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredGuests.map((guest) => (
+                    <Card
+                        key={guest.id}
+                        className="hover:shadow-lg transition-shadow"
+                    >
+                        <CardHeader>
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-center space-x-3">
+                                    <Avatar className="h-12 w-12">
+                                        <AvatarFallback className="text-lg">
+                                            {guest.firstName[0]}{guest.lastName[0]}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <CardTitle className="text-lg">
+                                            {guest.firstName} {guest.lastName}
+                                        </CardTitle>
+                                        <p className="text-sm text-muted-foreground">
+                                            {guest.occupation || 'Not specified'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end space-y-1">
+                                    <Badge variant={getVerificationColor(guest.verificationStatus) as "default" | "secondary" | "destructive" | "outline"}>
+                                        {guest.verificationStatus}
+                                    </Badge>
+                                    {guest.blacklisted && (
+                                        <Badge variant="destructive" className="text-xs">
+                                            Blacklisted
                                         </Badge>
-                                        {guest.blacklisted && (
-                                            <Badge variant="destructive" className="ml-2">
-                                                Blacklisted
-                                            </Badge>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="text-center">
-                                            <p className="font-medium">{guest.totalStays}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {guest.totalNights} nights
-                                            </p>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div>
-                                            <p className="font-medium">{formatCurrency(guest.totalSpent)}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                Last: {formatDate(guest.lastStay)}
-                                            </p>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        {guest.rating ? (
-                                            <div className="flex items-center space-x-1">
-                                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                                <span className="font-medium">{guest.rating}</span>
-                                            </div>
-                                        ) : (
-                                            <span className="text-muted-foreground">No rating</span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex space-x-2">
-                                            <Button variant="outline" size="sm">
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="outline" size="sm">
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="outline" size="sm">
-                                                <Bed className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                                    )}
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {/* Contact Information */}
+                            <div className="space-y-2">
+                                <div className="flex items-center space-x-2 text-sm">
+                                    <Mail className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">{guest.email}</span>
+                                </div>
+                                <div className="flex items-center space-x-2 text-sm">
+                                    <Phone className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">{guest.phone}</span>
+                                </div>
+                                <div className="flex items-center space-x-2 text-sm">
+                                    <Shield className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">{guest.nationality}</span>
+                                </div>
+                            </div>
+
+                            {/* Statistics */}
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div className="text-center p-2 bg-muted/50 rounded-lg">
+                                    <p className="font-medium">{guest.totalStays}</p>
+                                    <p className="text-muted-foreground">Total Stays</p>
+                                </div>
+                                <div className="text-center p-2 bg-muted/50 rounded-lg">
+                                    <p className="font-medium">{guest.totalNights}</p>
+                                    <p className="text-muted-foreground">Total Nights</p>
+                                </div>
+                            </div>
+
+                            {/* Financial Info */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-muted-foreground">Total Spent</span>
+                                    <span className="font-medium">{formatCurrency(guest.totalSpent)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-muted-foreground">Last Stay</span>
+                                    <span className="text-sm">{formatDate(guest.lastStay)}</span>
+                                </div>
+                            </div>
+
+                            {/* Rating */}
+                            {guest.rating && (
+                                <div className="flex items-center space-x-2">
+                                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                    <span className="font-medium">{guest.rating}</span>
+                                    <span className="text-sm text-muted-foreground">rating</span>
+                                </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex space-x-2 pt-2">
+                                <Button variant="outline" size="sm" className="flex-1">
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View
+                                </Button>
+                                <Button variant="outline" size="sm" className="flex-1">
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                    <Bed className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
 
             {filteredGuests.length === 0 && (
                 <div className="text-center py-8">
