@@ -1,7 +1,7 @@
+import { CheckoutDialog } from '@/components/CheckoutDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,26 +9,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { getCheckoutReports } from '@/lib/actions/checkout';
 import { getInventoryItems } from '@/lib/actions/inventory';
 import { getAllPropertiesWithUnits as getProperties } from '@/lib/actions/properties';
 import {
-  AlertTriangle,
-  Bath,
-  Bed,
-  Camera,
-  CheckCircle,
-  ClipboardList,
-  Download,
-  Edit,
-  Eye,
-  Lamp,
-  Monitor,
-  Package,
-  Plus,
-  Search,
-  UtensilsCrossed,
-  Wrench,
-  XCircle
+    AlertTriangle,
+    Bath,
+    Bed,
+    CheckCircle,
+    Download,
+    Edit,
+    Eye,
+    Lamp,
+    Monitor,
+    Package,
+    Plus,
+    Search,
+    UtensilsCrossed,
+    Wrench,
+    XCircle
 } from 'lucide-react';
 
 interface InventoryPageProps {
@@ -47,6 +46,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     // Fetch real data from database
     const inventoryItems = await getInventoryItems();
     const properties = await getProperties();
+    const checkoutReports = await getCheckoutReports();
     
     // Filter items based on search params
     const filteredItems = inventoryItems.filter(item => {
@@ -134,98 +134,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                         <Download className="h-4 w-4 mr-2" />
                         Export
                     </Button>
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button variant="outline">
-                                <ClipboardList className="h-4 w-4 mr-2" />
-                                Guest Checkout
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                            <DialogHeader>
-                                <DialogTitle>Guest Checkout Inspection</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div>
-                                        <Label htmlFor="checkout-guest">Guest</Label>
-                                        <Select>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select guest" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="james">James Kimani - Apt 2A</SelectItem>
-                                                <SelectItem value="sarah">Sarah Mitchell - Condo 3B</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="checkout-date">Checkout Date</Label>
-                                        <Input id="checkout-date" type="date" />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="inspector">Inspector</Label>
-                                        <Input id="inspector" placeholder="Inspector name" />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h3 className="font-medium mb-4">Inventory Checklist</h3>
-                                    <div className="space-y-3 max-h-60 overflow-y-auto border rounded-lg p-4">
-                                        {inventoryItems.filter(item => 
-                                            item.property.name === 'Sunset Apartments' && 
-                                            item.unit.name === 'Apartment 2A'
-                                        ).map((item) => {
-                                            const CategoryIcon = getCategoryIcon(item.category);
-                                            return (
-                                                <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                                    <div className="flex items-center space-x-3">
-                                                        <Checkbox />
-                                                        <CategoryIcon className="h-4 w-4 text-muted-foreground" />
-                                                        <div>
-                                                            <p className="font-medium">{item.itemName}</p>
-                                                            <p className="text-sm text-muted-foreground">{item.location}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <Select defaultValue="good">
-                                                            <SelectTrigger className="w-24">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="good">Good</SelectItem>
-                                                                <SelectItem value="damaged">Damaged</SelectItem>
-                                                                <SelectItem value="missing">Missing</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <Input placeholder="Damage cost" className="w-24" />
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="checkout-notes">Inspection Notes</Label>
-                                    <Textarea id="checkout-notes" placeholder="Overall condition notes, guest cooperation, etc..." />
-                                </div>
-
-                                <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-                                    <span className="font-medium">Total Damage Cost:</span>
-                                    <span className="text-lg font-bold">KES 0</span>
-                                </div>
-
-                                <div className="flex space-x-2">
-                                    <Button className="flex-1">Complete Checkout</Button>
-                                    <Button variant="outline" className="flex-1">
-                                        <Camera className="h-4 w-4 mr-2" />
-                                        Add Photos
-                                    </Button>
-                                </div>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
+                    <CheckoutDialog />
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button>
@@ -535,7 +444,81 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                             <CardTitle>Checkout Reports</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-muted-foreground">No checkout reports found. Checkout reports will appear here after guest checkouts are completed.</p>
+                            {checkoutReports.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Guest</TableHead>
+                                            <TableHead>Property/Unit</TableHead>
+                                            <TableHead>Checkout Date</TableHead>
+                                            <TableHead>Inspector</TableHead>
+                                            <TableHead>Damage Cost</TableHead>
+                                            <TableHead>Deposit Deduction</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {checkoutReports.map((report) => (
+                                            <TableRow key={report.id}>
+                                                <TableCell>
+                                                    <div>
+                                                        <p className="font-medium">
+                                                            {report.guest.firstName} {report.guest.lastName}
+                                                        </p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {report.guest.email}
+                                                        </p>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div>
+                                                        <p className="font-medium">
+                                                            {report.booking.property.name}
+                                                        </p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {report.booking.unit.name}
+                                                        </p>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {formatDate(report.checkoutDate)}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {report.inspector}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <span className={report.totalDamageCost > 0 ? "text-red-600 font-medium" : "text-green-600"}>
+                                                        {formatCurrency(report.totalDamageCost)}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <span className={report.depositDeduction > 0 ? "text-red-600 font-medium" : "text-green-600"}>
+                                                        {formatCurrency(report.depositDeduction)}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant={report.status === "completed" ? "default" : "secondary"}>
+                                                        {report.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex space-x-2">
+                                                        <Button variant="outline" size="sm">
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button variant="outline" size="sm">
+                                                            <Download className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <p className="text-muted-foreground">No checkout reports found. Checkout reports will appear here after guest checkouts are completed.</p>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>

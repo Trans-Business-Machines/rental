@@ -466,6 +466,73 @@ async function main() {
 		}),
 	]);
 
+	// Create checkout reports
+	const checkoutReport1 = await prisma.checkoutReport.create({
+		data: {
+			bookingId: 1, // John Doe's booking
+			guestId: 1,
+			checkoutDate: new Date("2024-01-20"),
+			inspector: "John Inspector",
+			totalDamageCost: 15000,
+			depositDeduction: 10000,
+			status: "completed",
+			notes: "Guest was cooperative during inspection. Minor damage to sofa armrest.",
+		},
+	});
+
+	const checkoutReport2 = await prisma.checkoutReport.create({
+		data: {
+			bookingId: 2, // Sarah Mitchell's booking
+			guestId: 2,
+			checkoutDate: new Date("2024-02-05"),
+			inspector: "Jane Inspector",
+			totalDamageCost: 0,
+			depositDeduction: 0,
+			status: "completed",
+			notes: "Unit in excellent condition. No damages found.",
+		},
+	});
+
+	// Create checkout items (damage tracking)
+	await Promise.all([
+		prisma.checkoutItem.create({
+			data: {
+				checkoutReportId: checkoutReport1.id,
+				inventoryItemId: 1, // Queen Bed
+				condition: "good",
+				damageCost: 0,
+				notes: "No damage",
+			},
+		}),
+		prisma.checkoutItem.create({
+			data: {
+				checkoutReportId: checkoutReport1.id,
+				inventoryItemId: 2, // Smart TV
+				condition: "damaged",
+				damageCost: 15000,
+				notes: "Cracked screen, needs replacement",
+			},
+		}),
+		prisma.checkoutItem.create({
+			data: {
+				checkoutReportId: checkoutReport2.id,
+				inventoryItemId: 4, // Sofa Bed
+				condition: "good",
+				damageCost: 0,
+				notes: "No damage",
+			},
+		}),
+	]);
+
+	// Update some inventory items to reflect damage status
+	await prisma.inventoryItem.update({
+		where: { id: 2 }, // Smart TV
+		data: {
+			status: "damaged",
+			lastInspected: new Date("2024-01-20"),
+		},
+	});
+
 	// Create tenants
 	await Promise.all([
 		prisma.tenant.create({

@@ -5,20 +5,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import { getProperties, searchProperties } from "@/lib/actions/properties";
 import {
-	Building2,
-	DollarSign,
-	Home,
-	MapPin,
-	Plus,
-	Users,
+    Building2,
+    DollarSign,
+    Home,
+    MapPin,
+    Plus,
+    Users,
 } from "lucide-react";
 import { Suspense } from "react";
 
