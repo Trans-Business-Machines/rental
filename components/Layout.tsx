@@ -6,6 +6,14 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import {
@@ -18,16 +26,19 @@ import {
 	CreditCard,
 	FileText,
 	Home,
+	LogOut,
 	Menu,
 	Search,
 	Settings,
+	Shield,
 	User,
+	UserCircle,
 	Users,
 	Wrench,
 	X
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface LayoutProps {
 	children: React.ReactNode;
@@ -48,6 +59,7 @@ const navigationConfig: NavItem[] = [
 	{ id: "guests", label: "Guests", icon: Users },
 	{ id: "payments", label: "Payments", icon: CreditCard },
 	{ id: "maintenance", label: "Maintenance", icon: Wrench },
+	{ id: "users", label: "Users", icon: Shield },
 	{
 		id: "amenities",
 		label: "Amenities",
@@ -83,6 +95,36 @@ export function Layout({ children }: LayoutProps) {
 		});
 		return initialOpen;
 	});
+
+	// Redirect to login if not authenticated
+	useEffect(() => {
+		if (session === null) {
+			router.push("/login");
+		}
+	}, [session, router]);
+
+	// Show loading state while checking authentication
+	if (session === undefined) {
+		return (
+			<div className="min-h-screen bg-background flex items-center justify-center">
+				<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+			</div>
+		);
+	}
+
+	// Don't render anything if not authenticated (will redirect)
+	if (!session) {
+		return null;
+	}
+
+	const handleLogout = async () => {
+		try {
+			await authClient.signOut();
+			router.push("/login");
+		} catch (error) {
+			console.error("Error signing out:", error);
+		}
+	};
 
 	const isItemActive = (item: NavItem): boolean => {
 		if (item.id === currentPage) return true;
@@ -293,13 +335,44 @@ export function Layout({ children }: LayoutProps) {
 									{userRole}
 								</p>
 							</div>
-							<Button
-								variant="ghost"
-								size="icon"
-								className="rounded-full"
-							>
-								<User className="h-5 w-5" />
-							</Button>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="rounded-full"
+									>
+										<User className="h-5 w-5" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end" className="w-56">
+									<DropdownMenuLabel>
+										<div className="flex flex-col space-y-1">
+											<p className="text-sm font-medium leading-none">{userName}</p>
+											<p className="text-xs leading-none text-muted-foreground capitalize">
+												{userRole}
+											</p>
+										</div>
+									</DropdownMenuLabel>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem onClick={() => router.push("/profile")}>
+										<UserCircle className="mr-2 h-4 w-4" />
+										<span>Profile</span>
+									</DropdownMenuItem>
+									<DropdownMenuItem onClick={() => router.push("/settings")}>
+										<Settings className="mr-2 h-4 w-4" />
+										<span>Settings</span>
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem 
+										onClick={handleLogout}
+										className="text-red-600 focus:text-red-600"
+									>
+										<LogOut className="mr-2 h-4 w-4" />
+										<span>Log out</span>
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
 						</div>
 					</div>
 				</div>
