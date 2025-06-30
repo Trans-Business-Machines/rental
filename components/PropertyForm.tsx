@@ -66,7 +66,8 @@ export function PropertyForm({ property, onCancel }: PropertyFormProps) {
         if (property?.id) {
             loadExistingUnits()
         }
-    }, [property?.id])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [property?.id, ])
 
     const loadExistingUnits = async () => {
         if (!property?.id) return

@@ -87,7 +87,6 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
 				<div className="lg:col-span-2 space-y-6">
 					<Card className="pt-0">
 						<div className="relative h-64 w-full overflow-hidden rounded-t-lg">
-							{/* eslint-disable-next-line @next/next/no-img-element */}
 							<img
 								src={property.image}
 								alt={property.name}

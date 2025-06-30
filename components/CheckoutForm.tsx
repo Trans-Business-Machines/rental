@@ -145,6 +145,7 @@ export function CheckoutForm({ onSuccess, onCancel }: CheckoutFormProps) {
 
         try {
             const checkedItems = Object.entries(checkoutItems)
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 .filter(([_, item]) => item.checked)
                 .map(([itemId, item]) => ({
                     inventoryItemId: parseInt(itemId),
