@@ -1,16 +1,8 @@
 'use client'
 
-import { PropertyForm } from "@/components/PropertyForm"
 import { Button } from "@/components/ui/button"
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
 import { Edit, Eye } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+import Link from "next/link"
 
 interface Property {
     id: number
@@ -34,44 +26,30 @@ interface PropertyCardActionsProps {
 }
 
 export function PropertyCardActions({ property }: PropertyCardActionsProps) {
-    const router = useRouter()
-    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-
     return (
-        <>
-            <div className="flex space-x-2">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => router.push(`/properties/${property.id}`)}
-                >
+        <div className="flex space-x-2">
+            <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                asChild
+            >
+                <Link href={`/properties/${property.id}`}>
                     <Eye className="h-4 w-4 mr-2" />
                     View
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setIsEditDialogOpen(true)}
-                >
+                </Link>
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                asChild
+            >
+                <Link href={`/properties/${property.id}/edit`}>
                     <Edit className="h-4 w-4 mr-2" />
                     Edit
-                </Button>
-            </div>
-
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Edit Property</DialogTitle>
-                    </DialogHeader>
-                    <PropertyForm 
-                        property={property}
-                        onSuccess={() => setIsEditDialogOpen(false)}
-                        onCancel={() => setIsEditDialogOpen(false)}
-                    />
-                </DialogContent>
-            </Dialog>
-        </>
+                </Link>
+            </Button>
+        </div>
     )
 } 

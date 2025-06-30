@@ -12,8 +12,19 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { createProperty, updateProperty } from "@/lib/actions/properties"
-import { useState } from "react"
+import { createUnit, deleteUnit, getUnitsByProperty, updateUnit } from "@/lib/actions/units"
+import { Plus, X } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
+
+interface Unit {
+    id?: number
+    name: string
+    type: string
+    rent: number
+    status: string
+}
 
 interface Property {
     id: number
@@ -32,12 +43,13 @@ interface Property {
 
 interface PropertyFormProps {
     property?: Property | null
-    onSuccess?: () => void
     onCancel?: () => void
 }
 
-export function PropertyForm({ property, onSuccess, onCancel }: PropertyFormProps) {
+export function PropertyForm({ property, onCancel }: PropertyFormProps) {
+    const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
+    const [existingUnits, setExistingUnits] = useState<Unit[]>([])
     const [formData, setFormData] = useState({
         name: property?.name || "",
         address: property?.address || "",
@@ -47,6 +59,55 @@ export function PropertyForm({ property, onSuccess, onCancel }: PropertyFormProp
         description: property?.description || "",
         image: property?.image || "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=60",
     })
+    const [units, setUnits] = useState<Unit[]>([])
+
+    // Load existing units when editing a property
+    useEffect(() => {
+        if (property?.id) {
+            loadExistingUnits()
+        }
+    }, [property?.id])
+
+    const loadExistingUnits = async () => {
+        if (!property?.id) return
+        try {
+            const existingUnitsData = await getUnitsByProperty(property.id)
+            setExistingUnits(existingUnitsData)
+            
+            // Initialize units array with existing units
+            const initialUnits = existingUnitsData.map(unit => ({
+                id: unit.id,
+                name: unit.name,
+                type: unit.type,
+                rent: unit.rent,
+                status: unit.status
+            }))
+            setUnits(initialUnits)
+        } catch (error) {
+            console.error("Error loading existing units:", error)
+        }
+    }
+
+    const addUnit = () => {
+        const newUnit: Unit = {
+            name: "",
+            type: formData.type || "apartment",
+            rent: parseInt(formData.rent) || 0,
+            status: "available"
+        }
+        setUnits([...units, newUnit])
+    }
+
+    const removeUnit = (index: number) => {
+        const updatedUnits = units.filter((_, i) => i !== index)
+        setUnits(updatedUnits)
+    }
+
+    const updateUnitForm = (index: number, field: keyof Unit, value: string | number) => {
+        const updatedUnits = [...units]
+        updatedUnits[index] = { ...updatedUnits[index], [field]: value }
+        setUnits(updatedUnits)
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -63,15 +124,55 @@ export function PropertyForm({ property, onSuccess, onCancel }: PropertyFormProp
                 image: formData.image,
             }
 
+            let propertyId: number
+
             if (property) {
-                await updateProperty(property.id, data)
-                toast.success("Property updated successfully")
+                const updatedProperty = await updateProperty(property.id, data)
+                propertyId = updatedProperty.id
+                
+                // Delete existing units that are no longer in the form
+                const unitsToDelete = existingUnits.filter(existingUnit => 
+                    !units.some(unit => unit.id === existingUnit.id)
+                )
+                
+                for (const unitToDelete of unitsToDelete) {
+                    if (unitToDelete.id) {
+                        await deleteUnit(unitToDelete.id)
+                    }
+                }
             } else {
-                await createProperty(data)
-                toast.success("Property created successfully")
+                const newProperty = await createProperty(data)
+                propertyId = newProperty.id
             }
 
-            onSuccess?.()
+            // Create or update units
+            for (const unit of units) {
+                if (unit.id) {
+                    // Update existing unit
+                    await updateUnit(unit.id, {
+                        name: unit.name,
+                        type: unit.type,
+                        rent: unit.rent,
+                        status: unit.status,
+                        propertyId
+                    })
+                } else {
+                    // Create new unit
+                    await createUnit({
+                        name: unit.name,
+                        type: unit.type,
+                        rent: unit.rent,
+                        status: unit.status,
+                        propertyId
+                    })
+                }
+            }
+
+            toast.success(property ? "Property updated successfully" : "Property created successfully")
+            
+            // Navigate back to properties page
+            router.push("/properties")
+            router.refresh()
         } catch (error) {
             toast.error("Failed to save property")
             console.error(error)
@@ -177,6 +278,115 @@ export function PropertyForm({ property, onSuccess, onCancel }: PropertyFormProp
                     />
                 </div>
             </div>
+
+            {/* Units Section */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <Label className="text-base font-medium">Units</Label>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addUnit}
+                        className="flex items-center gap-2"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Add Unit
+                    </Button>
+                </div>
+                
+                {units.length === 0 && (
+                    <div className="text-center py-4 text-muted-foreground">
+                        No units added yet. Click &quot;Add Unit&quot; to get started.
+                    </div>
+                )}
+
+                {units.map((unit, index) => (
+                    <div key={index} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-sm font-medium">Unit {index + 1}</Label>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeUnit(index)}
+                                className="h-6 w-6 p-0"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label htmlFor={`unit-name-${index}`} className="text-xs">
+                                    Unit Name
+                                </Label>
+                                <Input
+                                    id={`unit-name-${index}`}
+                                    value={unit.name}
+                                    onChange={(e) => updateUnitForm(index, 'name', e.target.value)}
+                                    placeholder="e.g., Apartment 2A, Studio 1C"
+                                    className="text-sm"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor={`unit-type-${index}`} className="text-xs">
+                                    Unit Type
+                                </Label>
+                                <Select
+                                    value={unit.type}
+                                    onValueChange={(value) => updateUnitForm(index, 'type', value)}
+                                >
+                                    <SelectTrigger className="text-sm">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="apartment">Apartment</SelectItem>
+                                        <SelectItem value="studio">Studio</SelectItem>
+                                        <SelectItem value="condo">Condo</SelectItem>
+                                        <SelectItem value="house">House</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label htmlFor={`unit-rent-${index}`} className="text-xs">
+                                    Rent ($)
+                                </Label>
+                                <Input
+                                    id={`unit-rent-${index}`}
+                                    type="number"
+                                    value={unit.rent}
+                                    onChange={(e) => updateUnitForm(index, 'rent', parseInt(e.target.value) || 0)}
+                                    placeholder="0"
+                                    className="text-sm"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor={`unit-status-${index}`} className="text-xs">
+                                    Status
+                                </Label>
+                                <Select
+                                    value={unit.status}
+                                    onValueChange={(value) => updateUnitForm(index, 'status', value)}
+                                >
+                                    <SelectTrigger className="text-sm">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="available">Available</SelectItem>
+                                        <SelectItem value="occupied">Occupied</SelectItem>
+                                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
             <div>
                 <Label htmlFor="image" className="mb-1.5 block">
                     Image URL

@@ -1,25 +1,18 @@
 import { PropertyCardActions } from "@/components/PropertyCardActions";
-import { PropertyForm } from "@/components/PropertyForm";
 import { PropertySearch } from "@/components/PropertySearch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
 import { getProperties, searchProperties } from "@/lib/actions/properties";
 import {
-    Building2,
-    DollarSign,
-    Home,
-    MapPin,
-    Plus,
-    Users,
+	Building2,
+	DollarSign,
+	Home,
+	MapPin,
+	Plus,
+	Users,
 } from "lucide-react";
+import Link from "next/link";
 import { Suspense } from "react";
 
 interface PropertiesPageProps {
@@ -61,20 +54,12 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
 						Manage your rental properties
 					</p>
 				</div>
-				<Dialog>
-					<DialogTrigger asChild>
-						<Button>
-							<Plus className="h-4 w-4 mr-2" />
-							Add Property
-						</Button>
-					</DialogTrigger>
-					<DialogContent className="max-w-md">
-						<DialogHeader>
-							<DialogTitle>Add New Property</DialogTitle>
-						</DialogHeader>
-						<PropertyForm />
-					</DialogContent>
-				</Dialog>
+				<Link href="/properties/add">
+					<Button>
+						<Plus className="h-4 w-4 mr-2" />
+						Add Property
+					</Button>
+				</Link>
 			</div>
 
 			{/* Search and Filters */}
