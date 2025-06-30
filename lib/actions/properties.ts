@@ -41,7 +41,7 @@ export async function createProperty(data: {
 	name: string;
 	address: string;
 	type: string;
-	totalUnits?: number;
+	totalUnits?: number | null;
 	rent: number;
 	description: string;
 	image: string;
@@ -73,7 +73,7 @@ export async function updateProperty(
 		name: string;
 		address: string;
 		type: string;
-		totalUnits?: number;
+		totalUnits?: number | null;
 		rent: number;
 		description: string;
 		image: string;

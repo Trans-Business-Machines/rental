@@ -3,12 +3,18 @@
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useTransition } from "react"
+import { useCallback, useEffect, useState, useTransition } from "react"
 
 export function PropertySearch() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const [isPending, startTransition] = useTransition()
+    const [searchValue, setSearchValue] = useState(searchParams.get('search') ?? '')
+
+    // Update local state when URL params change
+    useEffect(() => {
+        setSearchValue(searchParams.get('search') ?? '')
+    }, [searchParams])
 
     const createQueryString = useCallback(
         (name: string, value: string) => {
@@ -20,6 +26,7 @@ export function PropertySearch() {
     )
 
     const handleSearch = (term: string) => {
+        setSearchValue(term)
         startTransition(() => {
             router.push(`/properties?${createQueryString('search', term)}`)
         })
@@ -29,8 +36,9 @@ export function PropertySearch() {
         <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
+                key="property-search-input"
                 placeholder="Search properties..."
-                defaultValue={searchParams.get('search') ?? ''}
+                value={searchValue}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-10"
                 disabled={isPending}

@@ -17,7 +17,7 @@ interface Property {
     name: string
     address: string
     type: string
-    totalUnits?: number
+    totalUnits: number | null
     occupied: number
     rent: number
     status: string
@@ -25,6 +25,8 @@ interface Property {
     image: string
     createdAt: Date
     updatedAt: Date
+    tenants: any[]
+    amenities: any[]
 }
 
 interface PropertyCardActionsProps {

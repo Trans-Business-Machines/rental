@@ -6,6 +6,7 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import {
 	BarChart3,
@@ -64,6 +65,7 @@ export function Layout({ children }: LayoutProps) {
 	const router = useRouter();
 	const currentPage = pathname.slice(1) || "dashboard";
 	const [searchQuery, setSearchQuery] = useState("");
+	const { data: session } = authClient.useSession();
 
 	// Track which collapsible menus are open
 	const [openMenus, setOpenMenus] = useState<Set<string>>(() => {
@@ -178,6 +180,10 @@ export function Layout({ children }: LayoutProps) {
 		);
 	};
 
+	// Get user display name and role
+	const userName = session?.user?.name || "User";
+	const userRole = session?.user?.role || "User";
+
 	return (
 		<div className="min-h-screen bg-background">
 			{/* Mobile sidebar overlay */}
@@ -281,10 +287,10 @@ export function Layout({ children }: LayoutProps) {
 						<div className="flex items-center gap-3">
 							<div className="hidden md:block text-right">
 								<p className="text-sm font-medium">
-									Property Manager
+									{userName}
 								</p>
-								<p className="text-xs text-muted-foreground">
-									Admin
+								<p className="text-xs text-muted-foreground capitalize">
+									{userRole}
 								</p>
 							</div>
 							<Button

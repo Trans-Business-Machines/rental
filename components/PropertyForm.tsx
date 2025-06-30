@@ -20,7 +20,7 @@ interface Property {
     name: string
     address: string
     type: string
-    totalUnits?: number
+    totalUnits: number | null
     occupied: number
     rent: number
     status: string
@@ -57,7 +57,7 @@ export function PropertyForm({ property, onSuccess, onCancel }: PropertyFormProp
                 name: formData.name,
                 address: formData.address,
                 type: formData.type,
-                totalUnits: formData.totalUnits ? parseInt(formData.totalUnits) : undefined,
+                totalUnits: formData.totalUnits ? parseInt(formData.totalUnits) : null,
                 rent: parseInt(formData.rent),
                 description: formData.description,
                 image: formData.image,
