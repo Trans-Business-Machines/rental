@@ -36,14 +36,16 @@ interface InventoryFormProps {
     item?: InventoryItem;
     onSuccess?: () => void;
     onCancel?: () => void;
+    initialPropertyId?: number;
+    initialUnitId?: number;
 }
 
-export function InventoryForm({ item, onSuccess, onCancel }: InventoryFormProps) {
+export function InventoryForm({ item, onSuccess, onCancel, initialPropertyId, initialUnitId }: InventoryFormProps) {
     const [properties, setProperties] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
-        propertyId: item?.propertyId || 0,
-        unitId: item?.unitId || 0,
+        propertyId: item?.propertyId || initialPropertyId || 0,
+        unitId: item?.unitId || initialUnitId || 0,
         category: item?.category || "",
         itemName: item?.itemName || "",
         description: item?.description || "",

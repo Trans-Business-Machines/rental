@@ -14,9 +14,11 @@ import { useState } from "react";
 
 interface InventoryDialogProps {
     children?: React.ReactNode;
+    initialPropertyId?: number;
+    initialUnitId?: number;
 }
 
-export function InventoryDialog({ children }: InventoryDialogProps) {
+export function InventoryDialog({ children, initialPropertyId, initialUnitId }: InventoryDialogProps) {
     const [open, setOpen] = useState(false);
 
     return (
@@ -34,6 +36,8 @@ export function InventoryDialog({ children }: InventoryDialogProps) {
                     <DialogTitle>Add Inventory Item</DialogTitle>
                 </DialogHeader>
                 <InventoryForm
+                    initialPropertyId={initialPropertyId}
+                    initialUnitId={initialUnitId}
                     onSuccess={() => setOpen(false)}
                     onCancel={() => setOpen(false)}
                 />
