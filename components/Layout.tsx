@@ -28,10 +28,8 @@ import {
 	LogOut,
 	Menu,
 	Search,
-	Settings,
 	Shield,
 	User,
-	UserCircle,
 	Users,
 	X
 } from "lucide-react";
@@ -113,6 +111,7 @@ export function Layout({ children }: LayoutProps) {
 
 	// Don't render anything if not authenticated (will redirect)
 	if (!session) {
+		
 		return null;
 	}
 
@@ -272,22 +271,6 @@ export function Layout({ children }: LayoutProps) {
 				<nav className="p-4 space-y-2">
 					{filteredNavigationConfig.map(renderNavItem)}
 				</nav>
-
-				<div className="absolute bottom-4 left-4 right-4">
-					<Button
-						variant="ghost"
-						className={cn(
-							"w-full justify-start",
-							currentPage === "settings"
-								? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-accent-foreground"
-								: "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-						)}
-						onClick={() => router.push("/settings")}
-					>
-						<Settings className="h-5 w-5 mr-3" />
-						Settings
-					</Button>
-				</div>
 			</div>
 
 			{/* Main content */}
@@ -362,14 +345,7 @@ export function Layout({ children }: LayoutProps) {
 										</div>
 									</DropdownMenuLabel>
 									<DropdownMenuSeparator />
-									<DropdownMenuItem onClick={() => router.push("/profile")}>
-										<UserCircle className="mr-2 h-4 w-4" />
-										<span>Profile</span>
-									</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => router.push("/settings")}>
-										<Settings className="mr-2 h-4 w-4" />
-										<span>Settings</span>
-									</DropdownMenuItem>
+					
 									<DropdownMenuSeparator />
 									<DropdownMenuItem 
 										onClick={handleLogout}
