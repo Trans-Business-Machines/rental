@@ -23,7 +23,6 @@ import {
 	Calendar,
 	ChevronDown,
 	ChevronRight,
-	CreditCard,
 	FileText,
 	Home,
 	LogOut,
@@ -34,7 +33,6 @@ import {
 	User,
 	UserCircle,
 	Users,
-	Wrench,
 	X
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -58,18 +56,18 @@ const navigationConfig: NavItem[] = [
 	{ id: "inventory", label: "Inventory", icon: FileText },
 	{ id: "bookings", label: "Bookings", icon: Calendar },
 	{ id: "guests", label: "Guests", icon: Users },
-	{ id: "payments", label: "Payments", icon: CreditCard },
-	{ id: "maintenance", label: "Maintenance", icon: Wrench },
+	// { id: "payments", label: "Payments", icon: CreditCard },
+	// { id: "maintenance", label: "Maintenance", icon: Wrench },
 	{ id: "users", label: "Users", icon: Shield, role: "admin" },
-	{
-		id: "amenities",
-		label: "Amenities",
-		icon: Calendar,
-		items: [
-			{ id: "amenities", label: "Amenities" },
-			{ id: "booking-requests", label: "Booking Requests" },
-		],
-	},
+	// {
+	// 	id: "amenities",
+	// 	label: "Amenities",
+	// 	icon: Calendar,
+	// 	items: [
+	// 		{ id: "amenities", label: "Amenities" },
+	// 		{ id: "booking-requests", label: "Booking Requests" },
+	// 	],
+	// },
 ];
 
 export function Layout({ children }: LayoutProps) {
