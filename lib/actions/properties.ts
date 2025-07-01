@@ -148,3 +148,73 @@ export async function getAllPropertiesWithUnits() {
 		orderBy: { name: "asc" },
 	});
 }
+
+export async function getPropertyStats() {
+	try {
+		const totalProperties = await prisma.property.count();
+		const activeProperties = await prisma.property.count({
+			where: { status: "active" },
+		});
+
+		// Get total units across all properties
+		const propertiesWithUnits = await prisma.property.findMany({
+			include: {
+				units: true,
+			},
+		});
+
+		const totalUnits = propertiesWithUnits.reduce((sum, property) => {
+			return sum + (property.totalUnits || property.units.length);
+		}, 0);
+
+		const occupiedUnits = propertiesWithUnits.reduce((sum, property) => {
+			return sum + (property.occupied || 0);
+		}, 0);
+
+		return {
+			total: totalProperties,
+			active: activeProperties,
+			totalUnits,
+			occupiedUnits,
+		};
+	} catch (error) {
+		console.error("Error fetching property stats:", error);
+		return {
+			total: 0,
+			active: 0,
+			totalUnits: 0,
+			occupiedUnits: 0,
+		};
+	}
+}
+
+export async function getUpcomingCheckins(limit: number = 5) {
+	try {
+		const today = new Date();
+		const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+		const upcomingBookings = await prisma.booking.findMany({
+			where: {
+				checkInDate: {
+					gte: today,
+					lte: nextWeek,
+				},
+				status: "confirmed",
+			},
+			include: {
+				guest: true,
+				property: true,
+				unit: true,
+			},
+			orderBy: {
+				checkInDate: "asc",
+			},
+			take: limit,
+		});
+
+		return upcomingBookings;
+	} catch (error) {
+		console.error("Error fetching upcoming check-ins:", error);
+		return [];
+	}
+}

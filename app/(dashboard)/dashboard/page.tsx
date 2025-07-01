@@ -1,12 +1,10 @@
-
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getBookings } from "@/lib/actions/bookings";
-import { getGuests } from "@/lib/actions/guests";
-import { getInventoryItems } from "@/lib/actions/inventory";
-import { getProperties } from "@/lib/actions/properties";
+import { getBookingStats, getMonthlyRevenue, getRecentBookings } from "@/lib/actions/bookings";
+import { getGuestStats } from "@/lib/actions/guests";
+import { getRecentInventoryActivities } from "@/lib/actions/inventory";
+import { getPropertyStats, getUpcomingCheckins } from "@/lib/actions/properties";
 import {
 	AlertTriangle,
 	Building2,
@@ -17,91 +15,75 @@ import {
 } from "lucide-react";
 
 export default async function DashboardPage() {
-	// Fetch real data from database
-	const properties = await getProperties();
-	const guests = await getGuests();
-	const bookings = await getBookings();
-	const inventoryItems = await getInventoryItems();
+	// Fetch all data concurrently using Promise.all
+	const [
+		propertyStats,
+		guestStats,
+		bookingStats,
+		monthlyRevenue,
+		recentBookings,
+		recentInventoryActivities,
+		upcomingCheckins
+	] = await Promise.all([
+		getPropertyStats(),
+		getGuestStats(),
+		getBookingStats(),
+		getMonthlyRevenue(),
+		getRecentBookings(4),
+		getRecentInventoryActivities(4),
+		getUpcomingCheckins(4)
+	]);
 
-	// Calculate real metrics
-	const totalProperties = properties.length;
-	const totalUnits = properties.reduce((sum, property) => sum + (property.totalUnits || 0), 0);
-	const activeGuests = guests.filter(g => g.verificationStatus === 'verified').length;
-	const totalBookingsCount = bookings.length;
-	const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
-	const completedBookings = bookings.filter(b => b.status === 'completed').length;
-	
-	// Calculate revenue (mock calculation based on bookings)
-	const totalRevenue = bookings.reduce((sum, booking) => sum + booking.totalAmount, 0);
-	const monthlyRevenue = totalRevenue / 6; // Assuming 6 months of data
+	// Calculate real metrics from the fetched data
+	const totalProperties = propertyStats.total;
+	const totalUnits = propertyStats.totalUnits;
+	const occupiedUnits = propertyStats.occupiedUnits;
+	const activeGuests = guestStats.verified;
+	const totalBookingsCount = bookingStats.total;
 	
 	// Calculate occupancy rate
-	const occupiedUnits = confirmedBookings + completedBookings;
 	const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
 
-	// Recent activities (mock data for now)
+	// Generate real recent activities from actual data
 	const recentActivities = [
-		{
-			id: 1,
-			type: "payment",
-			title: "Booking payment received",
-			description: `${guests[0]?.firstName || 'Guest'} - ${properties[0]?.name || 'Property'}`,
-			time: "2 hours ago",
-			amount: formatCurrency(bookings[0]?.totalAmount || 0),
-		},
-		{
-			id: 2,
-			type: "maintenance",
-			title: "Inventory item damaged",
-			description: `${inventoryItems.find(item => item.status === 'damaged')?.itemName || 'Item'} - ${properties[0]?.name || 'Property'}`,
-			time: "4 hours ago",
-			status: "pending",
-		},
-		{
-			id: 3,
-			type: "lease",
+		// Recent bookings
+		...recentBookings.slice(0, 2).map((booking) => ({
+			id: `booking-${booking.id}`,
+			type: "lease" as const,
 			title: "New booking created",
-			description: `${guests[1]?.firstName || 'Guest'} - ${properties[1]?.name || 'Property'}`,
-			time: "1 day ago",
-			amount: formatCurrency(bookings[1]?.totalAmount || 0),
-		},
-		{
-			id: 4,
-			type: "payment",
-			title: "Guest checked out",
-			description: `${guests[2]?.firstName || 'Guest'} - ${properties[0]?.name || 'Property'}`,
-			time: "2 days ago",
-			status: "completed",
-		},
-	];
+			description: `${booking.guest.firstName} ${booking.guest.lastName} - ${booking.property.name}`,
+			time: formatTimeAgo(booking.createdAt),
+			amount: formatCurrency(booking.totalAmount),
+		})),
+		// Recent inventory issues
+		...recentInventoryActivities.slice(0, 1).map((item) => ({
+			id: `inventory-${item.id}`,
+			type: "maintenance" as const,
+			title: `Inventory item ${item.status}`,
+			description: `${item.itemName} - ${item.property.name}`,
+			time: formatTimeAgo(item.updatedAt),
+			status: item.status,
+		})),
+		// Recent payments (from bookings)
+		...recentBookings.slice(2, 3).map((booking) => ({
+			id: `payment-${booking.id}`,
+			type: "payment" as const,
+			title: "Booking payment received",
+			description: `${booking.guest.firstName} ${booking.guest.lastName} - ${booking.property.name}`,
+			time: formatTimeAgo(booking.createdAt),
+			amount: formatCurrency(booking.totalAmount),
+		}))
+	].slice(0, 4); // Limit to 4 activities
 
-	// Upcoming tasks (mock data for now)
-	const upcomingTasks = [
-		{
-			id: 1,
-			title: "Guest check-in",
-			tenant: guests[0]?.firstName || 'Guest',
-			unit: properties[0]?.name || 'Property',
-			date: "2025-06-08",
-			priority: "high",
-		},
-		{
-			id: 2,
-			title: "Property inspection",
-			tenant: guests[1]?.firstName || 'Guest',
-			unit: properties[1]?.name || 'Property',
-			date: "2025-06-10",
-			priority: "medium",
-		},
-		{
-			id: 3,
-			title: "Inventory check",
-			tenant: guests[2]?.firstName || 'Guest',
-			unit: properties[0]?.name || 'Property',
-			date: "2025-06-12",
-			priority: "low",
-		},
-	];
+	// Generate real upcoming tasks from actual data
+	const upcomingTasks = upcomingCheckins.map((booking) => ({
+		id: booking.id,
+		title: "Guest check-in",
+		tenant: `${booking.guest.firstName} ${booking.guest.lastName}`,
+		unit: `${booking.property.name} - ${booking.unit.name}`,
+		date: formatDate(booking.checkInDate),
+		priority: getPriorityFromDate(booking.checkInDate),
+	}));
 
 	function getGreeting() {
 		const hour = new Date().getHours();
@@ -124,6 +106,41 @@ export default async function DashboardPage() {
 			style: 'currency',
 			currency: 'KES'
 		}).format(amount);
+	}
+
+	function formatTimeAgo(date: Date) {
+		const now = new Date();
+		const diffInMs = now.getTime() - new Date(date).getTime();
+		const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+		const diffInDays = Math.floor(diffInHours / 24);
+
+		if (diffInHours < 1) {
+			return "Just now";
+		} else if (diffInHours < 24) {
+			return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+		} else if (diffInDays < 7) {
+			return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+		} else {
+			return formatDate(date);
+		}
+	}
+
+	function formatDate(date: Date) {
+		return new Intl.DateTimeFormat('en-US', {
+			year: 'numeric',
+			month: 'short',
+			day: 'numeric'
+		}).format(new Date(date));
+	}
+
+	function getPriorityFromDate(checkInDate: Date) {
+		const now = new Date();
+		const diffInMs = new Date(checkInDate).getTime() - now.getTime();
+		const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+		if (diffInDays <= 1) return "high";
+		if (diffInDays <= 3) return "medium";
+		return "low";
 	}
 
 	const { greeting, name } = getGreeting();
@@ -166,7 +183,7 @@ export default async function DashboardPage() {
 					<CardContent>
 						<div className="text-2xl font-bold">{activeGuests}</div>
 						<p className="text-xs text-muted-foreground">
-							{guests.length} total registered
+							{guestStats.total} total registered
 						</p>
 					</CardContent>
 				</Card>
@@ -210,45 +227,46 @@ export default async function DashboardPage() {
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-4">
-							{recentActivities.map((activity) => (
-								<div
-									key={activity.id}
-									className="flex items-start space-x-3"
-								>
-									<div className="flex-shrink-0">
-										{activity.type === "payment" && (
-											<div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-												<DollarSign className="h-4 w-4 text-green-600" />
-											</div>
-										)}
-										{activity.type === "maintenance" && (
-											<div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-												<AlertTriangle className="h-4 w-4 text-orange-600" />
-											</div>
-										)}
-										{activity.type === "lease" && (
-											<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-												<Calendar className="h-4 w-4 text-blue-600" />
-											</div>
-										)}
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-sm font-medium">
-											{activity.title}
-										</p>
-										<p className="text-sm text-muted-foreground">
-											{activity.description}
-										</p>
-										<div className="flex items-center space-x-2 mt-1">
-											<span className="text-xs text-muted-foreground">
-												{activity.time}
-											</span>
-											{activity.amount && (
+							{recentActivities.length > 0 ? (
+								recentActivities.map((activity) => (
+									<div
+										key={activity.id}
+										className="flex items-start space-x-3"
+									>
+										<div className="flex-shrink-0">
+											{activity.type === "payment" && (
+												<div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+													<DollarSign className="h-4 w-4 text-green-600" />
+												</div>
+											)}
+											{activity.type === "maintenance" && (
+												<div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+													<AlertTriangle className="h-4 w-4 text-orange-600" />
+												</div>
+											)}
+											{activity.type === "lease" && (
+												<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+													<Calendar className="h-4 w-4 text-blue-600" />
+												</div>
+											)}
+										</div>
+										<div className="flex-1 min-w-0">
+											<p className="text-sm font-medium">
+												{activity.title}
+											</p>
+											<p className="text-sm text-muted-foreground">
+												{activity.description}
+											</p>
+											<div className="flex items-center space-x-2 mt-1">
+												<span className="text-xs text-muted-foreground">
+													{activity.time}
+												</span>
+																							{'amount' in activity && activity.amount && (
 												<Badge variant="outline" className="text-xs">
 													{activity.amount}
 												</Badge>
 											)}
-											{activity.status && (
+											{'status' in activity && activity.status && (
 												<Badge
 													variant={
 														activity.status ===
@@ -261,10 +279,13 @@ export default async function DashboardPage() {
 													{activity.status}
 												</Badge>
 											)}
+											</div>
 										</div>
 									</div>
-								</div>
-							))}
+								))
+							) : (
+								<p className="text-sm text-muted-foreground">No recent activities</p>
+							)}
 						</div>
 					</CardContent>
 				</Card>
@@ -275,41 +296,45 @@ export default async function DashboardPage() {
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-4">
-							{upcomingTasks.map((task) => (
-								<div
-									key={task.id}
-									className="flex items-start space-x-3"
-								>
-									<div className="flex-shrink-0">
-										<Badge
-											variant={
-												task.priority === "high"
-													? "destructive"
-													: task.priority === "medium"
-													? "secondary"
-													: "outline"
-											}
-											className="text-xs"
-										>
-											{task.priority}
-										</Badge>
+							{upcomingTasks.length > 0 ? (
+								upcomingTasks.map((task) => (
+									<div
+										key={task.id}
+										className="flex items-start space-x-3"
+									>
+										<div className="flex-shrink-0">
+											<Badge
+												variant={
+													task.priority === "high"
+														? "destructive"
+														: task.priority === "medium"
+														? "secondary"
+														: "outline"
+												}
+												className="text-xs"
+											>
+												{task.priority}
+											</Badge>
+										</div>
+										<div className="flex-1 min-w-0">
+											<p className="text-sm font-medium">
+												{task.title}
+											</p>
+											<p className="text-sm text-muted-foreground">
+												{task.tenant} - {task.unit}
+											</p>
+											<p className="text-xs text-muted-foreground mt-1">
+												{task.date}
+											</p>
+										</div>
+										<Button variant="outline" size="sm">
+											View
+										</Button>
 									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-sm font-medium">
-											{task.title}
-										</p>
-										<p className="text-sm text-muted-foreground">
-											{task.tenant} - {task.unit}
-										</p>
-										<p className="text-xs text-muted-foreground mt-1">
-											{task.date}
-										</p>
-									</div>
-									<Button variant="outline" size="sm">
-										View
-									</Button>
-								</div>
-							))}
+								))
+							) : (
+								<p className="text-sm text-muted-foreground">No upcoming tasks</p>
+							)}
 						</div>
 					</CardContent>
 				</Card>

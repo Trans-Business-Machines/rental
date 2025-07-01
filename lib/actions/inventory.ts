@@ -207,3 +207,55 @@ export async function getInventoryByUnit(unitId: number) {
 		throw new Error("Failed to fetch inventory by unit");
 	}
 }
+
+export async function getRecentInventoryActivities(limit: number = 5) {
+	try {
+		const items = await prisma.inventoryItem.findMany({
+			where: {
+				OR: [{ status: "damaged" }, { status: "maintenance" }],
+			},
+			include: {
+				property: true,
+				unit: true,
+			},
+			orderBy: {
+				updatedAt: "desc",
+			},
+			take: limit,
+		});
+		return items;
+	} catch (error) {
+		console.error("Error fetching recent inventory activities:", error);
+		return [];
+	}
+}
+
+export async function getInventoryStats() {
+	try {
+		const totalItems = await prisma.inventoryItem.count();
+		const damagedItems = await prisma.inventoryItem.count({
+			where: { status: "damaged" },
+		});
+		const maintenanceItems = await prisma.inventoryItem.count({
+			where: { status: "maintenance" },
+		});
+		const activeItems = await prisma.inventoryItem.count({
+			where: { status: "active" },
+		});
+
+		return {
+			total: totalItems,
+			damaged: damagedItems,
+			maintenance: maintenanceItems,
+			active: activeItems,
+		};
+	} catch (error) {
+		console.error("Error fetching inventory stats:", error);
+		return {
+			total: 0,
+			damaged: 0,
+			maintenance: 0,
+			active: 0,
+		};
+	}
+}

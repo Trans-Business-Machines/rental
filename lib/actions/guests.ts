@@ -111,3 +111,33 @@ export async function checkoutGuest(bookingId: number, checkoutData: any) {
 	revalidatePath("/properties");
 	return { booking, report };
 }
+
+export async function getGuestStats() {
+	try {
+		const totalGuests = await prisma.guest.count();
+		const verifiedGuests = await prisma.guest.count({
+			where: { verificationStatus: "verified" },
+		});
+		const pendingGuests = await prisma.guest.count({
+			where: { verificationStatus: "pending" },
+		});
+		const blacklistedGuests = await prisma.guest.count({
+			where: { blacklisted: true },
+		});
+
+		return {
+			total: totalGuests,
+			verified: verifiedGuests,
+			pending: pendingGuests,
+			blacklisted: blacklistedGuests,
+		};
+	} catch (error) {
+		console.error("Error fetching guest stats:", error);
+		return {
+			total: 0,
+			verified: 0,
+			pending: 0,
+			blacklisted: 0,
+		};
+	}
+}
