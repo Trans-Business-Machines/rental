@@ -49,6 +49,7 @@ interface NavItem {
 	label: string;
 	icon?: React.ComponentType<{ className?: string }>;
 	items?: NavItem[];
+	role?: string;
 }
 
 const navigationConfig: NavItem[] = [
@@ -59,7 +60,7 @@ const navigationConfig: NavItem[] = [
 	{ id: "guests", label: "Guests", icon: Users },
 	{ id: "payments", label: "Payments", icon: CreditCard },
 	{ id: "maintenance", label: "Maintenance", icon: Wrench },
-	{ id: "users", label: "Users", icon: Shield },
+	{ id: "users", label: "Users", icon: Shield, role: "admin" },
 	{
 		id: "amenities",
 		label: "Amenities",
@@ -226,6 +227,14 @@ export function Layout({ children }: LayoutProps) {
 	const userName = session?.user?.name || "User";
 	const userRole = session?.user?.role || "User";
 
+	// Filter navigation items based on role
+	const filteredNavigationConfig = navigationConfig.filter(item => {
+		if (item.role && userRole !== item.role) {
+			return false;
+		}
+		return true;
+	});
+
 	return (
 		<div className="min-h-screen bg-background">
 			{/* Mobile sidebar overlay */}
@@ -263,7 +272,7 @@ export function Layout({ children }: LayoutProps) {
 				</div>
 
 				<nav className="p-4 space-y-2">
-					{navigationConfig.map(renderNavItem)}
+					{filteredNavigationConfig.map(renderNavItem)}
 				</nav>
 
 				<div className="absolute bottom-4 left-4 right-4">
