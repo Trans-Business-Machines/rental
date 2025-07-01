@@ -22,14 +22,9 @@ export default function AuthLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+   
         <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10">
           {children}
         </div>
-      </body>
-    </html>
   );
 } 
