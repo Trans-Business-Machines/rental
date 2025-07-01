@@ -1,7 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getPropertyById } from "@/lib/actions/properties";
 import { getUnitsByProperty } from "@/lib/actions/units";
 import { ArrowLeft, Building2, DollarSign, Edit, Home, MapPin, Users } from "lucide-react";
@@ -174,32 +173,30 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
 							</CardContent>
 						</Card>
 					) : (
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Name</TableHead>
-									<TableHead>Type</TableHead>
-									<TableHead>Rent</TableHead>
-									<TableHead>Status</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{units.map((unit) => (
-									<TableRow key={unit.id} className="hover:bg-gray-50 transition">
-										<TableCell>
-											<Link href={`/properties/${property.id}/units/${unit.id}`} className="text-blue-600 hover:underline">
-												{unit.name}
-											</Link>
-										</TableCell>
-										<TableCell className="capitalize">{unit.type}</TableCell>
-										<TableCell>${unit.rent}</TableCell>
-										<TableCell>
-											<Badge variant={getUnitStatusColor(unit.status)}>{unit.status}</Badge>
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
+						<div className="space-y-3">
+							{units.map((unit) => (
+								<Card key={unit.id}>
+									<CardContent className="p-4">
+										<div className="flex items-center justify-between mb-2">
+											<h3 className="font-medium">{unit.name}</h3>
+											<Badge variant={getUnitStatusColor(unit.status)}>
+												{unit.status}
+											</Badge>
+										</div>
+										<div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+											<div className="flex items-center">
+												<Home className="h-3 w-3 mr-1" />
+												<span className="capitalize">{unit.type}</span>
+											</div>
+											<div className="flex items-center">
+												<DollarSign className="h-3 w-3 mr-1" />
+												<span>${unit.rent}</span>
+											</div>
+										</div>
+									</CardContent>
+								</Card>
+							))}
+						</div>
 					)}
 				</div>
 			</div>
