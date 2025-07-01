@@ -33,7 +33,7 @@ import {
 	Users,
 	X
 } from "lucide-react";
-import { redirect, usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 interface LayoutProps {
@@ -111,7 +111,7 @@ export function Layout({ children }: LayoutProps) {
 
 	// Don't render anything if not authenticated (will redirect)
 	if (!session) {
-		redirect("/login")
+		return null;
 		
 	}
 
