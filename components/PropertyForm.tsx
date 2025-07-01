@@ -24,6 +24,7 @@ interface Unit {
     type: string
     rent: number
     status: string
+    bedrooms?: number
 }
 
 interface Property {
@@ -81,7 +82,8 @@ export function PropertyForm({ property, onCancel }: PropertyFormProps) {
                 name: unit.name,
                 type: unit.type,
                 rent: unit.rent,
-                status: unit.status
+                status: unit.status,
+                bedrooms: unit.bedrooms
             }))
             setUnits(initialUnits)
         } catch (error) {
@@ -155,6 +157,7 @@ export function PropertyForm({ property, onCancel }: PropertyFormProps) {
                         type: unit.type,
                         rent: unit.rent,
                         status: unit.status,
+                        bedrooms: unit.bedrooms,
                         propertyId
                     })
                 } else {
@@ -164,6 +167,7 @@ export function PropertyForm({ property, onCancel }: PropertyFormProps) {
                         type: unit.type,
                         rent: unit.rent,
                         status: unit.status,
+                        bedrooms: unit.bedrooms,
                         propertyId
                     })
                 }
@@ -236,9 +240,6 @@ export function PropertyForm({ property, onCancel }: PropertyFormProps) {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="apartment">Apartment</SelectItem>
-                        <SelectItem value="studio">Studio</SelectItem>
-                        <SelectItem value="condo">Condo</SelectItem>
-                        <SelectItem value="house">House</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -343,9 +344,6 @@ export function PropertyForm({ property, onCancel }: PropertyFormProps) {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="apartment">Apartment</SelectItem>
-                                        <SelectItem value="studio">Studio</SelectItem>
-                                        <SelectItem value="condo">Condo</SelectItem>
-                                        <SelectItem value="house">House</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -363,6 +361,20 @@ export function PropertyForm({ property, onCancel }: PropertyFormProps) {
                                     onChange={(e) => updateUnitForm(index, 'rent', parseInt(e.target.value) || 0)}
                                     placeholder="0"
                                     className="text-sm"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor={`unit-bedrooms-${index}`} className="text-xs">
+                                    Bedrooms
+                                </Label>
+                                <Input
+                                    id={`unit-bedrooms-${index}`}
+                                    type="number"
+                                    value={unit.bedrooms || ''}
+                                    onChange={(e) => updateUnitForm(index, 'bedrooms', parseInt(e.target.value) || 0)}
+                                    placeholder="0"
+                                    className="text-sm"
+                                    min={0}
                                 />
                             </div>
                             <div>

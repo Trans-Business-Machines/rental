@@ -42,5 +42,6 @@ next-env.d.ts
 
 /lib/generated/prisma
 prisma/dev.sqlite
+prisma/generated/client/
 
 .vercel

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "./generated/client";
 
 const prisma = new PrismaClient();
 
@@ -156,6 +156,7 @@ async function main() {
 				type: "apartment",
 				status: "occupied",
 				rent: 1200,
+				bedrooms: 2,
 			},
 		}),
 		prisma.unit.create({
@@ -165,6 +166,7 @@ async function main() {
 				type: "apartment",
 				status: "occupied",
 				rent: 1200,
+				bedrooms: 2,
 			},
 		}),
 		prisma.unit.create({
@@ -174,6 +176,7 @@ async function main() {
 				type: "apartment",
 				status: "available",
 				rent: 1200,
+				bedrooms: 2,
 			},
 		}),
 		// Units for Garden View Studios
@@ -181,18 +184,20 @@ async function main() {
 			data: {
 				name: "Studio 1A",
 				propertyId: property2.id,
-				type: "studio",
+				type: "apartment",
 				status: "occupied",
 				rent: 950,
+				bedrooms: 1,
 			},
 		}),
 		prisma.unit.create({
 			data: {
 				name: "Studio 2A",
 				propertyId: property2.id,
-				type: "studio",
+				type: "apartment",
 				status: "occupied",
 				rent: 950,
+				bedrooms: 1,
 			},
 		}),
 		// Units for Executive Condos
@@ -200,18 +205,20 @@ async function main() {
 			data: {
 				name: "Condo 1A",
 				propertyId: property3.id,
-				type: "condo",
+				type: "apartment",
 				status: "occupied",
 				rent: 2500,
+				bedrooms: 3,
 			},
 		}),
 		prisma.unit.create({
 			data: {
 				name: "Condo 2A",
 				propertyId: property3.id,
-				type: "condo",
+				type: "apartment",
 				status: "occupied",
 				rent: 2500,
+				bedrooms: 3,
 			},
 		}),
 	]);

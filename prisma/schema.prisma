@@ -6,6 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "./generated/client"
 }
 
 datasource db {
@@ -108,6 +109,7 @@ model Unit {
   type        String   // apartment, studio, condo, house
   status      String   @default("available") // available, occupied, maintenance
   rent        Int
+  bedrooms    Int      @default(1)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
