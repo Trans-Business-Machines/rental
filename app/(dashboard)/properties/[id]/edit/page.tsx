@@ -33,7 +33,7 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
 						Back to Properties
 					</Button>
 				</Link>
-				<div className="flex items-center justify-between max-w-4xl">
+				<div className="flex items-center justify-between">
 					<div>
 						<h1>Edit Property</h1>
 						<p className="text-muted-foreground">
@@ -44,7 +44,7 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
 				</div>
 			</div>
 
-			<div className="max-w-4xl">
+			<div className="w-full">
 				<PropertyForm 
 					property={property}
 				/>
