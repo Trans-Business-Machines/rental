@@ -16,8 +16,6 @@ export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -32,6 +30,7 @@ export default function LoginForm() {
         toast.error("Invalid email or password");
       } else {
         toast.success("Login successful!");
+        router.prefetch("/dashboard");
         router.push("/dashboard");
       }
     } catch {
