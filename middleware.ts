@@ -22,10 +22,12 @@ export function middleware(request: NextRequest) {
 	}
 
 	// If user is authenticated and trying to access login or setup page
+	// Only redirect if they're exactly on these pages, not sub-routes
 	if (cookies && (pathname === "/login" || pathname === "/setup")) {
 		return NextResponse.redirect(new URL("/dashboard", request.url));
 	}
 
+	// Allow all other requests to proceed
 	return NextResponse.next();
 }
 

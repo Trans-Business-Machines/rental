@@ -34,7 +34,7 @@ import {
 	X
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface LayoutProps {
 	children: React.ReactNode;
@@ -93,13 +93,6 @@ export function Layout({ children }: LayoutProps) {
 		return initialOpen;
 	});
 
-	// Redirect to login if not authenticated
-	useEffect(() => {
-		if (session === null) {
-			router.push("/login");
-		}
-	}, [session, router]);
-
 	// Show loading state while checking authentication
 	if (session === undefined) {
 		return (
@@ -109,10 +102,15 @@ export function Layout({ children }: LayoutProps) {
 		);
 	}
 
-	// Don't render anything if not authenticated (will redirect)
+	// If no session, show a message (middleware will handle redirect)
 	if (!session) {
-		return null;
-		
+		return (
+			<div className="min-h-screen bg-background flex items-center justify-center">
+				<div className="text-center">
+					<p className="text-muted-foreground">Redirecting to login...</p>
+				</div>
+			</div>
+		);
 	}
 
 	const handleLogout = async () => {
