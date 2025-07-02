@@ -4,6 +4,7 @@ import { getPropertyById } from "@/lib/actions/properties";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PropertyDeleteButton } from "../../property-delete-button";
 
 interface EditPropertyPageProps {
 	params: Promise<{ id: string }>
@@ -32,11 +33,14 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
 						Back to Properties
 					</Button>
 				</Link>
-				<div>
-					<h1>Edit Property</h1>
-					<p className="text-muted-foreground">
-						Update property details and manage units
-					</p>
+				<div className="flex items-center justify-between max-w-4xl">
+					<div>
+						<h1>Edit Property</h1>
+						<p className="text-muted-foreground">
+							Update property details and manage units
+						</p>
+					</div>
+					<PropertyDeleteButton property={property} />
 				</div>
 			</div>
 

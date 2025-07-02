@@ -2,10 +2,15 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { auth } from "../auth";
 
 export async function getProperties() {
 	try {
 		const properties = await prisma.property.findMany({
+			where: {
+				deletedAt: null,
+			},
 			include: {
 				tenants: true,
 				amenities: true,
@@ -24,7 +29,10 @@ export async function getProperties() {
 export async function getPropertyById(id: number) {
 	try {
 		const property = await prisma.property.findUnique({
-			where: { id },
+			where: {
+				id,
+				deletedAt: null,
+			},
 			include: {
 				tenants: true,
 				amenities: true,
@@ -109,10 +117,38 @@ export async function deleteProperty(id: number) {
 	}
 }
 
+export async function softDeleteProperty(id: number) {
+	try {
+		// Get the current session using cookies
+		const session = await auth.api.getSession({
+			headers: await headers(),
+		});
+
+		if (!session?.user || session.user.role !== "admin") {
+			throw new Error("Unauthorized: Only admins can delete properties");
+		}
+
+		// Soft delete the property
+		await prisma.property.update({
+			where: { id },
+			data: {
+				deletedAt: new Date(),
+			},
+		});
+
+		revalidatePath("/properties");
+		return { success: true };
+	} catch (error) {
+		console.error("Error soft deleting property:", error);
+		throw new Error("Failed to delete property");
+	}
+}
+
 export async function searchProperties(query: string) {
 	try {
 		const properties = await prisma.property.findMany({
 			where: {
+				deletedAt: null,
 				OR: [
 					{
 						name: {
@@ -144,6 +180,9 @@ export async function searchProperties(query: string) {
 
 export async function getAllPropertiesWithUnits() {
 	return prisma.property.findMany({
+		where: {
+			deletedAt: null,
+		},
 		include: { units: true },
 		orderBy: { name: "asc" },
 	});
@@ -151,13 +190,19 @@ export async function getAllPropertiesWithUnits() {
 
 export async function getPropertyStats() {
 	try {
-		const totalProperties = await prisma.property.count();
+		const totalProperties = await prisma.property.count({
+			where: { deletedAt: null },
+		});
 		const activeProperties = await prisma.property.count({
-			where: { status: "active" },
+			where: {
+				status: "active",
+				deletedAt: null,
+			},
 		});
 
 		// Get total units across all properties
 		const propertiesWithUnits = await prisma.property.findMany({
+			where: { deletedAt: null },
 			include: {
 				units: true,
 			},

@@ -91,6 +91,7 @@ model Property {
   image       String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
 
   tenants     Tenant[]
   amenities   Amenity[]
