@@ -14,8 +14,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { createProperty, updateProperty } from "@/lib/actions/properties"
 import { createUnit, deleteUnit, getUnitsByProperty, updateUnit } from "@/lib/actions/units"
-import { Plus } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { Plus, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
@@ -49,7 +48,6 @@ interface PropertyFormProps {
 }
 
 export function PropertyForm({ property, onCancel }: PropertyFormProps) {
-    const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
     const [existingUnits, setExistingUnits] = useState<Unit[]>([])
     const [formData, setFormData] = useState({
@@ -366,7 +364,6 @@ export function PropertyForm({ property, onCancel }: PropertyFormProps) {
                                 <div className="space-y-4 max-h-[600px] overflow-y-auto">
                                     {units.map((unit, index) => (
                                         <Card key={index} className="">
-                                            
                                             <CardContent className="space-y-4">
                                                 <div className="space-y-3">
                                                     <div>
@@ -446,6 +443,19 @@ export function PropertyForm({ property, onCancel }: PropertyFormProps) {
                                                             <SelectItem value="maintenance">Maintenance</SelectItem>
                                                         </SelectContent>
                                                     </Select>
+                                                </div>
+                                                
+                                                <div className="pt-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => removeUnit(index)}
+                                                        className="w-full text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 hover:text-red-700"
+                                                    >
+                                                        <X className="h-4 w-4 mr-2" />
+                                                        Remove Unit
+                                                    </Button>
                                                 </div>
                                             </CardContent>
                                         </Card>
