@@ -97,7 +97,7 @@ export function PropertyForm({ property, onCancel }: PropertyFormProps) {
             rent: parseInt(formData.rent) || 0,
             status: "available"
         }
-        setUnits([...units, newUnit])
+        setUnits([newUnit, ...units])
     }
 
     const removeUnit = (index: number) => {
