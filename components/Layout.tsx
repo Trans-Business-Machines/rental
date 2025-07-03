@@ -107,7 +107,7 @@ export function Layout({ children }: LayoutProps) {
 		return (
 			<div className="min-h-screen bg-background flex items-center justify-center">
 				<div className="text-center">
-					<p className="text-muted-foreground">Redirecting to login...</p>
+					<Home className="h-12 w-12 text-primary mx-auto mb-4" />
 				</div>
 			</div>
 		);

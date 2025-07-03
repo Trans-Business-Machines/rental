@@ -158,30 +158,30 @@ model Guest {
   lastName                  String
   email                     String
   phone                     String
-  nationality               String
-  idType                    String   // National ID, Passport
   idNumber                  String?
   passportNumber            String?
-  dateOfBirth               String
-  address                   String
-  city                      String
-  country                   String
+  notes                     String?
+  nationality               String?
+  idType                    String?   // National ID, Passport
+  dateOfBirth               String?
+  address                   String?
+  city                      String?
+  country                   String?
   occupation                String?
   employer                  String?
-  emergencyContactName      String
-  emergencyContactPhone     String
-  emergencyContactRelation  String
-  registrationDate          DateTime @default(now())
+  emergencyContactName      String?
+  emergencyContactPhone     String?
+  emergencyContactRelation  String?
+  registrationDate          DateTime? @default(now())
   lastStay                  DateTime?
-  totalStays                Int      @default(0)
-  totalNights               Int      @default(0)
-  totalSpent                Int      @default(0)
+  totalStays                Int?      @default(0)
+  totalNights               Int?      @default(0)
+  totalSpent                Int?      @default(0)
   rating                    Float?
-  notes                     String?
-  blacklisted               Boolean  @default(false)
-  verificationStatus        String   @default("pending") // pending, verified, rejected
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+  blacklisted               Boolean?  @default(false)
+  verificationStatus        String?   @default("pending") // pending, verified, rejected
+  createdAt                 DateTime? @default(now())
+  updatedAt                 DateTime? @updatedAt
 
   bookings                  Booking[]
   checkoutReports           CheckoutReport[]

@@ -10,19 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getGuests } from '@/lib/actions/guests';
 import { getAllPropertiesWithUnits as getProperties } from '@/lib/actions/properties';
 import {
-  Bed,
-  Clock,
-  Download,
-  Edit,
-  Eye,
-  Flag,
-  Mail,
-  Phone,
-  Search,
-  Shield,
-  Star,
-  UserCheck,
-  Users
+    Bed,
+    Clock,
+    Download,
+    Edit,
+    Eye,
+    Flag,
+    Mail,
+    Phone,
+    Search,
+    Star,
+    UserCheck,
+    Users
 } from 'lucide-react';
 
 interface GuestsPageProps {
@@ -282,7 +281,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end space-y-1">
-                                    <Badge variant={getVerificationColor(guest.verificationStatus) as "default" | "secondary" | "destructive" | "outline"}>
+                                    <Badge variant={getVerificationColor(guest.verificationStatus || 'pending') as "default" | "secondary" | "destructive" | "outline"}>
                                         {guest.verificationStatus}
                                     </Badge>
                                     {guest.blacklisted && (
@@ -304,10 +303,6 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                                     <Phone className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-muted-foreground">{guest.phone}</span>
                                 </div>
-                                <div className="flex items-center space-x-2 text-sm">
-                                    <Shield className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">{guest.nationality}</span>
-                                </div>
                             </div>
 
                             {/* Statistics */}
@@ -326,7 +321,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-muted-foreground">Total Spent</span>
-                                    <span className="font-medium">{formatCurrency(guest.totalSpent)}</span>
+                                    <span className="font-medium">{formatCurrency(guest.totalSpent || 0)}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-muted-foreground">Last Stay</span>

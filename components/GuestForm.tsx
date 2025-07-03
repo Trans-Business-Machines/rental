@@ -3,13 +3,6 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { createGuest } from "@/lib/actions/guests"
 import { useState } from "react"
@@ -52,19 +45,7 @@ export function GuestForm({ guest, onSuccess, onCancel }: GuestFormProps) {
         lastName: guest?.lastName || "",
         email: guest?.email || "",
         phone: guest?.phone || "",
-        nationality: guest?.nationality || "",
-        idType: guest?.idType || "National ID",
-        idNumber: guest?.idNumber || "",
-        passportNumber: guest?.passportNumber || "",
-        dateOfBirth: guest?.dateOfBirth || "",
-        address: guest?.address || "",
-        city: guest?.city || "",
-        country: guest?.country || "",
-        occupation: guest?.occupation || "",
-        employer: guest?.employer || "",
-        emergencyContactName: guest?.emergencyContactName || "",
-        emergencyContactPhone: guest?.emergencyContactPhone || "",
-        emergencyContactRelation: guest?.emergencyContactRelation || "",
+        idPassportNumber: guest?.idNumber || guest?.passportNumber || "",
         notes: guest?.notes || "",
     })
 
@@ -78,19 +59,8 @@ export function GuestForm({ guest, onSuccess, onCancel }: GuestFormProps) {
                 lastName: formData.lastName,
                 email: formData.email,
                 phone: formData.phone,
-                nationality: formData.nationality,
-                idType: formData.idType,
-                idNumber: formData.idNumber || undefined,
-                passportNumber: formData.passportNumber || undefined,
-                dateOfBirth: formData.dateOfBirth,
-                address: formData.address,
-                city: formData.city,
-                country: formData.country,
-                occupation: formData.occupation || undefined,
-                employer: formData.employer || undefined,
-                emergencyContactName: formData.emergencyContactName,
-                emergencyContactPhone: formData.emergencyContactPhone,
-                emergencyContactRelation: formData.emergencyContactRelation,
+                idNumber: formData.idPassportNumber,
+                passportNumber: formData.idPassportNumber,
                 notes: formData.notes || undefined,
             }
 
@@ -158,7 +128,7 @@ export function GuestForm({ guest, onSuccess, onCancel }: GuestFormProps) {
                     />
                 </div>
                 <div>
-                    <Label htmlFor="phone">Phone</Label>
+                    <Label htmlFor="phone">Mobile No.</Label>
                     <Input
                         id="phone"
                         value={formData.phone}
@@ -168,209 +138,24 @@ export function GuestForm({ guest, onSuccess, onCancel }: GuestFormProps) {
                                 phone: e.target.value,
                             })
                         }
-                        placeholder="Phone number"
-                        required
-                    />
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="nationality">Nationality</Label>
-                    <Input
-                        id="nationality"
-                        value={formData.nationality}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                nationality: e.target.value,
-                            })
-                        }
-                        placeholder="Nationality"
-                        required
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                    <Input
-                        id="dateOfBirth"
-                        type="date"
-                        value={formData.dateOfBirth}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                dateOfBirth: e.target.value,
-                            })
-                        }
-                        required
-                    />
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="idType">ID Type</Label>
-                    <Select
-                        value={formData.idType}
-                        onValueChange={(value) =>
-                            setFormData({
-                                ...formData,
-                                idType: value,
-                            })
-                        }
-                    >
-                        <SelectTrigger>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="National ID">National ID</SelectItem>
-                            <SelectItem value="Passport">Passport</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div>
-                    <Label htmlFor="idNumber">
-                        {formData.idType === "National ID" ? "ID Number" : "Passport Number"}
-                    </Label>
-                    <Input
-                        id="idNumber"
-                        value={formData.idType === "National ID" ? formData.idNumber : formData.passportNumber}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                [formData.idType === "National ID" ? "idNumber" : "passportNumber"]: e.target.value,
-                            })
-                        }
-                        placeholder={formData.idType === "National ID" ? "ID Number" : "Passport Number"}
-                    />
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="country">Country</Label>
-                    <Input
-                        id="country"
-                        value={formData.country}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                country: e.target.value,
-                            })
-                        }
-                        placeholder="Country"
-                        required
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                        id="city"
-                        value={formData.city}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                city: e.target.value,
-                            })
-                        }
-                        placeholder="City"
+                        placeholder="Mobile number"
                         required
                     />
                 </div>
             </div>
 
             <div>
-                <Label htmlFor="address">Address</Label>
+                <Label htmlFor="idPassportNumber">ID/Passport Number</Label>
                 <Input
-                    id="address"
-                    value={formData.address}
+                    id="idPassportNumber"
+                    value={formData.idPassportNumber}
                     onChange={(e) =>
                         setFormData({
                             ...formData,
-                            address: e.target.value,
+                            idPassportNumber: e.target.value,
                         })
                     }
-                    placeholder="Full address"
-                    required
-                />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="occupation">Occupation</Label>
-                    <Input
-                        id="occupation"
-                        value={formData.occupation}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                occupation: e.target.value,
-                            })
-                        }
-                        placeholder="Occupation"
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="employer">Employer</Label>
-                    <Input
-                        id="employer"
-                        value={formData.employer}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                employer: e.target.value,
-                            })
-                        }
-                        placeholder="Employer"
-                    />
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="emergencyContactName">Emergency Contact Name</Label>
-                    <Input
-                        id="emergencyContactName"
-                        value={formData.emergencyContactName}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                emergencyContactName: e.target.value,
-                            })
-                        }
-                        placeholder="Emergency contact name"
-                        required
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="emergencyContactPhone">Emergency Contact Phone</Label>
-                    <Input
-                        id="emergencyContactPhone"
-                        value={formData.emergencyContactPhone}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                emergencyContactPhone: e.target.value,
-                            })
-                        }
-                        placeholder="Emergency contact phone"
-                        required
-                    />
-                </div>
-            </div>
-
-            <div>
-                <Label htmlFor="emergencyContactRelation">Relationship to Guest</Label>
-                <Input
-                    id="emergencyContactRelation"
-                    value={formData.emergencyContactRelation}
-                    onChange={(e) =>
-                        setFormData({
-                            ...formData,
-                            emergencyContactRelation: e.target.value,
-                        })
-                    }
-                    placeholder="e.g., Spouse, Parent, Friend"
+                    placeholder="ID or Passport Number"
                     required
                 />
             </div>
