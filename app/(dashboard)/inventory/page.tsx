@@ -1,11 +1,10 @@
 import { CheckoutDialog } from '@/components/CheckoutDialog';
 import { InventoryDialog } from '@/components/InventoryDialog';
 import { InventoryEditDialog } from '@/components/InventoryEditDialog';
+import { InventoryFilters } from '@/components/InventoryFilters';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getCheckoutReports } from '@/lib/actions/checkout';
@@ -22,7 +21,6 @@ import {
     Lamp,
     Monitor,
     Package,
-    Search,
     UtensilsCrossed,
     Wrench,
     XCircle
@@ -34,12 +32,13 @@ interface InventoryPageProps {
         category?: string;
         status?: string;
         property?: string;
+        unit?: string;
         tab?: string;
     }>
 }
 
 export default async function InventoryPage({ searchParams }: InventoryPageProps) {
-    const { search, category, status, property, tab } = await searchParams;
+    const { search, category, status, property, unit, tab } = await searchParams;
     
     // Fetch real data from database
     const inventoryItems = await getInventoryItems();
@@ -57,8 +56,9 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
         const matchesCategory = !category || category === 'all' || item.category === category;
         const matchesStatus = !status || status === 'all' || item.status === status;
         const matchesProperty = !property || property === 'all' || item.property.name === property;
+        const matchesUnit = !unit || unit === 'all' || item.unit.name === unit;
         
-        return matchesSearch && matchesCategory && matchesStatus && matchesProperty;
+        return matchesSearch && matchesCategory && matchesStatus && matchesProperty && matchesUnit;
     });
 
     const getStatusColor = (status: string) => {
@@ -186,55 +186,14 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             </div>
 
             {/* Search and Filters */}
-            <div className="flex items-center space-x-4">
-                <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                        placeholder="Search inventory..."
-                        defaultValue={search || ''}
-                        className="pl-10"
-                    />
-                </div>
-                <Select defaultValue={category || 'all'}>
-                    <SelectTrigger className="w-32">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        <SelectItem value="Furniture">Furniture</SelectItem>
-                        <SelectItem value="Electronics">Electronics</SelectItem>
-                        <SelectItem value="Appliances">Appliances</SelectItem>
-                        <SelectItem value="Bathroom">Bathroom</SelectItem>
-                        <SelectItem value="Lighting">Lighting</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Select defaultValue={status || 'all'}>
-                    <SelectTrigger className="w-32">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="damaged">Damaged</SelectItem>
-                        <SelectItem value="missing">Missing</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Select defaultValue={property || 'all'}>
-                    <SelectTrigger className="w-40">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Properties</SelectItem>
-                        {properties.map(property => (
-                            <SelectItem key={property.id} value={property.name}>
-                                {property.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+            <InventoryFilters 
+                search={search}
+                category={category}
+                status={status}
+                property={property}
+                unit={unit}
+                properties={properties}
+            />
 
             {/* Tabs */}
             <Tabs defaultValue={tab || 'inventory'} className="space-y-4">
@@ -256,7 +215,6 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                                     <TableHead>Status</TableHead>
                                     <TableHead>Condition</TableHead>
                                     <TableHead>Quantity</TableHead>
-                                    <TableHead>Current Value</TableHead>
                                     <TableHead>Last Inspected</TableHead>
                                     <TableHead>Actions</TableHead>
                                 </TableRow>
@@ -297,7 +255,6 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                                                 </span>
                                             </TableCell>
                                             <TableCell>{item.quantity}</TableCell>
-                                            <TableCell>{formatCurrency(item?.currentValue || 0)}</TableCell>
                                             <TableCell>{formatDate(item.lastInspected)}</TableCell>
                                             <TableCell>
                                                 <div className="flex space-x-2">
