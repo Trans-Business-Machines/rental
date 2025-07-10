@@ -226,8 +226,8 @@ model InventoryItem {
   quantity        Int
   condition       String   // Excellent, Good, Fair, Poor
   purchaseDate    DateTime
-  purchasePrice   Int
-  currentValue    Int
+  purchasePrice   Int?
+  currentValue    Int?
   location        String   // Living Room, Kitchen, etc.
   serialNumber    String?
   supplier        String?
