@@ -14,9 +14,11 @@ import { useState } from "react";
 
 interface InventoryDialogProps {
     children?: React.ReactNode;
+    preselectedPropertyId?: number;
+    preselectedUnitId?: number;
 }
 
-export function InventoryDialog({ children }: InventoryDialogProps) {
+export function InventoryDialog({ children, preselectedPropertyId, preselectedUnitId }: InventoryDialogProps) {
     const [open, setOpen] = useState(false);
 
     return (
@@ -36,6 +38,8 @@ export function InventoryDialog({ children }: InventoryDialogProps) {
                 <InventoryForm
                     onSuccess={() => setOpen(false)}
                     onCancel={() => setOpen(false)}
+                    preselectedPropertyId={preselectedPropertyId}
+                    preselectedUnitId={preselectedUnitId}
                 />
             </DialogContent>
         </Dialog>

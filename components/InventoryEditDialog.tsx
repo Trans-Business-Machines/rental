@@ -21,8 +21,8 @@ interface InventoryItem {
     quantity: number;
     condition: string;
     purchaseDate: Date;
-    purchasePrice: number;
-    currentValue: number;
+    purchasePrice?: number;
+    currentValue?: number;
     location: string;
     serialNumber?: string | null;
     supplier?: string | null;

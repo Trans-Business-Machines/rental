@@ -175,26 +175,28 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
 					) : (
 						<div className="space-y-3">
 							{units.map((unit) => (
-								<Card key={unit.id}>
-									<CardContent className="p-4">
-										<div className="flex items-center justify-between mb-2">
-											<h3 className="font-medium">{unit.name}</h3>
-											<Badge variant={getUnitStatusColor(unit.status)}>
-												{unit.status}
-											</Badge>
-										</div>
-										<div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-											<div className="flex items-center">
-												<Home className="h-3 w-3 mr-1" />
-												<span className="capitalize">{unit.type}</span>
+								<Link key={unit.id} href={`/properties/${property.id}/units/${unit.id}`}>
+									<Card className="hover:shadow-md transition-shadow cursor-pointer">
+										<CardContent className="p-4">
+											<div className="flex items-center justify-between mb-2">
+												<h3 className="font-medium">{unit.name}</h3>
+												<Badge variant={getUnitStatusColor(unit.status)}>
+													{unit.status}
+												</Badge>
 											</div>
-											<div className="flex items-center">
-												<DollarSign className="h-3 w-3 mr-1" />
-												<span>${unit.rent}</span>
+											<div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+												<div className="flex items-center">
+													<Home className="h-3 w-3 mr-1" />
+													<span className="capitalize">{unit.type}</span>
+												</div>
+												<div className="flex items-center">
+													<DollarSign className="h-3 w-3 mr-1" />
+													<span>${unit.rent}</span>
+												</div>
 											</div>
-										</div>
-									</CardContent>
-								</Card>
+										</CardContent>
+									</Card>
+								</Link>
 							))}
 						</div>
 					)}

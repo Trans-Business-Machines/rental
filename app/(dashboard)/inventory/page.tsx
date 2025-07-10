@@ -297,14 +297,14 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                                                 </span>
                                             </TableCell>
                                             <TableCell>{item.quantity}</TableCell>
-                                            <TableCell>{formatCurrency(item.currentValue)}</TableCell>
+                                            <TableCell>{formatCurrency(item?.currentValue || 0)}</TableCell>
                                             <TableCell>{formatDate(item.lastInspected)}</TableCell>
                                             <TableCell>
                                                 <div className="flex space-x-2">
                                                     <Button variant="outline" size="sm">
                                                         <Eye className="h-4 w-4" />
                                                     </Button>
-                                                    <InventoryEditDialog item={item}>
+                                                    <InventoryEditDialog item={item as any}>
                                                         <Button variant="outline" size="sm">
                                                             <Edit className="h-4 w-4" />
                                                         </Button>

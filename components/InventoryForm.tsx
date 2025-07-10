@@ -20,8 +20,8 @@ interface InventoryItem {
     quantity: number;
     condition: string;
     purchaseDate: Date;
-    purchasePrice: number;
-    currentValue: number;
+    purchasePrice?: number;
+    currentValue?: number;
     location: string;
     serialNumber?: string | null;
     supplier?: string | null;
@@ -36,14 +36,16 @@ interface InventoryFormProps {
     item?: InventoryItem;
     onSuccess?: () => void;
     onCancel?: () => void;
+    preselectedPropertyId?: number;
+    preselectedUnitId?: number;
 }
 
-export function InventoryForm({ item, onSuccess, onCancel }: InventoryFormProps) {
+export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId, preselectedUnitId }: InventoryFormProps) {
     const [properties, setProperties] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
-        propertyId: item?.propertyId || 0,
-        unitId: item?.unitId || 0,
+        propertyId: item?.propertyId || preselectedPropertyId || 0,
+        unitId: item?.unitId || preselectedUnitId || 0,
         category: item?.category || "",
         itemName: item?.itemName || "",
         description: item?.description || "",

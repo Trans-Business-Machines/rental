@@ -157,6 +157,26 @@ export async function searchBookings(query: string) {
 	}
 }
 
+export async function getBookingsByUnit(unitId: number) {
+	try {
+		const bookings = await prisma.booking.findMany({
+			where: { unitId },
+			include: {
+				guest: true,
+				property: true,
+				unit: true,
+			},
+			orderBy: {
+				createdAt: "desc",
+			},
+		});
+		return bookings;
+	} catch (error) {
+		console.error("Error fetching bookings by unit:", error);
+		return [];
+	}
+}
+
 export async function getAllPropertiesWithUnits() {
 	try {
 		const properties = await prisma.property.findMany({

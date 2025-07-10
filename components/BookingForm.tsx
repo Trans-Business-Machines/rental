@@ -36,9 +36,11 @@ interface Property {
 interface BookingFormProps {
     onSuccess?: () => void
     onCancel?: () => void
+    preselectedPropertyId?: number
+    preselectedUnitId?: number
 }
 
-export function BookingForm({ onSuccess, onCancel }: BookingFormProps) {
+export function BookingForm({ onSuccess, onCancel, preselectedPropertyId, preselectedUnitId }: BookingFormProps) {
     const [isLoading, setIsLoading] = useState(false)
     const [guests, setGuests] = useState<Guest[]>([])
     const [properties, setProperties] = useState<Property[]>([])
@@ -48,8 +50,8 @@ export function BookingForm({ onSuccess, onCancel }: BookingFormProps) {
     
     const [formData, setFormData] = useState({
         guestId: "",
-        propertyId: "",
-        unitId: "",
+        propertyId: preselectedPropertyId?.toString() || "",
+        unitId: preselectedUnitId?.toString() || "",
         checkInDate: today, // Auto-select today's date
         checkOutDate: "",
         numberOfGuests: "1",
