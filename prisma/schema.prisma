@@ -203,6 +203,7 @@ model Booking {
   totalAmount     Int
   source          String   // direct, booking.com, airbnb, etc.
   purpose         String   // business, leisure, etc.
+  paymentMethod   String?  // mpesa_till, credit_card, debit_card
   specialRequests String?
   status          String   @default("confirmed") // confirmed, checked-in, checked-out, cancelled
   createdAt       DateTime @default(now())

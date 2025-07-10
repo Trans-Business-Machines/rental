@@ -10,7 +10,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { createBooking } from "@/lib/actions/bookings"
 import { getGuests } from "@/lib/actions/guests"
 import { getAllPropertiesWithUnits } from "@/lib/actions/properties"
@@ -43,17 +42,18 @@ export function BookingForm({ onSuccess, onCancel }: BookingFormProps) {
     const [isLoading, setIsLoading] = useState(false)
     const [guests, setGuests] = useState<Guest[]>([])
     const [properties, setProperties] = useState<Property[]>([])
+    
+    // Get today's date in YYYY-MM-DD format for auto-selection
+    const today = new Date().toISOString().split('T')[0]
+    
     const [formData, setFormData] = useState({
         guestId: "",
         propertyId: "",
         unitId: "",
-        checkInDate: "",
+        checkInDate: today, // Auto-select today's date
         checkOutDate: "",
         numberOfGuests: "1",
-        totalAmount: "",
-        source: "",
-        purpose: "",
-        specialRequests: "",
+        paymentMethod: "",
     })
 
     useEffect(() => {
@@ -85,10 +85,10 @@ export function BookingForm({ onSuccess, onCancel }: BookingFormProps) {
                 checkInDate: new Date(formData.checkInDate),
                 checkOutDate: new Date(formData.checkOutDate),
                 numberOfGuests: parseInt(formData.numberOfGuests),
-                totalAmount: parseInt(formData.totalAmount),
-                source: formData.source,
-                purpose: formData.purpose,
-                specialRequests: formData.specialRequests || undefined,
+                totalAmount: 0, // Default value
+                source: "direct", // Default value
+                purpose: "personal", // Default value
+                paymentMethod: formData.paymentMethod || undefined, // Make it optional
             }
 
             await createBooking(data)
@@ -184,20 +184,26 @@ export function BookingForm({ onSuccess, onCancel }: BookingFormProps) {
                 </div>
                 <div>
                     <Label htmlFor="numberOfGuests">Number of Guests</Label>
-                    <Input
-                        id="numberOfGuests"
-                        type="number"
-                        min="1"
+                    <Select
                         value={formData.numberOfGuests}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                             setFormData({
                                 ...formData,
-                                numberOfGuests: e.target.value,
+                                numberOfGuests: value,
                             })
                         }
-                        placeholder="1"
-                        required
-                    />
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select number of guests" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {[1, 2, 3, 4, 5].map(num => (
+                                <SelectItem key={num} value={num.toString()}>
+                                    {num} {num === 1 ? 'Guest' : 'Guests'}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
 
@@ -234,84 +240,26 @@ export function BookingForm({ onSuccess, onCancel }: BookingFormProps) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="totalAmount">Total Amount (KES)</Label>
-                    <Input
-                        id="totalAmount"
-                        type="number"
-                        value={formData.totalAmount}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                totalAmount: e.target.value,
-                            })
-                        }
-                        placeholder="0"
-                        required
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="source">Booking Source</Label>
-                    <Select
-                        value={formData.source}
-                        onValueChange={(value) =>
-                            setFormData({
-                                ...formData,
-                                source: value,
-                            })
-                        }
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select source" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="direct">Direct</SelectItem>
-                            <SelectItem value="airbnb">Airbnb</SelectItem>
-                            <SelectItem value="booking">Booking.com</SelectItem>
-                            <SelectItem value="phone">Phone</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-
             <div>
-                <Label htmlFor="purpose">Purpose of Visit</Label>
+                <Label htmlFor="paymentMethod">Payment Method</Label>
                 <Select
-                    value={formData.purpose}
+                    value={formData.paymentMethod}
                     onValueChange={(value) =>
                         setFormData({
                             ...formData,
-                            purpose: value,
+                            paymentMethod: value,
                         })
                     }
                 >
                     <SelectTrigger>
-                        <SelectValue placeholder="Select purpose" />
+                        <SelectValue placeholder="Select payment method" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="business">Business</SelectItem>
-                        <SelectItem value="tourism">Tourism</SelectItem>
-                        <SelectItem value="personal">Personal</SelectItem>
-                        <SelectItem value="family">Family</SelectItem>
+                        <SelectItem value="mpesa_till">Mpesa Till No.</SelectItem>
+                        <SelectItem value="credit_card">Credit Card</SelectItem>
+                        <SelectItem value="debit_card">Debit Card</SelectItem>
                     </SelectContent>
                 </Select>
-            </div>
-
-            <div>
-                <Label htmlFor="specialRequests">Special Requests</Label>
-                <Textarea
-                    id="specialRequests"
-                    value={formData.specialRequests}
-                    onChange={(e) =>
-                        setFormData({
-                            ...formData,
-                            specialRequests: e.target.value,
-                        })
-                    }
-                    placeholder="Any special requests..."
-                    rows={3}
-                />
             </div>
 
             <div className="flex space-x-2">

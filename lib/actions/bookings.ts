@@ -49,6 +49,7 @@ export async function createBooking(data: {
 	totalAmount: number;
 	source: string;
 	purpose: string;
+	paymentMethod?: string;
 	specialRequests?: string;
 }) {
 	try {
