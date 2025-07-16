@@ -25,6 +25,7 @@ import {
     Wrench,
     XCircle
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface InventoryPageProps {
     searchParams: Promise<{ 
@@ -51,12 +52,12 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             item.itemName.toLowerCase().includes(search.toLowerCase()) ||
             item.description.toLowerCase().includes(search.toLowerCase()) ||
             item.property.name.toLowerCase().includes(search.toLowerCase()) ||
-            item.unit.name.toLowerCase().includes(search.toLowerCase());
+            (item.unit?.name ?? '').toLowerCase().includes(search.toLowerCase());
         
         const matchesCategory = !category || category === 'all' || item.category === category;
         const matchesStatus = !status || status === 'all' || item.status === status;
         const matchesProperty = !property || property === 'all' || item.property.name === property;
-        const matchesUnit = !unit || unit === 'all' || item.unit.name === unit;
+        const matchesUnit = !unit || unit === 'all' || (item.unit?.name ?? '') === unit;
         
         return matchesSearch && matchesCategory && matchesStatus && matchesProperty && matchesUnit;
     });
@@ -231,7 +232,11 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                                                         <CategoryIcon className="h-4 w-4 text-muted-foreground" />
                                                     </div>
                                                     <div>
-                                                        <div className="font-medium">{item.itemName}</div>
+                                                        <div className="font-medium">
+                                                            <Link href={`/inventory/${item.id}`} className="hover:underline text-primary">
+                                                                {item.itemName}
+                                                            </Link>
+                                                        </div>
                                                         <div className="text-sm text-muted-foreground line-clamp-2">
                                                             {item.description}
                                                         </div>
@@ -242,7 +247,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                                                 <Badge variant="outline">{item.category}</Badge>
                                             </TableCell>
                                             <TableCell>{item.property.name}</TableCell>
-                                            <TableCell>{item.unit.name}</TableCell>
+                                            <TableCell>{item.unit ? item.unit.name : <span className="italic text-gray-400">Store (Unassigned)</span>}</TableCell>
                                             <TableCell>
                                                 <Badge variant={getStatusColor(item.status) as "default" | "secondary" | "destructive" | "outline"}>
                                                     <StatusIcon className="h-3 w-3 mr-1" />

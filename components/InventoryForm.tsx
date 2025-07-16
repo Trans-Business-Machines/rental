@@ -13,7 +13,7 @@ import { toast } from "sonner";
 interface InventoryItem {
     id: number;
     propertyId: number;
-    unitId: number;
+    unitId: number | null;
     category: string;
     itemName: string;
     description: string;
@@ -45,7 +45,7 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         propertyId: item?.propertyId || preselectedPropertyId || 0,
-        unitId: item?.unitId || preselectedUnitId || 0,
+        unitId: typeof item?.unitId === 'undefined' ? (typeof preselectedUnitId === 'undefined' ? null : preselectedUnitId) : item.unitId,
         category: item?.category || "",
         itemName: item?.itemName || "",
         description: item?.description || "",
@@ -115,21 +115,22 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                 <div>
                     <Label htmlFor="property-unit">Property & Unit</Label>
                     <Select
-                        value={`${formData.propertyId}-${formData.unitId}`}
+                        value={formData.unitId === null ? `store` : `${formData.propertyId}-${formData.unitId}`}
                         onValueChange={(value) => {
-                            const [propertyId, unitId] = value.split('-').map(Number);
-                            setFormData(prev => ({ 
-                                ...prev, 
-                                propertyId, 
-                                unitId 
-                            }));
+                            if (value === 'store') {
+                                setFormData(prev => ({ ...prev, unitId: null }));
+                            } else {
+                                const [propertyId, unitId] = value.split('-').map(Number);
+                                setFormData(prev => ({ ...prev, propertyId, unitId }));
+                            }
                         }}
                     >
                         <SelectTrigger>
-                            <SelectValue placeholder="Select unit" />
+                            <SelectValue placeholder="Select unit or store" />
                         </SelectTrigger>
                         <SelectContent>
-                            {properties.map(property => 
+                            <SelectItem value="store">Store (Unassigned)</SelectItem>
+                            {properties.map(property =>
                                 property.units.map((unit: any) => (
                                     <SelectItem key={unit.id} value={`${property.id}-${unit.id}`}>
                                         {property.name} - {unit.name}
@@ -150,8 +151,9 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="Furniture">Furniture</SelectItem>
-                            <SelectItem value="Electronics">Electronics</SelectItem>
                             <SelectItem value="Appliances">Appliances</SelectItem>
+                            <SelectItem value="Beddings">Beddings</SelectItem>
+                            <SelectItem value="Cutlery">Cutlery</SelectItem>
                             <SelectItem value="Bathroom">Bathroom</SelectItem>
                             <SelectItem value="Lighting">Lighting</SelectItem>
                             <SelectItem value="Other">Other</SelectItem>

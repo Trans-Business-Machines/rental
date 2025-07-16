@@ -39,7 +39,7 @@ export async function getInventoryItemById(id: number) {
 
 export async function createInventoryItem(data: {
 	propertyId: number;
-	unitId: number;
+	unitId: number | null;
 	category: string;
 	itemName: string;
 	description: string;
@@ -55,9 +55,11 @@ export async function createInventoryItem(data: {
 	notes?: string;
 }) {
 	try {
+		const { unitId, ...rest } = data;
 		const item = await prisma.inventoryItem.create({
 			data: {
-				...data,
+				...rest,
+				unitId: unitId === null ? undefined : unitId,
 				status: "active",
 				lastInspected: new Date(),
 			},
@@ -78,7 +80,7 @@ export async function updateInventoryItem(
 	id: number,
 	data: {
 		propertyId: number;
-		unitId: number;
+		unitId: number | null;
 		category: string;
 		itemName: string;
 		description: string;
@@ -96,9 +98,13 @@ export async function updateInventoryItem(
 	}
 ) {
 	try {
+		const { unitId, ...rest } = data;
 		const item = await prisma.inventoryItem.update({
 			where: { id },
-			data,
+			data: {
+				...rest,
+				unitId: unitId === null ? undefined : unitId,
+			},
 			include: {
 				property: true,
 				unit: true,
@@ -257,5 +263,22 @@ export async function getInventoryStats() {
 			maintenance: 0,
 			active: 0,
 		};
+	}
+}
+
+export async function getInventoryMovementsForItem(itemId: number) {
+	try {
+		const movements = await prisma.inventoryMovement.findMany({
+			where: { inventoryItemId: itemId },
+			include: {
+				fromUnit: true,
+				toUnit: true,
+			},
+			orderBy: { movedAt: "desc" },
+		});
+		return movements;
+	} catch (error) {
+		console.error("Error fetching inventory movements:", error);
+		return [];
 	}
 }
