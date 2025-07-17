@@ -28,6 +28,8 @@ model User {
   updatedAt     DateTime
   sessions      Session[]
   accounts      Account[]
+  invitations   Invitation[] @relation("UserInvitations")
+  invitedBy     Invitation[] @relation("InvitedBy")
 
   @@unique([email])
   @@map("user")
@@ -293,4 +295,34 @@ model CheckoutItem {
   createdAt         DateTime        @default(now())
 
   @@map("checkout_items")
+}
+
+model Invitation {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String?
+  role         String   // 'user' or 'admin'
+  token        String   @unique
+  createdAt    DateTime @default(now())
+  acceptedAt   DateTime?
+  userId       String?  // The user created after accepting invite
+  user         User?    @relation("UserInvitations", fields: [userId], references: [id])
+  invitedById  String?  // The admin who sent the invite
+  invitedBy    User?    @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@map("invitations")
+}
+
+model Media {
+  id         String   @id @default(uuid())
+  url        String
+  key        String   // S3 object key
+  type       String   // image/jpeg, image/png, etc.
+  size       Int
+  entityType String   // e.g., "Property", "Unit"
+  entityId   Int      // ID of the associated entity
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("media")
 }

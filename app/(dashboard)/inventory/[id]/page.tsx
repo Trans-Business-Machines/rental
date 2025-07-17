@@ -26,14 +26,15 @@ function getStatusColor(status: string) {
   }
 }
 
-export default async function InventoryDetailsPage({ params }: { params: { id: string } }) {
-  const id = Number(params.id);
-  if (isNaN(id)) return notFound();
+export default async function InventoryDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const itemId = Number(id);
+  if (isNaN(itemId)) return notFound();
 
-  const item = await getInventoryItemById(id);
+  const item = await getInventoryItemById(itemId);
   if (!item) return notFound();
 
-  const movements = await getInventoryMovementsForItem(id);
+  const movements = await getInventoryMovementsForItem(itemId);
   const CategoryIcon = getCategoryIcon(item.category);
 
   return (

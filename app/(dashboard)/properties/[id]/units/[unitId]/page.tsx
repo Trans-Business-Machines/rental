@@ -1,3 +1,4 @@
+import { MediaUpload } from "@/components/MediaUpload";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -131,6 +132,9 @@ export default async function UnitPage({ params }: UnitPageProps) {
 									<Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
 									<span>Created {new Date(unit.createdAt).toLocaleDateString()}</span>
 								</div>
+							</div>
+							<div className="mt-4">
+								<MediaUpload entityType="Unit" entityId={unit.id} />
 							</div>
 						</CardContent>
 					</Card>

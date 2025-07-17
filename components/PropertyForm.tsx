@@ -17,6 +17,7 @@ import { createUnit, deleteUnit, getUnitsByProperty, updateUnit } from "@/lib/ac
 import { Plus, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
+import { MediaUpload } from "./MediaUpload"
 
 interface Unit {
     id?: number
@@ -311,6 +312,13 @@ export function PropertyForm({ property, onCancel }: PropertyFormProps) {
                                         placeholder="Enter image URL"
                                         required
                                     />
+                                    {property?.id ? (
+                                        <div className="mt-2">
+                                            <MediaUpload entityType="Property" entityId={property.id} />
+                                        </div>
+                                    ) : (
+                                        <div className="text-xs text-muted-foreground mt-2">Save property first to upload images</div>
+                                    )}
                                 </div>
                             </div>
                             
@@ -457,6 +465,13 @@ export function PropertyForm({ property, onCancel }: PropertyFormProps) {
                                                         Remove Unit
                                                     </Button>
                                                 </div>
+                                                {unit.id ? (
+                                                    <div className="mt-2">
+                                                        <MediaUpload entityType="Unit" entityId={unit.id} />
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-xs text-muted-foreground mt-2">Save unit first to upload images</div>
+                                                )}
                                             </CardContent>
                                         </Card>
                                     ))}

@@ -56,7 +56,7 @@ export async function createBooking(data: {
 		const booking = await prisma.booking.create({
 			data: {
 				...data,
-				status: "pending",
+				status: "confirmed",
 			},
 			include: {
 				guest: true,

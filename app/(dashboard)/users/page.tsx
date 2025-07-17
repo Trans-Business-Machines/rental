@@ -7,44 +7,44 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-    useBanUser,
-    useCreateUser,
-    useDeleteUser,
-    useRevokeUserSessions,
-    useSetUserRole,
-    useUnbanUser,
-    useUsers
+  useBanUser,
+  useDeleteUser,
+  useRevokeUserSessions,
+  useSetUserRole,
+  useUnbanUser,
+  useUsers
 } from "@/hooks/useUsers";
 import {
-    Ban,
-    Calendar,
-    Download,
-    Edit,
-    Eye,
-    Flag,
-    LogOut,
-    Mail,
-    MoreHorizontal,
-    Search,
-    Shield,
-    Trash2,
-    Check as Unban,
-    UserCheck,
-    UserPlus,
-    Users
+  Ban,
+  Calendar,
+  Download,
+  Edit,
+  Eye,
+  Flag,
+  LogOut,
+  Mail,
+  MoreHorizontal,
+  Search,
+  Shield,
+  Trash2,
+  Check as Unban,
+  UserCheck,
+  UserPlus,
+  Users
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface User {
   id: string;
@@ -58,6 +58,12 @@ interface User {
   emailVerified: boolean;
 }
 
+interface Invitation {
+  name: string;
+  email: string;
+  acceptedAt: string | null;
+}
+
 function UsersPageContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -66,9 +72,7 @@ function UsersPageContent() {
 
   // Invite form state
   const [inviteForm, setInviteForm] = useState({
-    name: "",
     email: "",
-    password: "",
     role: "user" as "user" | "admin"
   });
 
@@ -78,9 +82,24 @@ function UsersPageContent() {
     expiresIn: "7" // days
   });
 
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  useEffect(() => {
+    fetch("/api/invitations/list")
+      .then(res => res.json())
+      .then(data => setInvitations(data.invitations || []));
+  }, []);
+
+  const handleResendInvite = async (email: string) => {
+    await fetch("/api/invitations", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    // Optionally show a toast or reload invitations
+  };
+
   // React Query hooks
   const { data: users = [], isLoading, error } = useUsers(searchQuery);
-  const createUserMutation = useCreateUser();
   const banUserMutation = useBanUser();
   const unbanUserMutation = useUnbanUser();
   const deleteUserMutation = useDeleteUser();
@@ -89,13 +108,20 @@ function UsersPageContent() {
 
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    createUserMutation.mutate(inviteForm, {
-      onSuccess: () => {
-        setInviteDialogOpen(false);
-        setInviteForm({ name: "", email: "", password: "", role: "user" });
-      }
-    });
+    try {
+      await fetch("/api/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(inviteForm),
+      });
+      setInviteDialogOpen(false);
+      setInviteForm({ email: "", role: "user" });
+      // Optionally show a toast
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
+      // Optionally show error
+    }
   };
 
   const handleBanUser = async (e: React.FormEvent) => {
@@ -207,16 +233,6 @@ function UsersPageContent() {
               </DialogHeader>
               <form onSubmit={handleInviteUser} className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={inviteForm.name}
-                    onChange={(e) => setInviteForm(prev => ({ ...prev, name: e.target.value }))}
-                    required
-                    disabled={createUserMutation.isPending}
-                  />
-                </div>
-                <div>
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
@@ -224,18 +240,6 @@ function UsersPageContent() {
                     value={inviteForm.email}
                     onChange={(e) => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
                     required
-                    disabled={createUserMutation.isPending}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={inviteForm.password}
-                    onChange={(e) => setInviteForm(prev => ({ ...prev, password: e.target.value }))}
-                    required
-                    disabled={createUserMutation.isPending}
                   />
                 </div>
                 <div>
@@ -243,7 +247,6 @@ function UsersPageContent() {
                   <Select
                     value={inviteForm.role}
                     onValueChange={(value: "user" | "admin") => setInviteForm(prev => ({ ...prev, role: value }))}
-                    disabled={createUserMutation.isPending}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -259,15 +262,13 @@ function UsersPageContent() {
                     type="button" 
                     variant="outline" 
                     onClick={() => setInviteDialogOpen(false)}
-                    disabled={createUserMutation.isPending}
                   >
                     Cancel
                   </Button>
                   <Button 
                     type="submit"
-                    disabled={createUserMutation.isPending}
                   >
-                    {createUserMutation.isPending ? "Creating..." : "Invite User"}
+                    Invite User
                   </Button>
                 </div>
               </form>
@@ -504,6 +505,22 @@ function UsersPageContent() {
                   </DropdownMenu>
                 </div>
               </CardContent>
+            </Card>
+          ))}
+          {invitations.filter(i => !i.acceptedAt).map(invite => (
+            <Card key={invite.email} className="hover:shadow-lg transition-shadow border-dashed border-2 border-blue-400">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-lg">{invite.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{invite.email}</p>
+                    <p className="text-xs text-blue-600">Invitation Pending</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => handleResendInvite(invite.email)}>
+                    Resend Invite
+                  </Button>
+                </div>
+              </CardHeader>
             </Card>
           ))}
         </div>
