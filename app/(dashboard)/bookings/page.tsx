@@ -1,6 +1,5 @@
 import { BookingDialog } from '@/components/BookingDialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,15 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getBookings } from '@/lib/actions/bookings';
 import { getAllPropertiesWithUnits as getProperties } from '@/lib/actions/properties';
 import {
-  Bed,
-  Calendar,
-  CheckCircle,
-  Clock,
-  Download,
-  Edit,
-  Eye,
-  Search,
-  XCircle
+    Bed,
+    Calendar,
+    CheckCircle,
+    Clock,
+    Download,
+    Edit,
+    Eye,
+    Search
 } from 'lucide-react';
 
 interface BookingsPageProps {
@@ -49,29 +47,29 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
         return matchesSearch && matchesStatus && matchesProperty;
     });
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'confirmed': return 'default';
-            case 'pending': return 'secondary';
-            case 'cancelled': return 'destructive';
-            case 'completed': return 'default';
-            case 'checked_in': return 'default';
-            case 'checked_out': return 'default';
-            default: return 'secondary';
-        }
-    };
+    // const getStatusColor = (status: string) => {
+    //     switch (status) {
+    //         case 'confirmed': return 'default';
+    //         case 'pending': return 'secondary';
+    //         case 'cancelled': return 'destructive';
+    //         case 'completed': return 'default';
+    //         case 'checked_in': return 'default';
+    //         case 'checked_out': return 'default';
+    //         default: return 'secondary';
+    //     }
+    // };
 
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'confirmed': return CheckCircle;
-            case 'pending': return Clock;
-            case 'cancelled': return XCircle;
-            case 'completed': return CheckCircle;
-            case 'checked_in': return Bed;
-            case 'checked_out': return CheckCircle;
-            default: return Clock;
-        }
-    };
+    // const getStatusIcon = (status: string) => {
+    //     switch (status) {
+    //         case 'confirmed': return CheckCircle;
+    //         case 'pending': return Clock;
+    //         case 'cancelled': return XCircle;
+    //         case 'completed': return CheckCircle;
+    //         case 'checked_in': return Bed;
+    //         case 'checked_out': return CheckCircle;
+    //         default: return Clock;
+    //     }
+    // };
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-KE', {
@@ -175,7 +173,6 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
                     <SelectContent>
                         <SelectItem value="all">All Status</SelectItem>
                         <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="checked_in">Checked In</SelectItem>
@@ -221,7 +218,7 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
                                         </p>
                                     </div>
                                 </div>
-                                <Badge variant={getStatusColor(booking.status) as "default" | "secondary" | "destructive" | "outline"}>
+                                {/* <Badge variant={getStatusColor(booking.status) as "default" | "secondary" | "destructive" | "outline"}>
                                     <div className="flex items-center space-x-1">
                                         {(() => {
                                             const StatusIcon = getStatusIcon(booking.status);
@@ -229,7 +226,7 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
                                         })()}
                                         <span>{booking.status.replace('_', ' ')}</span>
                                     </div>
-                                </Badge>
+                                </Badge> */}
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-4">

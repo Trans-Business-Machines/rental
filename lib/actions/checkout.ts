@@ -149,7 +149,7 @@ export async function getBookingsForCheckout() {
 		const bookings = await prisma.booking.findMany({
 			where: {
 				status: {
-					in: ["confirmed", "checked-in"],
+					notIn: ["checked-out", "cancelled"],
 				},
 			},
 			include: {
