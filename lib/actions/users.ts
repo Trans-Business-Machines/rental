@@ -5,7 +5,7 @@ import resend from "../emailClient";
 import { InviteUserEmail } from "../emails/InviteUserEmail";
 import { prisma } from "../prisma";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://rentmanager.app";
 
 export async function createInvitation({
 	email,
@@ -73,12 +73,12 @@ async function sendInviteEmail({
 		});
 		if (inviter) invitedByName = inviter.name;
 	}
-	const inviteLink = `${APP_URL}/auth/invite?token=${token}`;
+	const inviteLink = `${APP_URL}/invite?token=${token}`;
 	const emailHtml = await Promise.resolve(
 		render(InviteUserEmail({ name: name || "", inviteLink, invitedByName }))
 	);
 	await resend.emails.send({
-		from: process.env.RESEND_FROM || "noreply@yourdomain.com",
+		from: `RentManager <${process.env.RESEND_FROM || "noreply@accounts.rentmanager.app"}>`,
 		to: email,
 		subject: "You're invited to join RentManager",
 		html: emailHtml,

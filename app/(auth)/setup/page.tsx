@@ -16,15 +16,19 @@ export default function SetupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const router = useRouter();
 
+  const validatePassword = (password: string) => {
+    // At least 8 characters, one uppercase, one lowercase, one number, one special character
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(password);
+  };
+
   const handleSubmit = async (formData: FormData) => {
     // Client-side validation
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
-
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters long");
+    if (!validatePassword(password)) {
+      toast.error("Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.");
       return;
     }
 
@@ -108,7 +112,7 @@ export default function SetupPage() {
                   className="h-11"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Password must be at least 8 characters long
+                  Password must be at least 8 characters, include uppercase, lowercase, number, and special character.
                 </p>
               </div>
               

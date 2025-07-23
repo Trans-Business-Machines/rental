@@ -1,13 +1,29 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authClient } from "@/lib/auth-client";
+import { Building2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { toast } from "sonner";
 
-export default function AcceptInvitePage() {
+function SuspenseWrapper({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<div className="text-center p-8">Loading...</div>}>{children}</Suspense>;
+}
+
+export default function AcceptInvitePageWrapper() {
+  return (
+    <SuspenseWrapper>
+      <AcceptInvitePage />
+    </SuspenseWrapper>
+  );
+}
+
+function AcceptInvitePage() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
   const [password, setPassword] = useState("");
@@ -36,6 +52,11 @@ export default function AcceptInvitePage() {
       });
   }, [token]);
 
+  const validatePassword = (password: string) => {
+    // At least 8 characters, one uppercase, one lowercase, one number, one special character
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(password);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -43,12 +64,12 @@ export default function AcceptInvitePage() {
       setError("Name is required");
       return;
     }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
+    if (!validatePassword(password)) {
+      setError("Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.");
       return;
     }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long");
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
       return;
     }
     setLoading(true);
@@ -60,8 +81,26 @@ export default function AcceptInvitePage() {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
-      setSuccess(true);
-      setTimeout(() => router.push("/login"), 2000);
+      // Automatically log the user in
+      try {
+        const loginResult = await authClient.signIn.email({
+          email: invite?.email || "",
+          password,
+        });
+        if (loginResult?.error) {
+          toast.error("Account created, but automatic login failed. Please log in manually.");
+          setSuccess(true);
+          setTimeout(() => router.push("/login"), 2000);
+        } else {
+          toast.success("Invitation accepted! Logging you in...");
+          setSuccess(true);
+          setTimeout(() => router.push("/dashboard"), 1500);
+        }
+      } catch {
+        toast.error("Account created, but automatic login failed. Please log in manually.");
+        setSuccess(true);
+        setTimeout(() => router.push("/login"), 2000);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -72,6 +111,14 @@ export default function AcceptInvitePage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
+        {/* Logo and Brand */}
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 bg-primary rounded-lg flex items-center justify-center mb-4">
+            <Building2 className="h-8 w-8 text-primary-foreground" />
+          </div>
+          <h1 className="text-3xl font-bold text-foreground">RentManager</h1>
+          <p className="mt-2 text-muted-foreground">Property Management System</p>
+        </div>
         <Card className="shadow-xl border-0">
           <CardHeader>
             <CardTitle className="text-2xl text-center font-semibold">Accept Invitation</CardTitle>
@@ -89,7 +136,7 @@ export default function AcceptInvitePage() {
                   <div className="font-medium text-lg">{invite.email}</div>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
                     <Input
                       id="name"
@@ -99,7 +146,7 @@ export default function AcceptInvitePage() {
                       required
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <Input
                       id="password"
@@ -108,8 +155,11 @@ export default function AcceptInvitePage() {
                       onChange={e => setPassword(e.target.value)}
                       required
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Password must be at least 8 characters, include uppercase, lowercase, number, and special character.
+                    </p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
                     <Input
                       id="confirmPassword"
@@ -127,7 +177,7 @@ export default function AcceptInvitePage() {
               </>
             )}
             {success && (
-              <div className="text-center text-green-600 font-medium">Invitation accepted! Redirecting to login...</div>
+              <div className="text-center text-green-600 font-medium">Invitation accepted! Redirecting...</div>
             )}
           </CardContent>
         </Card>
