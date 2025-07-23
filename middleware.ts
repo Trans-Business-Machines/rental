@@ -9,7 +9,13 @@ export function middleware(request: NextRequest) {
 	const cookies = getSessionCookie(request);
 
 	// Public routes that don't require authentication
-	const publicRoutes = ["/login", "/setup", "/api/auth", "/api/better-auth"];
+	const publicRoutes = [
+		"/login",
+		"/invite",
+		"/setup",
+		"/api/auth",
+		"/api/better-auth",
+	];
 
 	// Check if the current path is a public route
 	const isPublicRoute = publicRoutes.some((route) =>
