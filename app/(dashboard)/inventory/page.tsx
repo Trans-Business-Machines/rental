@@ -235,7 +235,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                                                         <StatusIcon className="h-3 w-3 mr-1" />
                                                         {item.status}
                                                     </Badge>
-                                                    <InventoryActions item={item} />
+                                                    <InventoryActions item={item as any} />
                                                 </div>
                                             </div>
                                         </CardHeader>
