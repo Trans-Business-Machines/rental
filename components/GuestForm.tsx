@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { createGuest } from "@/lib/actions/guests"
+import { useCreateGuest } from "@/hooks/useGuests"
 import { useState } from "react"
-import { toast } from "sonner"
 
 interface Guest {
     id: number
@@ -14,32 +13,32 @@ interface Guest {
     lastName: string
     email: string
     phone: string
-    nationality: string
-    idType: string
-    idNumber?: string
-    passportNumber?: string
-    dateOfBirth: string
-    address: string
-    city: string
-    country: string
-    occupation?: string
-    employer?: string
-    emergencyContactName: string
-    emergencyContactPhone: string
-    emergencyContactRelation: string
-    notes?: string
-    createdAt: Date
-    updatedAt: Date
+    nationality?: string | null
+    idType?: string | null
+    idNumber?: string | null
+    passportNumber?: string | null
+    dateOfBirth?: string | null
+    address?: string | null
+    city?: string | null
+    country?: string | null
+    occupation?: string | null
+    employer?: string | null
+    emergencyContactName?: string | null
+    emergencyContactPhone?: string | null
+    emergencyContactRelation?: string | null
+    notes?: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
 }
 
 interface GuestFormProps {
     guest?: Guest | null
-    onSuccess?: () => void
+    onSuccess?: (guest?: Guest) => void
     onCancel?: () => void
 }
 
 export function GuestForm({ guest, onSuccess, onCancel }: GuestFormProps) {
-    const [isLoading, setIsLoading] = useState(false)
+    const createGuestMutation = useCreateGuest()
     const [formData, setFormData] = useState({
         firstName: guest?.firstName || "",
         lastName: guest?.lastName || "",
@@ -51,28 +50,22 @@ export function GuestForm({ guest, onSuccess, onCancel }: GuestFormProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        setIsLoading(true)
 
-        try {
-            const data = {
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                email: formData.email,
-                phone: formData.phone,
-                idNumber: formData.idPassportNumber,
-                passportNumber: formData.idPassportNumber,
-                notes: formData.notes || undefined,
-            }
-
-            await createGuest(data)
-            toast.success("Guest created successfully")
-            onSuccess?.()
-        } catch (error) {
-            toast.error("Failed to create guest")
-            console.error(error)
-        } finally {
-            setIsLoading(false)
+        const data = {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            idNumber: formData.idPassportNumber,
+            passportNumber: formData.idPassportNumber,
+            notes: formData.notes || undefined,
         }
+
+        createGuestMutation.mutate(data, {
+            onSuccess: (newGuest) => {
+                onSuccess?.(newGuest)
+            }
+        })
     }
 
     return (
@@ -177,8 +170,12 @@ export function GuestForm({ guest, onSuccess, onCancel }: GuestFormProps) {
             </div>
 
             <div className="flex space-x-2">
-                <Button type="submit" disabled={isLoading} className="flex-1">
-                    {isLoading ? "Creating..." : "Create Guest"}
+                <Button 
+                    type="submit" 
+                    disabled={createGuestMutation.isPending} 
+                    className="flex-1"
+                >
+                    {createGuestMutation.isPending ? "Creating..." : "Create Guest"}
                 </Button>
                 {onCancel && (
                     <Button type="button" variant="outline" onClick={onCancel}>

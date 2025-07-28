@@ -1,6 +1,13 @@
 'use client'
 
+import { GuestForm } from "@/components/GuestForm"
 import { Button } from "@/components/ui/button"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -10,11 +17,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { createBooking } from "@/lib/actions/bookings"
-import { getGuests } from "@/lib/actions/guests"
-import { getAllPropertiesWithUnits } from "@/lib/actions/properties"
-import { useEffect, useState } from "react"
-import { toast } from "sonner"
+import { useBookings, useCreateBooking } from "@/hooks/useBookings"
+import { useGuests } from "@/hooks/useGuests"
+import { usePropertiesWithUnits } from "@/hooks/useProperties"
+import { Plus } from "lucide-react"
+import { useState } from "react"
 
 interface Guest {
     id: number
@@ -22,15 +29,6 @@ interface Guest {
     lastName: string
     email: string
     phone: string
-}
-
-interface Property {
-    id: number
-    name: string
-    units: {
-        id: number
-        name: string
-    }[]
 }
 
 interface BookingFormProps {
@@ -41,9 +39,7 @@ interface BookingFormProps {
 }
 
 export function BookingForm({ onSuccess, onCancel, preselectedPropertyId, preselectedUnitId }: BookingFormProps) {
-    const [isLoading, setIsLoading] = useState(false)
-    const [guests, setGuests] = useState<Guest[]>([])
-    const [properties, setProperties] = useState<Property[]>([])
+    const [isGuestModalOpen, setIsGuestModalOpen] = useState(false)
     
     // Get today's date in YYYY-MM-DD format for auto-selection
     const today = new Date().toISOString().split('T')[0]
@@ -58,82 +54,146 @@ export function BookingForm({ onSuccess, onCancel, preselectedPropertyId, presel
         paymentMethod: "",
     })
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [guestsData, propertiesData] = await Promise.all([
-                    getGuests(),
-                    getAllPropertiesWithUnits(),
-                ])
-                setGuests(guestsData)
-                setProperties(propertiesData)
-            } catch (error) {
-                console.error("Error fetching data:", error)
-                toast.error("Failed to load form data")
-            }
-        }
-        fetchData()
-    }, [])
+    // React Query hooks
+    const { data: guests = [], isLoading: guestsLoading } = useGuests()
+    const { data: properties = [], isLoading: propertiesLoading } = usePropertiesWithUnits()
+    const { data: allBookings = [] } = useBookings()
+    const createBookingMutation = useCreateBooking()
+
+    // Dynamically compute booked properties for the selected check-in date
+    const bookedUnitIds = allBookings.filter(b => {
+        const checkIn = new Date(b.checkInDate)
+        const selected = new Date(formData.checkInDate)
+        return (
+            b.propertyId.toString() === formData.propertyId &&
+            checkIn.getFullYear() === selected.getFullYear() &&
+            checkIn.getMonth() === selected.getMonth() &&
+            checkIn.getDate() === selected.getDate()
+        )
+    }).map(b => b.unitId)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        setIsLoading(true)
 
-        try {
-            const data = {
-                guestId: parseInt(formData.guestId),
-                propertyId: parseInt(formData.propertyId),
-                unitId: parseInt(formData.unitId),
-                checkInDate: new Date(formData.checkInDate),
-                checkOutDate: new Date(formData.checkOutDate),
-                numberOfGuests: parseInt(formData.numberOfGuests),
-                totalAmount: 0, // Default value
-                source: "direct", // Default value
-                purpose: "personal", // Default value
-                paymentMethod: formData.paymentMethod || undefined, // Make it optional
-            }
-
-            await createBooking(data)
-            toast.success("Booking created successfully")
-            onSuccess?.()
-        } catch (error) {
-            toast.error("Failed to create booking")
-            console.error(error)
-        } finally {
-            setIsLoading(false)
+        const data = {
+            guestId: parseInt(formData.guestId),
+            propertyId: parseInt(formData.propertyId),
+            unitId: parseInt(formData.unitId),
+            checkInDate: new Date(formData.checkInDate),
+            checkOutDate: new Date(formData.checkOutDate),
+            numberOfGuests: parseInt(formData.numberOfGuests),
+            totalAmount: 0, 
+            source: "direct", 
+            purpose: "personal", 
+            paymentMethod: formData.paymentMethod || undefined, 
         }
+
+        createBookingMutation.mutate(data, {
+            onSuccess: () => {
+                onSuccess?.()
+            }
+        })
+    }
+
+    const handleGuestCreated = (newGuest?: Guest) => {
+        console.log('Guest created:', newGuest)
+        if (newGuest) {
+            setFormData(prev => {
+                const newFormData = {
+                    ...prev,
+                    guestId: newGuest.id.toString()
+                }
+                console.log('Updated form data:', newFormData)
+                return newFormData
+            })
+        }
+        setIsGuestModalOpen(false)
     }
 
     const selectedProperty = properties.find(p => p.id.toString() === formData.propertyId)
     const availableUnits = selectedProperty?.units || []
 
-    return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="guestId">Guest</Label>
-                    <Select
-                        value={formData.guestId}
-                        onValueChange={(value) =>
-                            setFormData({
-                                ...formData,
-                                guestId: value,
-                            })
-                        }
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select guest" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {guests.map(guest => (
-                                <SelectItem key={guest.id} value={guest.id.toString()}>
-                                    {guest.firstName} {guest.lastName} - {guest.email}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+    if (guestsLoading || propertiesLoading) {
+        return (
+            <div className="space-y-4">
+                <div className="animate-pulse space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="h-10 bg-gray-200 rounded"></div>
+                        <div className="h-10 bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="h-10 bg-gray-200 rounded"></div>
+                        <div className="h-10 bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="h-10 bg-gray-200 rounded"></div>
+                        <div className="h-10 bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="h-10 bg-gray-200 rounded"></div>
                 </div>
-                <div>
+            </div>
+        )
+    }
+
+    return (
+        <>
+            <Dialog open={isGuestModalOpen} onOpenChange={setIsGuestModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Guest</DialogTitle>
+                    </DialogHeader>
+                    <GuestForm 
+                        onSuccess={handleGuestCreated}
+                        onCancel={() => setIsGuestModalOpen(false)}
+                    />
+                </DialogContent>
+            </Dialog>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                <div className="min-w-0">
+                    <Label htmlFor="guestId">Guest</Label>
+                    <div className="flex gap-2">
+                            <Select
+                                key={formData.guestId} // Force re-render when guestId changes
+                                value={formData.guestId}
+                                onValueChange={(value) =>
+                                    setFormData({
+                                        ...formData,
+                                        guestId: value,
+                                    })
+                                }
+                            >
+                                <SelectTrigger className="flex-1 min-w-0">
+                                    <SelectValue placeholder="Select guest" className="truncate">
+                                        {formData.guestId && (() => {
+                                            const selectedGuest = guests.find(g => g.id.toString() === formData.guestId)
+                                            return selectedGuest ? `${selectedGuest.firstName} ${selectedGuest.lastName}` : "Select guest"
+                                        })()}
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {guests.map(guest => (
+                                        <SelectItem key={guest.id} value={guest.id.toString()}>
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">{guest.firstName} {guest.lastName}</span>
+                                                <span className="text-sm text-muted-foreground">{guest.email}</span>
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="icon"
+                                onClick={() => setIsGuestModalOpen(true)}
+                            >
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                <div className="min-w-0">
                     <Label htmlFor="propertyId">Property</Label>
                     <Select
                         value={formData.propertyId}
@@ -150,7 +210,10 @@ export function BookingForm({ onSuccess, onCancel, preselectedPropertyId, presel
                         </SelectTrigger>
                         <SelectContent>
                             {properties.map(property => (
-                                <SelectItem key={property.id} value={property.id.toString()}>
+                                <SelectItem
+                                    key={property.id}
+                                    value={property.id.toString()}
+                                >
                                     {property.name}
                                 </SelectItem>
                             ))}
@@ -176,11 +239,18 @@ export function BookingForm({ onSuccess, onCancel, preselectedPropertyId, presel
                             <SelectValue placeholder="Select unit" />
                         </SelectTrigger>
                         <SelectContent>
-                            {availableUnits.map(unit => (
-                                <SelectItem key={unit.id} value={unit.id.toString()}>
-                                    {unit.name}
-                                </SelectItem>
-                            ))}
+                            {availableUnits.map(unit => {
+                                const isBooked = bookedUnitIds.includes(unit.id)
+                                return (
+                                    <SelectItem
+                                        key={unit.id}
+                                        value={unit.id.toString()}
+                                        disabled={isBooked}
+                                    >
+                                        {unit.name} {isBooked ? "(Already Booked)" : ""}
+                                    </SelectItem>
+                                )
+                            })}
                         </SelectContent>
                     </Select>
                 </div>
@@ -265,8 +335,12 @@ export function BookingForm({ onSuccess, onCancel, preselectedPropertyId, presel
             </div>
 
             <div className="flex space-x-2">
-                <Button type="submit" disabled={isLoading} className="flex-1">
-                    {isLoading ? "Creating..." : "Create Booking"}
+                <Button 
+                    type="submit" 
+                    disabled={createBookingMutation.isPending} 
+                    className="flex-1"
+                >
+                    {createBookingMutation.isPending ? "Creating..." : "Create Booking"}
                 </Button>
                 {onCancel && (
                     <Button type="button" variant="outline" onClick={onCancel}>
@@ -275,5 +349,6 @@ export function BookingForm({ onSuccess, onCancel, preselectedPropertyId, presel
                 )}
             </div>
         </form>
+        </>
     )
 } 

@@ -53,6 +53,26 @@ export async function createBooking(data: {
 	specialRequests?: string;
 }) {
 	try {
+		// Prevent double booking: check if any booking exists for this property with checkInDate on the same day
+		const startOfDay = new Date(data.checkInDate);
+		startOfDay.setHours(0, 0, 0, 0);
+		const endOfDay = new Date(data.checkInDate);
+		endOfDay.setHours(23, 59, 59, 999);
+		const existingBooking = await prisma.booking.findFirst({
+			where: {
+				propertyId: data.propertyId,
+				checkInDate: {
+					gte: startOfDay,
+					lte: endOfDay,
+				},
+			},
+		});
+		if (existingBooking) {
+			throw new Error(
+				"A booking already exists for this property on the selected check-in date. Double booking is not allowed."
+			);
+		}
+
 		const booking = await prisma.booking.create({
 			data: {
 				...data,

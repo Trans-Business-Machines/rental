@@ -1,14 +1,12 @@
+"use client";
+
 import { GuestDialog } from '@/components/GuestDialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getGuests } from '@/lib/actions/guests';
-import { getAllPropertiesWithUnits as getProperties } from '@/lib/actions/properties';
+import { useGuests } from '@/hooks/useGuests';
 import {
     Bed,
     Clock,
@@ -23,35 +21,56 @@ import {
     UserCheck,
     Users
 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useRef, useState } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
 
-interface GuestsPageProps {
-    searchParams: Promise<{ 
-        search?: string;
-        nationality?: string;
-        verification?: string;
-    }>
-}
+export default function GuestsPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const [searchValue, setSearchValue] = useState(searchParams.get('search') || '');
+    const initializedRef = useRef(false);
+    
+    // Get search parameters from URL
+    const search = searchParams.get('search') || '';
+    const nationality = searchParams.get('nationality') || '';
+    const verification = searchParams.get('verification') || '';
+    
+    // React Query hook
+    const { data: guests = [], isLoading, error } = useGuests(search, nationality, verification);
 
-export default async function GuestsPage({ searchParams }: GuestsPageProps) {
-    const { search, nationality, verification } = await searchParams;
-    
-    // Fetch real data from database
-    const guests = await getGuests();
-    const properties = await getProperties();
-    
-    // Filter guests based on search params
-    const filteredGuests = guests.filter(guest => {
-        const matchesSearch = !search || 
-            guest.firstName.toLowerCase().includes(search.toLowerCase()) ||
-            guest.lastName.toLowerCase().includes(search.toLowerCase()) ||
-            guest.email.toLowerCase().includes(search.toLowerCase()) ||
-            guest.phone.toLowerCase().includes(search.toLowerCase());
-        
-        const matchesNationality = !nationality || nationality === 'all' || guest.nationality === nationality;
-        const matchesVerification = !verification || verification === 'all' || guest.verificationStatus === verification;
-        
-        return matchesSearch && matchesNationality && matchesVerification;
-    });
+    const createQueryString = useCallback(
+        (name: string, value: string) => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (value === '' || value === 'all') {
+                params.delete(name);
+            } else {
+                params.set(name, value);
+            }
+            return params.toString();
+        },
+        [searchParams]
+    );
+
+    // Debounced search handler
+    const debouncedSearch = useDebouncedCallback(
+        (term: string) => {
+            const queryString = createQueryString('search', term);
+            router.push(`/guests?${queryString}`);
+        },
+        300
+    );
+
+    const handleSearchChange = (value: string) => {
+        setSearchValue(value);
+        debouncedSearch(value);
+    };
+
+    // Initialize search value from URL only once
+    if (!initializedRef.current && search !== '') {
+        setSearchValue(search);
+        initializedRef.current = true;
+    }
 
     const getVerificationColor = (status: string) => {
         switch (status) {
@@ -80,6 +99,23 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
     const pendingGuests = guests.filter(g => g.verificationStatus === 'pending').length;
     const blacklistedGuests = guests.filter(g => g.blacklisted).length;
 
+    if (error) {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1>Guest Management</h1>
+                        <p className="text-muted-foreground">Manage guest registrations, bookings, and check-ins</p>
+                    </div>
+                    <GuestDialog />
+                </div>
+                <div className="text-center py-8">
+                    <p className="text-destructive">Error loading guests. Please try again.</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -88,87 +124,10 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                     <p className="text-muted-foreground">Manage guest registrations, bookings, and check-ins</p>
                 </div>
                 <div className="flex space-x-2">
-                    <Button variant="outline">
+                    <Button variant="outline" disabled>
                         <Download className="h-4 w-4 mr-2" />
                         Export
                     </Button>
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button variant="outline">
-                                <Bed className="h-4 w-4 mr-2" />
-                                Quick Book
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                            <DialogHeader>
-                                <DialogTitle>Quick Booking</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="quick-guest-name">Guest Name</Label>
-                                        <Input id="quick-guest-name" placeholder="Full name" />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="quick-guest-phone">Phone</Label>
-                                        <Input id="quick-guest-phone" placeholder="Phone number" />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="quick-property">Property</Label>
-                                        <Select>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select property" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {properties.map(property => (
-                                                    <SelectItem key={property.id} value={property.id.toString()}>
-                                                        {property.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="quick-unit">Unit</Label>
-                                        <Select>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select unit" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {properties.map(property => 
-                                                    property.units.map(unit => (
-                                                        <SelectItem key={unit.id} value={unit.id.toString()}>
-                                                            {property.name} - {unit.name}
-                                                        </SelectItem>
-                                                    ))
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label htmlFor="quick-checkin">Check-in Date</Label>
-                                        <Input id="quick-checkin" type="date" />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="quick-checkout">Check-out Date</Label>
-                                        <Input id="quick-checkout" type="date" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <Label htmlFor="quick-amount">Total Amount</Label>
-                                    <Input id="quick-amount" type="number" placeholder="0" />
-                                </div>
-                                <div className="flex space-x-2">
-                                    <Button className="flex-1">Create Booking</Button>
-                                    <Button variant="outline" className="flex-1">Cancel</Button>
-                                </div>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
                     <GuestDialog />
                 </div>
             </div>
@@ -227,137 +186,127 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
                         placeholder="Search guests..."
-                        defaultValue={search || ''}
+                        value={searchValue}
+                        onChange={(e) => handleSearchChange(e.target.value)}
                         className="pl-10"
+                        disabled={isLoading}
+                        autoFocus
                     />
                 </div>
-                <Select defaultValue={nationality || 'all'}>
-                    <SelectTrigger className="w-32">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Nationalities</SelectItem>
-                        <SelectItem value="Kenyan">Kenyan</SelectItem>
-                        <SelectItem value="American">American</SelectItem>
-                        <SelectItem value="Brazilian">Brazilian</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Select defaultValue={verification || 'all'}>
-                    <SelectTrigger className="w-32">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="verified">Verified</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                    </SelectContent>
-                </Select>
             </div>
+
+            {/* Loading State */}
+            {isLoading && (
+                <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-muted-foreground mt-2">Loading guests...</p>
+                </div>
+            )}
 
             {/* Guests Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredGuests.map((guest) => (
-                    <Card
-                        key={guest.id}
-                        className="hover:shadow-lg transition-shadow"
-                    >
-                        <CardHeader>
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-center space-x-3">
-                                    <Avatar className="h-12 w-12">
-                                        <AvatarFallback className="text-lg">
-                                            {guest.firstName[0]}{guest.lastName[0]}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <CardTitle className="text-lg">
-                                            {guest.firstName} {guest.lastName}
-                                        </CardTitle>
-                                        <p className="text-sm text-muted-foreground">
-                                            {guest.occupation || 'Not specified'}
-                                        </p>
+            {!isLoading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {guests.map((guest) => (
+                        <Card
+                            key={guest.id}
+                            className="hover:shadow-lg transition-shadow"
+                        >
+                            <CardHeader>
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center space-x-3">
+                                        <Avatar className="h-12 w-12">
+                                            <AvatarFallback className="text-lg">
+                                                {guest.firstName[0]}{guest.lastName[0]}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <CardTitle className="text-lg">
+                                                {guest.firstName} {guest.lastName}
+                                            </CardTitle>
+                                            <p className="text-sm text-muted-foreground">
+                                                {guest.occupation || 'Not specified'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end space-y-1">
+                                        <Badge variant={getVerificationColor(guest.verificationStatus || 'pending') as "default" | "secondary" | "destructive" | "outline"}>
+                                            {guest.verificationStatus || 'pending'}
+                                        </Badge>
+                                        {guest.blacklisted && (
+                                            <Badge variant="destructive" className="text-xs">
+                                                Blacklisted
+                                            </Badge>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="flex flex-col items-end space-y-1">
-                                    <Badge variant={getVerificationColor(guest.verificationStatus || 'pending') as "default" | "secondary" | "destructive" | "outline"}>
-                                        {guest.verificationStatus}
-                                    </Badge>
-                                    {guest.blacklisted && (
-                                        <Badge variant="destructive" className="text-xs">
-                                            Blacklisted
-                                        </Badge>
-                                    )}
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {/* Contact Information */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center space-x-2 text-sm">
+                                        <Mail className="h-4 w-4 text-muted-foreground" />
+                                        <span className="text-muted-foreground">{guest.email}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2 text-sm">
+                                        <Phone className="h-4 w-4 text-muted-foreground" />
+                                        <span className="text-muted-foreground">{guest.phone}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {/* Contact Information */}
-                            <div className="space-y-2">
-                                <div className="flex items-center space-x-2 text-sm">
-                                    <Mail className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">{guest.email}</span>
-                                </div>
-                                <div className="flex items-center space-x-2 text-sm">
-                                    <Phone className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">{guest.phone}</span>
-                                </div>
-                            </div>
 
-                            {/* Statistics */}
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div className="text-center p-2 bg-muted/50 rounded-lg">
-                                    <p className="font-medium">{guest.totalStays}</p>
-                                    <p className="text-muted-foreground">Total Stays</p>
+                                {/* Statistics */}
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div className="text-center p-2 bg-muted/50 rounded-lg">
+                                        <p className="font-medium">{guest.totalStays || 0}</p>
+                                        <p className="text-muted-foreground">Total Stays</p>
+                                    </div>
+                                    <div className="text-center p-2 bg-muted/50 rounded-lg">
+                                        <p className="font-medium">{guest.totalNights || 0}</p>
+                                        <p className="text-muted-foreground">Total Nights</p>
+                                    </div>
                                 </div>
-                                <div className="text-center p-2 bg-muted/50 rounded-lg">
-                                    <p className="font-medium">{guest.totalNights}</p>
-                                    <p className="text-muted-foreground">Total Nights</p>
-                                </div>
-                            </div>
 
-                            {/* Financial Info */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">Total Spent</span>
-                                    <span className="font-medium">{formatCurrency(guest.totalSpent || 0)}</span>
+                                {/* Financial Info */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-muted-foreground">Total Spent</span>
+                                        <span className="font-medium">{formatCurrency(guest.totalSpent || 0)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-muted-foreground">Last Stay</span>
+                                        <span className="text-sm">{formatDate(guest.lastStay || null)}</span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">Last Stay</span>
-                                    <span className="text-sm">{formatDate(guest.lastStay)}</span>
+
+                                {/* Rating */}
+                                {guest.rating && (
+                                    <div className="flex items-center space-x-2">
+                                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                        <span className="font-medium">{guest.rating}</span>
+                                        <span className="text-sm text-muted-foreground">rating</span>
+                                    </div>
+                                )}
+
+                                {/* Action Buttons */}
+                                <div className="flex space-x-2 pt-2">
+                                    <Button variant="outline" size="sm" className="flex-1">
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        View
+                                    </Button>
+                                    <Button variant="outline" size="sm" className="flex-1">
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Edit
+                                    </Button>
+                                    <Button variant="outline" size="sm">
+                                        <Bed className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                            </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            )}
 
-                            {/* Rating */}
-                            {guest.rating && (
-                                <div className="flex items-center space-x-2">
-                                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                    <span className="font-medium">{guest.rating}</span>
-                                    <span className="text-sm text-muted-foreground">rating</span>
-                                </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="flex space-x-2 pt-2">
-                                <Button variant="outline" size="sm" className="flex-1">
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    View
-                                </Button>
-                                <Button variant="outline" size="sm" className="flex-1">
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Edit
-                                </Button>
-                                <Button variant="outline" size="sm">
-                                    <Bed className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
-            {filteredGuests.length === 0 && (
+            {!isLoading && guests.length === 0 && (
                 <div className="text-center py-8">
                     <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-medium">No guests found</h3>
