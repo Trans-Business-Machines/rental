@@ -50,15 +50,6 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
         itemName: item?.itemName || "",
         description: item?.description || "",
         quantity: item?.quantity || 1,
-        condition: item?.condition || "Good",
-        purchaseDate: item?.purchaseDate ? new Date(item.purchaseDate).toISOString().split('T')[0] : "",
-        purchasePrice: item?.purchasePrice || 0,
-        currentValue: item?.currentValue || 0,
-        location: item?.location || "",
-        serialNumber: item?.serialNumber || "",
-        supplier: item?.supplier || "",
-        warrantyExpiry: item?.warrantyExpiry ? new Date(item.warrantyExpiry).toISOString().split('T')[0] : "",
-        status: item?.status || "active",
         notes: item?.notes || "",
     });
 
@@ -79,21 +70,28 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
         setLoading(true);
 
         try {
+            // Set default values for optional fields
+            const submitData = {
+                ...formData,
+                // Default values for hidden fields
+                condition: item?.condition || "Good",
+                purchaseDate: item?.purchaseDate ? new Date(item.purchaseDate) : new Date(),
+                purchasePrice: item?.purchasePrice || 0,
+                currentValue: item?.currentValue || 0,
+                location: item?.location || "General",
+                serialNumber: item?.serialNumber || "",
+                supplier: item?.supplier || "",
+                warrantyExpiry: item?.warrantyExpiry ? new Date(item.warrantyExpiry) : undefined,
+                status: item?.status || "active",
+            };
+
             if (item) {
                 // Update existing item
-                await updateInventoryItem(item.id, {
-                    ...formData,
-                    purchaseDate: new Date(formData.purchaseDate),
-                    warrantyExpiry: formData.warrantyExpiry ? new Date(formData.warrantyExpiry) : undefined,
-                });
+                await updateInventoryItem(item.id, submitData);
                 toast.success("Inventory item updated successfully");
             } else {
                 // Create new item
-                await createInventoryItem({
-                    ...formData,
-                    purchaseDate: new Date(formData.purchaseDate),
-                    warrantyExpiry: formData.warrantyExpiry ? new Date(formData.warrantyExpiry) : undefined,
-                });
+                await createInventoryItem(submitData);
                 toast.success("Inventory item created successfully");
             }
             onSuccess?.();
@@ -113,7 +111,7 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <Label htmlFor="property-unit">Property & Unit</Label>
+                    <Label htmlFor="property-unit">Property & Unit *</Label>
                     <Select
                         value={formData.unitId === null ? `store` : `${formData.propertyId}-${formData.unitId}`}
                         onValueChange={(value) => {
@@ -126,7 +124,7 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                         }}
                     >
                         <SelectTrigger>
-                            <SelectValue placeholder="Select unit or store" />
+                            <SelectValue placeholder="Select unit or store" className="max-w-[200px] overflow-hidden text-ellipsis"/>
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="store">Store (Unassigned)</SelectItem>
@@ -140,8 +138,9 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                         </SelectContent>
                     </Select>
                 </div>
+                
                 <div>
-                    <Label htmlFor="category">Category</Label>
+                    <Label htmlFor="category">Category *</Label>
                     <Select
                         value={formData.category}
                         onValueChange={(value) => handleInputChange("category", value)}
@@ -151,17 +150,17 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="Furniture">Furniture</SelectItem>
+                            <SelectItem value="Electronics">Electronics</SelectItem>
                             <SelectItem value="Appliances">Appliances</SelectItem>
-                            <SelectItem value="Beddings">Beddings</SelectItem>
-                            <SelectItem value="Cutlery">Cutlery</SelectItem>
                             <SelectItem value="Bathroom">Bathroom</SelectItem>
                             <SelectItem value="Lighting">Lighting</SelectItem>
                             <SelectItem value="Other">Other</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
+                
                 <div>
-                    <Label htmlFor="item-name">Item Name</Label>
+                    <Label htmlFor="item-name">Item Name *</Label>
                     <Input
                         id="item-name"
                         value={formData.itemName}
@@ -170,8 +169,9 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                         required
                     />
                 </div>
+                
                 <div>
-                    <Label htmlFor="quantity">Quantity</Label>
+                    <Label htmlFor="quantity">Quantity *</Label>
                     <Input
                         id="quantity"
                         type="number"
@@ -182,132 +182,29 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                         required
                     />
                 </div>
+                
                 <div className="col-span-2">
                     <Label htmlFor="description">Description</Label>
                     <Input
                         id="description"
                         value={formData.description}
                         onChange={(e) => handleInputChange("description", e.target.value)}
-                        placeholder="Detailed description of the item"
-                        required
+                        placeholder="Detailed description of the item (optional)"
                     />
                 </div>
-                <div>
-                    <Label htmlFor="location">Location</Label>
-                    <Input
-                        id="location"
-                        value={formData.location}
-                        onChange={(e) => handleInputChange("location", e.target.value)}
-                        placeholder="e.g., Living Room"
-                        required
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="condition">Condition</Label>
-                    <Select
-                        value={formData.condition}
-                        onValueChange={(value) => handleInputChange("condition", value)}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select condition" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Excellent">Excellent</SelectItem>
-                            <SelectItem value="Good">Good</SelectItem>
-                            <SelectItem value="Fair">Fair</SelectItem>
-                            <SelectItem value="Poor">Poor</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div>
-                    <Label htmlFor="purchase-date">Purchase Date</Label>
-                    <Input
-                        id="purchase-date"
-                        type="date"
-                        value={formData.purchaseDate}
-                        onChange={(e) => handleInputChange("purchaseDate", e.target.value)}
-                        required
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="purchase-price">Purchase Price (KES)</Label>
-                    <Input
-                        id="purchase-price"
-                        type="number"
-                        value={formData.purchasePrice}
-                        onChange={(e) => handleInputChange("purchasePrice", parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                        required
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="current-value">Current Value (KES)</Label>
-                    <Input
-                        id="current-value"
-                        type="number"
-                        value={formData.currentValue}
-                        onChange={(e) => handleInputChange("currentValue", parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                        required
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="serial-number">Serial Number</Label>
-                    <Input
-                        id="serial-number"
-                        value={formData.serialNumber}
-                        onChange={(e) => handleInputChange("serialNumber", e.target.value)}
-                        placeholder="Optional"
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="supplier">Supplier</Label>
-                    <Input
-                        id="supplier"
-                        value={formData.supplier}
-                        onChange={(e) => handleInputChange("supplier", e.target.value)}
-                        placeholder="Optional"
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="warranty-expiry">Warranty Expiry</Label>
-                    <Input
-                        id="warranty-expiry"
-                        type="date"
-                        value={formData.warrantyExpiry}
-                        onChange={(e) => handleInputChange("warrantyExpiry", e.target.value)}
-                    />
-                </div>
-                {item && (
-                    <div>
-                        <Label htmlFor="status">Status</Label>
-                        <Select
-                            value={formData.status}
-                            onValueChange={(value) => handleInputChange("status", value)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="damaged">Damaged</SelectItem>
-                                <SelectItem value="missing">Missing</SelectItem>
-                                <SelectItem value="maintenance">Maintenance</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                )}
+                
                 <div className="col-span-2">
                     <Label htmlFor="notes">Notes</Label>
                     <Textarea
                         id="notes"
                         value={formData.notes}
                         onChange={(e) => handleInputChange("notes", e.target.value)}
-                        placeholder="Additional notes..."
+                        placeholder="Additional notes (optional)..."
                         rows={3}
                     />
                 </div>
             </div>
+            
             <div className="flex space-x-2">
                 <Button type="submit" className="flex-1" disabled={loading}>
                     {loading ? "Saving..." : (item ? "Update Item" : "Add Item")}

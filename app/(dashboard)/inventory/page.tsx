@@ -266,10 +266,8 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                                                     <Button variant="outline" size="sm">
                                                         <Eye className="h-4 w-4" />
                                                     </Button>
-                                                    <InventoryEditDialog item={item as any}>
-                                                        <Button variant="outline" size="sm">
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
+                                                    <InventoryEditDialog item={item as any}>                                                        
+                                                        <Edit className="h-4 w-4" />
                                                     </InventoryEditDialog>
                                                 </div>
                                             </TableCell>
