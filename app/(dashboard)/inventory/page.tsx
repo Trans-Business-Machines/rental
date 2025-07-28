@@ -1,11 +1,10 @@
 import { CheckoutDialog } from '@/components/CheckoutDialog';
+import { InventoryActions } from '@/components/InventoryActions';
 import { InventoryDialog } from '@/components/InventoryDialog';
-import { InventoryEditDialog } from '@/components/InventoryEditDialog';
 import { InventoryFilters } from '@/components/InventoryFilters';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getCheckoutReports } from '@/lib/actions/checkout';
 import { getInventoryItems } from '@/lib/actions/inventory';
@@ -16,7 +15,6 @@ import {
     Bed,
     CheckCircle,
     Download,
-    Edit,
     Eye,
     Lamp,
     Monitor,
@@ -204,81 +202,107 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                 </TabsList>
 
                 <TabsContent value="inventory" className="space-y-4">
-                    {/* Inventory Items Table */}
-                    <div className="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Item Name</TableHead>
-                                    <TableHead>Category</TableHead>
-                                    <TableHead>Property</TableHead>
-                                    <TableHead>Unit</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Condition</TableHead>
-                                    <TableHead>Quantity</TableHead>
-                                    <TableHead>Last Inspected</TableHead>
-                                    <TableHead>Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredItems.map((item) => {
-                                    const StatusIcon = getStatusIcon(item.status);
-                                    const CategoryIcon = getCategoryIcon(item.category);
-                                    return (
-                                        <TableRow key={item.id}>
-                                            <TableCell>
+                    {/* Inventory Items Grid */}
+                    {filteredItems.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredItems.map((item) => {
+                                const StatusIcon = getStatusIcon(item.status);
+                                const CategoryIcon = getCategoryIcon(item.category);
+                                return (
+                                    <Card
+                                        key={item.id}
+                                        className="hover:shadow-lg transition-shadow"
+                                    >
+                                        <CardHeader>
+                                            <div className="flex items-start justify-between">
                                                 <div className="flex items-center space-x-3">
                                                     <div className="p-2 bg-muted/50 rounded-lg">
                                                         <CategoryIcon className="h-4 w-4 text-muted-foreground" />
                                                     </div>
                                                     <div>
-                                                        <div className="font-medium">
+                                                        <CardTitle className="text-lg">
                                                             <Link href={`/inventory/${item.id}`} className="hover:underline text-primary">
                                                                 {item.itemName}
                                                             </Link>
-                                                        </div>
-                                                        <div className="text-sm text-muted-foreground line-clamp-2">
+                                                        </CardTitle>
+                                                        <p className="text-sm text-muted-foreground line-clamp-2">
                                                             {item.description}
-                                                        </div>
+                                                        </p>
                                                     </div>
                                                 </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline">{item.category}</Badge>
-                                            </TableCell>
-                                            <TableCell>{item.property.name}</TableCell>
-                                            <TableCell>{item.unit ? item.unit.name : <span className="italic text-gray-400">Store (Unassigned)</span>}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={getStatusColor(item.status) as "default" | "secondary" | "destructive" | "outline"}>
-                                                    <StatusIcon className="h-3 w-3 mr-1" />
-                                                    {item.status}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <span className={getConditionColor(item.condition)}>
-                                                    {item.condition}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell>{item.quantity}</TableCell>
-                                            <TableCell>{formatDate(item.lastInspected)}</TableCell>
-                                            <TableCell>
-                                                <div className="flex space-x-2">
-                                                    <Button variant="outline" size="sm">
-                                                        <Eye className="h-4 w-4" />
-                                                    </Button>
-                                                    <InventoryEditDialog item={item as any}>                                                        
-                                                        <Edit className="h-4 w-4" />
-                                                    </InventoryEditDialog>
+                                                <div className="flex items-center space-x-2">
+                                                    <Badge variant={getStatusColor(item.status) as "default" | "secondary" | "destructive" | "outline"}>
+                                                        <StatusIcon className="h-3 w-3 mr-1" />
+                                                        {item.status}
+                                                    </Badge>
+                                                    <InventoryActions item={item} />
                                                 </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
-                    </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            {/* Property and Unit Information */}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center space-x-2 text-sm">
+                                                    <Bed className="h-4 w-4 text-muted-foreground" />
+                                                    <span className="font-medium">{item.property.name}</span>
+                                                </div>
+                                                <div className="flex items-center space-x-2 text-sm">
+                                                    <Package className="h-4 w-4 text-muted-foreground" />
+                                                    <span className="text-muted-foreground">
+                                                        {item.unit ? item.unit.name : "Store (Unassigned)"}
+                                                    </span>
+                                                </div>
+                                            </div>
 
-                    {filteredItems.length === 0 && (
+                                            {/* Item Details */}
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div className="text-center p-2 bg-muted/50 rounded-lg">
+                                                    <p className="font-medium">{item.quantity}</p>
+                                                    <p className="text-muted-foreground">Quantity</p>
+                                                </div>
+                                                <div className="text-center p-2 bg-muted/50 rounded-lg">
+                                                    <p className={`font-medium ${getConditionColor(item.condition)}`}>
+                                                        {item.condition}
+                                                    </p>
+                                                    <p className="text-muted-foreground">Condition</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Financial Information */}
+                                            {item.purchasePrice && (
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm text-muted-foreground">Purchase Price</span>
+                                                        <span className="font-medium">{formatCurrency(item.purchasePrice)}</span>
+                                                    </div>
+                                                    {item.currentValue && (
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-sm text-muted-foreground">Current Value</span>
+                                                            <span className="font-medium">{formatCurrency(item.currentValue)}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Additional Details */}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm text-muted-foreground">Category</span>
+                                                    <Badge variant="outline" className="text-xs">
+                                                        {item.category}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm text-muted-foreground">Last Inspected</span>
+                                                    <span className="text-sm">{formatDate(item.lastInspected)}</span>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    ) : (
                         <div className="text-center py-8">
                             <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                             <h3 className="text-lg font-medium">No inventory items found</h3>

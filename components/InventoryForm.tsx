@@ -29,7 +29,7 @@ interface InventoryItem {
     status: string;
     notes?: string | null;
     property: { id: number; name: string };
-    unit: { id: number; name: string };
+    unit: { id: number; name: string } | null;
 }
 
 interface InventoryFormProps {

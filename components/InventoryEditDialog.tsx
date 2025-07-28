@@ -1,20 +1,19 @@
 "use client";
 
 import { InventoryForm } from "@/components/InventoryForm";
-import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
-import { Edit } from "lucide-react";
 import { useState } from "react";
 
 interface InventoryItem {
     id: number;
     propertyId: number;
-    unitId: number;
+    unitId: number | null;
     category: string;
     itemName: string;
     description: string;
@@ -30,39 +29,34 @@ interface InventoryItem {
     status: string;
     notes?: string | null;
     property: { id: number; name: string };
-    unit: { id: number; name: string };
+    unit: { id: number; name: string } | null;
 }
 
 interface InventoryEditDialogProps {
     item: InventoryItem;
     children?: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function InventoryEditDialog({ item, children }: InventoryEditDialogProps) {
-    const [open, setOpen] = useState(false);
+export function InventoryEditDialog({ item, children, open, onOpenChange }: InventoryEditDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
+    
+    const isControlled = open !== undefined;
+    const dialogOpen = isControlled ? open : internalOpen;
+    const setDialogOpen = isControlled ? (onOpenChange || (() => {})) : setInternalOpen;
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setOpen(true)}
-            >
-                {children || (
-                    <>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                    </>
-                )}
-            </Button>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            {children && <DialogTrigger asChild>{children}</DialogTrigger>}
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>Edit Inventory Item</DialogTitle>
                 </DialogHeader>
                 <InventoryForm
                     item={item}
-                    onSuccess={() => setOpen(false)}
-                    onCancel={() => setOpen(false)}
+                    onSuccess={() => setDialogOpen(false)}
+                    onCancel={() => setDialogOpen(false)}
                 />
             </DialogContent>
         </Dialog>
