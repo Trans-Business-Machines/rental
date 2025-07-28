@@ -180,6 +180,8 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                         onChange={(e) => handleInputChange("quantity", parseInt(e.target.value))}
                         placeholder="1"
                         required
+                        disabled={!!item} // Disable when editing existing item
+                        className={item ? "bg-muted cursor-not-allowed" : ""} // Visual indication when disabled
                     />
                 </div>
                 

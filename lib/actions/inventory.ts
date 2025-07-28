@@ -98,7 +98,8 @@ export async function updateInventoryItem(
 	}
 ) {
 	try {
-		const { unitId, ...rest } = data;
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { unitId, quantity, ...rest } = data; // Exclude quantity from updates
 		const item = await prisma.inventoryItem.update({
 			where: { id },
 			data: {
