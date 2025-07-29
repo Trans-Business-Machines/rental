@@ -109,7 +109,7 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-2">
                     <Label htmlFor="property-unit">Property & Unit *</Label>
                     <Select
                         value={formData.propertyId === null ? `store` : `${formData.propertyId}-${formData.unitId}`}
@@ -138,7 +138,7 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                     </Select>
                 </div>
                 
-                <div>
+                <div className="space-y-2">
                     <Label htmlFor="category">Category *</Label>
                     <Select
                         value={formData.category}
@@ -152,13 +152,13 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                             <SelectItem value="Electronics">Electronics</SelectItem>
                             <SelectItem value="Cutlery">Cutlery</SelectItem>
                             <SelectItem value="Bathroom">Bathroom</SelectItem>
-                            <SelectItem value="Lighting">Lighting</SelectItem>
+                            <SelectItem value="Lighting">Lighting</SelectItem>                            
                             <SelectItem value="Other">Other</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
                 
-                <div>
+                <div className="space-y-2">
                     <Label htmlFor="item-name">Item Name *</Label>
                     <Input
                         id="item-name"
@@ -169,7 +169,7 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                     />
                 </div>
                 
-                <div>
+                <div className="space-y-2">
                     <Label htmlFor="quantity">Quantity *</Label>
                     <Input
                         id="quantity"
@@ -184,7 +184,7 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                     />
                 </div>
                 
-                <div className="col-span-2">
+                <div className="col-span-2 space-y-2">
                     <Label htmlFor="description">Description</Label>
                     <Input
                         id="description"
@@ -194,7 +194,7 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                     />
                 </div>
                 
-                <div className="col-span-2">
+                <div className="col-span-2 space-y-2">
                     <Label htmlFor="notes">Notes</Label>
                     <Textarea
                         id="notes"
