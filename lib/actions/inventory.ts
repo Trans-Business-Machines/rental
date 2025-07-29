@@ -38,7 +38,7 @@ export async function getInventoryItemById(id: number) {
 }
 
 export async function createInventoryItem(data: {
-	propertyId: number;
+	propertyId: number | null;
 	unitId: number | null;
 	category: string;
 	itemName: string;
@@ -55,10 +55,11 @@ export async function createInventoryItem(data: {
 	notes?: string;
 }) {
 	try {
-		const { unitId, ...rest } = data;
+		const { unitId, propertyId, ...rest } = data;
 		const item = await prisma.inventoryItem.create({
 			data: {
 				...rest,
+				propertyId: propertyId === null ? undefined : propertyId,
 				unitId: unitId === null ? undefined : unitId,
 				status: "active",
 				lastInspected: new Date(),
@@ -79,7 +80,7 @@ export async function createInventoryItem(data: {
 export async function updateInventoryItem(
 	id: number,
 	data: {
-		propertyId: number;
+		propertyId: number | null;
 		unitId: number | null;
 		category: string;
 		itemName: string;
@@ -99,11 +100,12 @@ export async function updateInventoryItem(
 ) {
 	try {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const { unitId, quantity, ...rest } = data; // Exclude quantity from updates
+		const { unitId, propertyId, quantity, ...rest } = data; // Exclude quantity from updates
 		const item = await prisma.inventoryItem.update({
 			where: { id },
 			data: {
 				...rest,
+				propertyId: propertyId === null ? undefined : propertyId,
 				unitId: unitId === null ? undefined : unitId,
 			},
 			include: {

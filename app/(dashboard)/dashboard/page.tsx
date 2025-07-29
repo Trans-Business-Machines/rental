@@ -60,7 +60,7 @@ export default async function DashboardPage() {
 			id: `inventory-${item.id}`,
 			type: "maintenance" as const,
 			title: `Inventory item ${item.status}`,
-			description: `${item.itemName} - ${item.property.name}`,
+			description: `${item.itemName} - ${item.property?.name || ''}`,
 			time: formatTimeAgo(item.updatedAt),
 			status: item.status,
 		})),

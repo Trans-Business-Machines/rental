@@ -220,8 +220,8 @@ model Booking {
 
 model InventoryItem {
   id              Int      @id @default(autoincrement())
-  propertyId      Int
-  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId      Int?
+  property        Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   unitId          Int?     // Now nullable
   unit            Unit?    @relation(fields: [unitId], references: [id], onDelete: Cascade)
   category        String   // Furniture, Electronics, Appliances, etc.
