@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 interface InventoryItem {
     id: number;
-    propertyId: number;
+    propertyId: number | null;
     unitId: number | null;
     category: string;
     itemName: string;
@@ -28,7 +28,7 @@ interface InventoryItem {
     warrantyExpiry?: Date | null;
     status: string;
     notes?: string | null;
-    property: { id: number; name: string };
+    property: { id: number; name: string } | null;
     unit: { id: number; name: string } | null;
 }
 
@@ -44,7 +44,7 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
     const [properties, setProperties] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
-        propertyId: item?.propertyId || preselectedPropertyId || 0,
+        propertyId: item?.propertyId || preselectedPropertyId || null,
         unitId: typeof item?.unitId === 'undefined' ? (typeof preselectedUnitId === 'undefined' ? null : preselectedUnitId) : item.unitId,
         category: item?.category || "",
         itemName: item?.itemName || "",
@@ -113,10 +113,10 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                 <div>
                     <Label htmlFor="property-unit">Property & Unit *</Label>
                     <Select
-                        value={formData.unitId === null ? `store` : `${formData.propertyId}-${formData.unitId}`}
+                        value={formData.propertyId === null ? `store` : `${formData.propertyId}-${formData.unitId}`}
                         onValueChange={(value) => {
                             if (value === 'store') {
-                                setFormData(prev => ({ ...prev, unitId: null }));
+                                setFormData(prev => ({ ...prev, propertyId: null, unitId: null }));
                             } else {
                                 const [propertyId, unitId] = value.split('-').map(Number);
                                 setFormData(prev => ({ ...prev, propertyId, unitId }));
