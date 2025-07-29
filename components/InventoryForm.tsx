@@ -73,7 +73,6 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
             // Set default values for optional fields
             const submitData = {
                 ...formData,
-                // Default values for hidden fields
                 condition: item?.condition || "Good",
                 purchaseDate: item?.purchaseDate ? new Date(item.purchaseDate) : new Date(),
                 purchasePrice: item?.purchasePrice || 0,
@@ -151,7 +150,7 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                         <SelectContent>
                             <SelectItem value="Furniture">Furniture</SelectItem>
                             <SelectItem value="Electronics">Electronics</SelectItem>
-                            <SelectItem value="Appliances">Appliances</SelectItem>
+                            <SelectItem value="Cutlery">Cutlery</SelectItem>
                             <SelectItem value="Bathroom">Bathroom</SelectItem>
                             <SelectItem value="Lighting">Lighting</SelectItem>
                             <SelectItem value="Other">Other</SelectItem>
