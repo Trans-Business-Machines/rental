@@ -49,12 +49,12 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
         const matchesSearch = !search || 
             item.itemName.toLowerCase().includes(search.toLowerCase()) ||
             item.description.toLowerCase().includes(search.toLowerCase()) ||
-            item.property.name.toLowerCase().includes(search.toLowerCase()) ||
+            item.property?.name.toLowerCase().includes(search.toLowerCase()) ||
             (item.unit?.name ?? '').toLowerCase().includes(search.toLowerCase());
         
         const matchesCategory = !category || category === 'all' || item.category === category;
         const matchesStatus = !status || status === 'all' || item.status === status;
-        const matchesProperty = !property || property === 'all' || item.property.name === property;
+        const matchesProperty = !property || property === 'all' || item.property?.name === property;
         const matchesUnit = !unit || unit === 'all' || (item.unit?.name ?? '') === unit;
         
         return matchesSearch && matchesCategory && matchesStatus && matchesProperty && matchesUnit;
@@ -244,9 +244,9 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                                             <div className="space-y-2">
                                                 <div className="flex items-center space-x-2 text-sm">
                                                     <Bed className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="font-medium">{item.property.name}</span>
+                                                    <span className="font-medium">{item.property?.name || ''}</span>
                                                 </div>
-                                                <div className="flex items-center space-x-2 text-sm">
+                                                <div className="flex items-center space-x-2 text-sm">   
                                                     <Package className="h-4 w-4 text-muted-foreground" />
                                                     <span className="text-muted-foreground">
                                                         {item.unit ? item.unit.name : "Store (Unassigned)"}
