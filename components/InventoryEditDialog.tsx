@@ -12,24 +12,16 @@ import { useState } from "react";
 
 interface InventoryItem {
     id: number;
-    propertyId: number;
-    unitId: number | null;
     category: string;
     itemName: string;
     description: string;
     quantity: number;
-    condition: string;
-    purchaseDate: Date;
     purchasePrice?: number;
     currentValue?: number;
-    location: string;
-    serialNumber?: string | null;
     supplier?: string | null;
     warrantyExpiry?: Date | null;
     status: string;
-    notes?: string | null;
-    property: { id: number; name: string };
-    unit: { id: number; name: string } | null;
+    assignableOnBooking?: boolean;
 }
 
 interface InventoryEditDialogProps {

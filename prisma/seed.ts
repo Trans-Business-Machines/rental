@@ -227,90 +227,90 @@ async function main() {
 	await Promise.all([
 		prisma.inventoryItem.create({
 			data: {
-				propertyId: property1.id,
-				unitId: units[0].id, // Apartment 1A
+				// propertyId: property1.id, // No longer exists - handled by assignments
+				// unitId: units[0].id, // No longer exists - handled by assignments
 				category: "Furniture",
 				itemName: "Queen Bed",
 				description: "Comfortable queen-size bed with mattress",
 				quantity: 1,
-				condition: "Good",
-				purchaseDate: new Date("2023-01-15"),
+				// condition: "Good", // No longer exists - tracked at assignment level
+				// purchaseDate: new Date("2023-01-15"),
 				purchasePrice: 80000,
 				currentValue: 60000,
-				location: "Bedroom",
-				serialNumber: "QB-001",
+				// location: "Bedroom",
+				// serialNumber: "QB-001",
 				supplier: "Furniture World",
 				status: "active",
 			},
 		}),
 		prisma.inventoryItem.create({
 			data: {
-				propertyId: property1.id,
-				unitId: units[0].id, // Apartment 1A
+				// propertyId: property1.id, // No longer exists - handled by assignments
+				// unitId: units[0].id, // No longer exists - handled by assignments
 				category: "Electronics",
 				itemName: "Smart TV",
 				description: "55-inch 4K Smart TV",
 				quantity: 1,
-				condition: "Excellent",
-				purchaseDate: new Date("2023-02-10"),
+				// condition: "Excellent", // No longer exists - tracked at assignment level
+				// purchaseDate: new Date("2023-02-10"),
 				purchasePrice: 120000,
 				currentValue: 100000,
-				location: "Living Room",
-				serialNumber: "TV-001",
+				// location: "Living Room",
+				// serialNumber: "TV-001",
 				supplier: "Electronics Plus",
 				status: "active",
 			},
 		}),
 		prisma.inventoryItem.create({
 			data: {
-				propertyId: property1.id,
-				unitId: units[1].id, // Apartment 2A
+				// propertyId: property1.id, // No longer exists - handled by assignments
+				// unitId: units[1].id, // No longer exists - handled by assignments
 				category: "Appliances",
 				itemName: "Refrigerator",
 				description: "Side-by-side refrigerator with ice maker",
 				quantity: 1,
-				condition: "Good",
-				purchaseDate: new Date("2023-01-20"),
+				// condition: "Good", // No longer exists - tracked at assignment level
+				// purchaseDate: new Date("2023-01-20"),
 				purchasePrice: 150000,
 				currentValue: 120000,
-				location: "Kitchen",
-				serialNumber: "FRIDGE-001",
+				// location: "Kitchen",
+				// serialNumber: "FRIDGE-001",
 				supplier: "Appliance Store",
 				status: "active",
 			},
 		}),
 		prisma.inventoryItem.create({
 			data: {
-				propertyId: property2.id,
-				unitId: units[3].id, // Studio 1A
+				// propertyId: property2.id, // No longer exists - handled by assignments
+				// unitId: units[3].id, // No longer exists - handled by assignments
 				category: "Furniture",
 				itemName: "Sofa Bed",
 				description: "Convertible sofa bed for studio apartment",
 				quantity: 1,
-				condition: "Fair",
-				purchaseDate: new Date("2022-12-05"),
+				// condition: "Fair", // No longer exists - tracked at assignment level
+				// purchaseDate: new Date("2022-12-05"),
 				purchasePrice: 60000,
 				currentValue: 40000,
-				location: "Living Area",
-				serialNumber: "SOFA-001",
+				// location: "Living Area",
+				// serialNumber: "SOFA-001",
 				supplier: "Studio Furniture",
 				status: "active",
 			},
 		}),
 		prisma.inventoryItem.create({
 			data: {
-				propertyId: property3.id,
-				unitId: units[5].id, // Condo 1A
+				// propertyId: property3.id, // No longer exists - handled by assignments
+				// unitId: units[5].id, // No longer exists - handled by assignments
 				category: "Electronics",
 				itemName: "Washing Machine",
 				description: "Front-loading washing machine",
 				quantity: 1,
-				condition: "Excellent",
-				purchaseDate: new Date("2023-03-15"),
+				// condition: "Excellent", // No longer exists - tracked at assignment level
+				// purchaseDate: new Date("2023-03-15"),
 				purchasePrice: 80000,
 				currentValue: 70000,
-				location: "Laundry Room",
-				serialNumber: "WM-001",
+				// location: "Laundry Room",
+				// serialNumber: "WM-001",
 				supplier: "Home Appliances",
 				status: "active",
 			},
@@ -444,8 +444,8 @@ async function main() {
 		prisma.booking.create({
 			data: {
 				guestId: 3, // James Kimani
-				propertyId: property1.id, // Sunset Apartments
-				unitId: units[1].id, // Apartment 2A
+				propertyId: property1.id, // No longer exists - handled by assignments // Sunset Apartments
+				unitId: units[1].id, // No longer exists - handled by assignments
 				checkInDate: new Date("2024-02-10"),
 				checkOutDate: new Date("2024-02-15"),
 				numberOfGuests: 3,
@@ -536,7 +536,7 @@ async function main() {
 		where: { id: 2 }, // Smart TV
 		data: {
 			status: "damaged",
-			lastInspected: new Date("2024-01-20"),
+			// lastInspected: new Date("2024-01-20"), // Field no longer exists
 		},
 	});
 

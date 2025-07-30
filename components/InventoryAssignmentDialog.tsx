@@ -10,10 +10,16 @@ interface InventoryAssignmentDialogProps {
 	preselectedItemId?: number;
 	trigger?: React.ReactNode;
 	onSuccess?: () => void;
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
 }
 
-export function InventoryAssignmentDialog({ preselectedItemId, trigger, onSuccess }: InventoryAssignmentDialogProps) {
-	const [open, setOpen] = useState(false);
+export function InventoryAssignmentDialog({ preselectedItemId, trigger, onSuccess, open: controlledOpen, onOpenChange }: InventoryAssignmentDialogProps) {
+	const [internalOpen, setInternalOpen] = useState(false);
+	
+	// Use controlled state if provided, otherwise use internal state
+	const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
+	const setOpen = onOpenChange || setInternalOpen;
 
 	const handleSuccess = () => {
 		setOpen(false);
@@ -27,20 +33,22 @@ export function InventoryAssignmentDialog({ preselectedItemId, trigger, onSucces
 	const defaultTrigger = (
 		<Button size="sm" className="gap-2">
 			<Plus className="h-4 w-4" />
-			Assign to Unit
+			Assign Items
 		</Button>
 	);
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				{trigger || defaultTrigger}
-			</DialogTrigger>
-			<DialogContent className="sm:max-w-[600px]">
+		<Dialog open={isOpen} onOpenChange={setOpen}>
+			{trigger && (
+				<DialogTrigger asChild>
+					{trigger || defaultTrigger}
+				</DialogTrigger>
+			)}
+			<DialogContent className="max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle>Assign Inventory Item</DialogTitle>
 					<DialogDescription>
-						Assign an inventory item from the store to a specific unit. This will reduce the store quantity and create an assignment record.
+						Assign inventory items from the store to a specific unit. Supports bulk assignments with individual serial numbers and notes.
 					</DialogDescription>
 				</DialogHeader>
 				<InventoryAssignmentForm

@@ -61,6 +61,7 @@ export async function createBooking(data: {
 		const existingBooking = await prisma.booking.findFirst({
 			where: {
 				propertyId: data.propertyId,
+				unitId: data.unitId,
 				checkInDate: {
 					gte: startOfDay,
 					lte: endOfDay,

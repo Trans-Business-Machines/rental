@@ -36,12 +36,13 @@ interface Booking {
 }
 
 interface InventoryItem {
-    id: number
+    id: number // assignment ID
+    inventoryItemId: number
     itemName: string
     category: string
-    location: string
-    condition: string
     status: string
+    serialNumber?: string | null
+    notes?: string | null
 }
 
 interface CheckoutFormProps {
@@ -228,12 +229,22 @@ export function CheckoutForm({ onSuccess, onCancel }: CheckoutFormProps) {
                 </div>
             </div>
 
-            {selectedBooking && inventoryItems.length > 0 && (
-                <>
-                    <div>
-                        <h3 className="font-medium mb-4">Inventory Checklist - {selectedBooking.property.name} {selectedBooking.unit.name}</h3>
-                        <div className="space-y-3 max-h-60 overflow-y-auto border rounded-lg p-4">
-                            {inventoryItems.map((item) => {
+            {selectedBooking && (
+                <div>
+                    <h3 className="font-medium mb-4">
+                        Assignable Items Checklist - {selectedBooking.property.name} {selectedBooking.unit.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Items that were assigned to the guest and can be returned to stock
+                    </p>
+                    <div className="space-y-3 max-h-60 overflow-y-auto border rounded-lg p-4">
+                        {inventoryItems.length === 0 ? (
+                            <div className="text-center text-muted-foreground py-8">
+                                <p>No assignable items found for this unit.</p>
+                                <p className="text-xs mt-1">Only items marked as "assignable to guests" will appear here.</p>
+                            </div>
+                        ) : (
+                            inventoryItems.map((item) => {
                                 const itemData = checkoutItems[item.id] || { checked: false, condition: "good", damageCost: 0, notes: "" }
                                 return (
                                     <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
@@ -246,7 +257,18 @@ export function CheckoutForm({ onSuccess, onCancel }: CheckoutFormProps) {
                                             />
                                             <div>
                                                 <p className="font-medium">{item.itemName}</p>
-                                                <p className="text-sm text-muted-foreground">{item.location} • {item.category}</p>
+                                                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                                                    <span>{item.category}</span>
+                                                    {item.serialNumber && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span>S/N: {item.serialNumber}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                {item.notes && (
+                                                    <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center space-x-2">
@@ -256,7 +278,7 @@ export function CheckoutForm({ onSuccess, onCancel }: CheckoutFormProps) {
                                                     handleItemChange(item.id, "condition", value)
                                                 }
                                             >
-                                                <SelectTrigger className="w-24">
+                                                <SelectTrigger className="w-28">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -265,20 +287,22 @@ export function CheckoutForm({ onSuccess, onCancel }: CheckoutFormProps) {
                                                     <SelectItem value="missing">Missing</SelectItem>
                                                 </SelectContent>
                                             </Select>
-                                            <Input
-                                                placeholder="Damage cost"
-                                                type="number"
-                                                className="w-24"
-                                                value={itemData.damageCost}
-                                                onChange={(e) =>
-                                                    handleItemChange(item.id, "damageCost", parseInt(e.target.value) || 0)
-                                                }
-                                            />
+                                            {itemData.condition === "damaged" && (
+                                                <Input
+                                                    placeholder="Damage cost"
+                                                    type="number"
+                                                    className="w-28"
+                                                    value={itemData.damageCost}
+                                                    onChange={(e) =>
+                                                        handleItemChange(item.id, "damageCost", parseInt(e.target.value) || 0)
+                                                    }
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                 )
-                            })}
-                        </div>
+                            })
+                        )}
                     </div>
 
                     <div>
@@ -296,8 +320,10 @@ export function CheckoutForm({ onSuccess, onCancel }: CheckoutFormProps) {
                             rows={3}
                         />
                     </div>
+                </div>
+            )}
 
-                    <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label htmlFor="deposit-deduction">Deposit Deduction (KES)</Label>
                             <Input
@@ -318,8 +344,6 @@ export function CheckoutForm({ onSuccess, onCancel }: CheckoutFormProps) {
                             <span className="text-lg font-bold">KES {totalDamage.toLocaleString()}</span>
                         </div>
                     </div>
-                </>
-            )}
 
             <div className="flex space-x-2">
                 <Button type="submit" disabled={isLoading || !selectedBooking} className="flex-1">

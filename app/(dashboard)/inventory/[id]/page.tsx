@@ -65,22 +65,22 @@ export default async function InventoryDetailsPage({ params }: { params: Promise
         <Card className="p-4 flex items-center gap-3">
           <MapPin className="h-5 w-5 text-muted-foreground" />
           <div>
-            <div className="text-xs text-muted-foreground">Property</div>
-            <div className="font-medium">{item.property?.name}</div>
+            <div className="text-xs text-muted-foreground">Category</div>
+            <div className="font-medium">{item.category}</div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
           <Home className="h-5 w-5 text-muted-foreground" />
           <div>
-            <div className="text-xs text-muted-foreground">Unit/Store</div>
-            <div className="font-medium">{item.unit ? item.unit.name : <span className="italic text-gray-400">Store (Unassigned)</span>}</div>
+            <div className="text-xs text-muted-foreground">Quantity</div>
+            <div className="font-medium">{item.quantity} available</div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
           <Calendar className="h-5 w-5 text-muted-foreground" />
           <div>
-            <div className="text-xs text-muted-foreground">Purchase Date</div>
-            <div className="font-medium">{new Date(item.purchaseDate).toLocaleDateString()}</div>
+            <div className="text-xs text-muted-foreground">Assigned</div>
+            <div className="font-medium">{(item as any).assignedQuantity || 0} items</div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
@@ -93,15 +93,15 @@ export default async function InventoryDetailsPage({ params }: { params: Promise
         <Card className="p-4 flex items-center gap-3">
           <User className="h-5 w-5 text-muted-foreground" />
           <div>
-            <div className="text-xs text-muted-foreground">Condition</div>
-            <div className="font-medium">{item.condition}</div>
+            <div className="text-xs text-muted-foreground">Supplier</div>
+            <div className="font-medium">{item.supplier || 'Not specified'}</div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
           <UtensilsCrossed className="h-5 w-5 text-muted-foreground" />
           <div>
-            <div className="text-xs text-muted-foreground">Location</div>
-            <div className="font-medium">{item.location}</div>
+            <div className="text-xs text-muted-foreground">Status</div>
+            <div className="font-medium capitalize">{item.status}</div>
           </div>
         </Card>
       </div>

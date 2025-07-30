@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getBookingsByUnit } from "@/lib/actions/bookings";
-import { getInventoryByUnit } from "@/lib/actions/inventory";
+import { getAssignmentsByUnit } from "@/lib/actions/inventory";
 import { getPropertyById } from "@/lib/actions/properties";
 import { getUnitById } from "@/lib/actions/units";
 import { ArrowLeft, Bed, Building2, Calendar, DollarSign, Edit, Home, MapPin } from "lucide-react";
@@ -26,11 +26,11 @@ export default async function UnitPage({ params }: UnitPageProps) {
 		notFound()
 	}
 
-	const [property, unit, inventory, bookings] = await Promise.all([
+	const [property, unit, bookings, assignments] = await Promise.all([
 		getPropertyById(propertyId),
 		getUnitById(unitIdNum),
-		getInventoryByUnit(unitIdNum),
-		getBookingsByUnit(unitIdNum)
+		getBookingsByUnit(unitIdNum),
+		getAssignmentsByUnit(unitIdNum)
 	])
 
 	if (!property || !unit || unit.propertyId !== propertyId) {
@@ -143,7 +143,7 @@ export default async function UnitPage({ params }: UnitPageProps) {
 					<UnitQuickActions unit={unit} property={property} />
 
 					{/* Inventory */}
-					<UnitInventory unit={unit} inventory={inventory as any} />
+					<UnitInventory unit={unit} inventory={[] as any} assignments={assignments as any} />
 
 					{/* Recent Bookings */}
 					<UnitBookings unit={unit} bookings={bookings} />
@@ -184,7 +184,7 @@ export default async function UnitPage({ params }: UnitPageProps) {
 						<CardContent className="space-y-3">
 							<div className="flex items-center justify-between">
 								<span className="text-sm font-medium">Inventory Items</span>
-								<span className="text-sm">{inventory.length}</span>
+								        <span className="text-sm">{assignments.length}</span>
 							</div>
 							<div className="flex items-center justify-between">
 								<span className="text-sm font-medium">Total Bookings</span>

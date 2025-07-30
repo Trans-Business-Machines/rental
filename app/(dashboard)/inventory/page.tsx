@@ -1,3 +1,4 @@
+import { AssignmentFilters } from '@/components/AssignmentFilters';
 import { CheckoutDialog } from '@/components/CheckoutDialog';
 import { InventoryActions } from '@/components/InventoryActions';
 import { InventoryAssignmentDialog } from '@/components/InventoryAssignmentDialog';
@@ -9,10 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getCheckoutReports } from '@/lib/actions/checkout';
-import { getAssignmentStats, getInventoryAssignments, getInventoryItems } from '@/lib/actions/inventory';
+import { getInventoryAssignments, getInventoryItems } from '@/lib/actions/inventory';
 import { getAllPropertiesWithUnits as getProperties } from '@/lib/actions/properties';
 import {
-    AlertTriangle,
     Bath,
     Bed,
     CheckCircle,
@@ -22,7 +22,6 @@ import {
     Monitor,
     Package,
     UtensilsCrossed,
-    Wrench,
     XCircle
 } from 'lucide-react';
 import Link from 'next/link';
@@ -35,39 +34,55 @@ interface InventoryPageProps {
         property?: string;
         unit?: string;
         tab?: string;
+        // Assignment filters
+        assignmentProperty?: string;
+        assignmentItem?: string;
+        assignmentStatus?: string;
     }>
 }
 
 export default async function InventoryPage({ searchParams }: InventoryPageProps) {
-    const { search, category, status, property, unit, tab } = await searchParams;
+    const { search, category, status, property, unit, tab, assignmentProperty, assignmentItem, assignmentStatus } = await searchParams;
     
     // Fetch real data from database
     const inventoryItems = await getInventoryItems();
     const properties = await getProperties();
     const checkoutReports = await getCheckoutReports();
+    const assignments = await getInventoryAssignments();
     
     // Filter items based on search params
     const filteredItems = inventoryItems.filter(item => {
         const matchesSearch = !search || 
             item.itemName.toLowerCase().includes(search.toLowerCase()) ||
             item.description.toLowerCase().includes(search.toLowerCase()) ||
-            item.property?.name.toLowerCase().includes(search.toLowerCase()) ||
-            (item.unit?.name ?? '').toLowerCase().includes(search.toLowerCase());
+            item.category.toLowerCase().includes(search.toLowerCase()) ||
+            (item.supplier ?? '').toLowerCase().includes(search.toLowerCase());
         
         const matchesCategory = !category || category === 'all' || item.category === category;
         const matchesStatus = !status || status === 'all' || item.status === status;
-        const matchesProperty = !property || property === 'all' || item.property?.name === property;
-        const matchesUnit = !unit || unit === 'all' || (item.unit?.name ?? '') === unit;
         
-        return matchesSearch && matchesCategory && matchesStatus && matchesProperty && matchesUnit;
+        return matchesSearch && matchesCategory && matchesStatus;
+    });
+
+    // Filter assignments based on search params
+    const filteredAssignments = assignments.filter(assignment => {
+        const matchesProperty = !assignmentProperty || assignmentProperty === 'all' || 
+            (assignment.property && assignment.property.id.toString() === assignmentProperty);
+        
+        const matchesItem = !assignmentItem || assignmentItem === 'all' || 
+            assignment.inventoryItem.id.toString() === assignmentItem;
+        
+        const matchesStatus = !assignmentStatus || assignmentStatus === 'all' || 
+            (assignmentStatus === 'active' && assignment.isActive) ||
+            (assignmentStatus === 'returned' && !assignment.isActive);
+        
+        return matchesProperty && matchesItem && matchesStatus;
     });
 
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'active': return 'default';
-            case 'damaged': return 'destructive';
-            case 'missing': return 'destructive';
-            case 'maintenance': return 'secondary';
+            case 'discontinued': return 'secondary';
             default: return 'secondary';
         }
     };
@@ -75,20 +90,8 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     const getStatusIcon = (status: string) => {
         switch (status) {
             case 'active': return CheckCircle;
-            case 'damaged': return AlertTriangle;
-            case 'missing': return XCircle;
-            case 'maintenance': return Wrench;
+            case 'discontinued': return XCircle;
             default: return Package;
-        }
-    };
-
-    const getConditionColor = (condition: string) => {
-        switch (condition) {
-            case 'Excellent': return 'text-green-600';
-            case 'Good': return 'text-blue-600';
-            case 'Fair': return 'text-yellow-600';
-            case 'Poor': return 'text-red-600';
-            default: return 'text-gray-600';
         }
     };
 
@@ -118,8 +121,8 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     // Statistics
     const totalItems = inventoryItems.length;
     const activeItems = inventoryItems.filter(i => i.status === 'active').length;
-    const damagedItems = inventoryItems.filter(i => i.status === 'damaged').length;
-    const missingItems = inventoryItems.filter(i => i.status === 'missing').length;
+    const discontinuedItems = inventoryItems.filter(i => i.status === 'discontinued').length;
+    const availableItems = inventoryItems.filter((i: any) => i.isAvailable).length;
 
     return (
         <div className="space-y-6">
@@ -139,7 +142,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             </div>
 
             {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center space-x-2">
@@ -147,6 +150,28 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Total Items</p>
                                 <p className="text-2xl font-bold">{totalItems}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-6">
+                        <div className="flex items-center space-x-2">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Available</p>
+                                <p className="text-2xl font-bold text-green-600">{availableItems}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="p-6">
+                        <div className="flex items-center space-x-2">
+                            <Package className="h-5 w-5 text-blue-600" />
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Assigned</p>
+                                <p className="text-2xl font-bold text-blue-600">{assignments.filter(a => a.isActive).length}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -165,21 +190,10 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center space-x-2">
-                            <AlertTriangle className="h-5 w-5 text-red-600" />
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Damaged</p>
-                                <p className="text-2xl font-bold text-red-600">{damagedItems}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex items-center space-x-2">
                             <XCircle className="h-5 w-5 text-red-600" />
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Missing</p>
-                                <p className="text-2xl font-bold text-red-600">{missingItems}</p>
+                                <p className="text-sm font-medium text-muted-foreground">Discontinued</p>
+                                <p className="text-2xl font-bold text-red-600">{discontinuedItems}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -200,6 +214,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             <Tabs defaultValue={tab || 'inventory'} className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="inventory">Inventory Items</TabsTrigger>
+                    <TabsTrigger value="assignments">Assignments</TabsTrigger>
                     <TabsTrigger value="checkout">Checkout Reports</TabsTrigger>
                 </TabsList>
 
@@ -213,92 +228,53 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                                 return (
                                     <Card
                                         key={item.id}
-                                        className="hover:shadow-lg transition-shadow"
+                                        className="hover:shadow-sm transition-shadow shadow-none"
                                     >
-                                        <CardHeader>
+                                        <CardHeader className="pb-3">
                                             <div className="flex items-start justify-between">
-                                                <div className="flex items-center space-x-3">
-                                                    <div className="p-2 bg-muted/50 rounded-lg">
-                                                        <CategoryIcon className="h-4 w-4 text-muted-foreground" />
+                                                <div className="flex items-start space-x-3 min-w-0 flex-1">
+                                                    <div className="p-2.5 bg-primary/10 rounded-lg flex-shrink-0">
+                                                        <CategoryIcon className="h-5 w-5 text-primary" />
                                                     </div>
-                                                    <div>
-                                                        <CardTitle className="text-lg">
-                                                            <Link href={`/inventory/${item.id}`} className="hover:underline text-primary">
-                                                                {item.itemName}
-                                                            </Link>
-                                                        </CardTitle>
-                                                        <p className="text-sm text-muted-foreground line-clamp-2">
-                                                            {item.description}
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-start justify-between mb-1">
+                                                            <CardTitle className="text-lg font-semibold truncate flex items-center gap-2">
+                                                                <Link href={`/inventory/${item.id}`} className="hover:underline text-primary">
+                                                                    {item.itemName}
+                                                                </Link>
+                                                                <Badge variant="outline" className="text-xs font-normal">
+                                                                    {item.category}
+                                                                </Badge>
+                                                            </CardTitle>
+                                                            <div className="flex items-center space-x-2 ml-3 flex-shrink-0">
+                                                                <Badge variant={getStatusColor(item.status) as "default" | "secondary" | "destructive" | "outline"} className="text-xs">
+                                                                    <StatusIcon className="h-3 w-3 mr-1" />
+                                                                    {item.status}
+                                                                </Badge>
+                                                                <InventoryActions item={item as any} />
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                                                            {item.description || "No description available" }
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <Badge variant={getStatusColor(item.status) as "default" | "secondary" | "destructive" | "outline"}>
-                                                        <StatusIcon className="h-3 w-3 mr-1" />
-                                                        {item.status}
-                                                    </Badge>
-                                                    <InventoryActions item={item as any} />
-                                                </div>
                                             </div>
                                         </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            {/* Property and Unit Information */}
-                                            <div className="space-y-2">
-                                                <div className="flex items-center space-x-2 text-sm">
-                                                    <Bed className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="font-medium">{item.property?.name || ''}</span>
+                                        <CardContent className="pt-0">
+                                            {/* Key Stats */}
+                                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                                <div className="text-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                                                    <p className="text-lg font-semibold text-green-700">{(item as any).availableQuantity || item.quantity}</p>
+                                                    <p className="text-xs text-green-600">Available</p>
                                                 </div>
-                                                <div className="flex items-center space-x-2 text-sm">   
-                                                    <Package className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="text-muted-foreground">
-                                                        {item.unit ? item.unit.name : "Store (Unassigned)"}
-                                                    </span>
+                                                <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                                    <p className="text-lg font-semibold text-blue-700">{(item as any).assignedQuantity || 0}</p>
+                                                    <p className="text-xs text-blue-600">Assigned</p>
                                                 </div>
                                             </div>
 
-                                            {/* Item Details */}
-                                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                                <div className="text-center p-2 bg-muted/50 rounded-lg">
-                                                    <p className="font-medium">{item.quantity}</p>
-                                                    <p className="text-muted-foreground">Quantity</p>
-                                                </div>
-                                                <div className="text-center p-2 bg-muted/50 rounded-lg">
-                                                    <p className={`font-medium ${getConditionColor(item.condition)}`}>
-                                                        {item.condition}
-                                                    </p>
-                                                    <p className="text-muted-foreground">Condition</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Financial Information */}
-                                            {item.purchasePrice && (
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-sm text-muted-foreground">Purchase Price</span>
-                                                        <span className="font-medium">{formatCurrency(item.purchasePrice)}</span>
-                                                    </div>
-                                                    {item.currentValue && (
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-sm text-muted-foreground">Current Value</span>
-                                                            <span className="font-medium">{formatCurrency(item.currentValue)}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* Additional Details */}
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-sm text-muted-foreground">Category</span>
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {item.category}
-                                                    </Badge>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-sm text-muted-foreground">Last Inspected</span>
-                                                    <span className="text-sm">{formatDate(item.lastInspected)}</span>
-                                                </div>
-                                            </div>
+                                            
                                         </CardContent>
                                     </Card>
                                 );
@@ -313,6 +289,26 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
                             </p>
                         </div>
                     )}
+                </TabsContent>
+
+                <TabsContent value="assignments" className="space-y-4">
+                    {/* Assignment Actions */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-xl font-semibold">Assignment Management</h2>
+                            <p className="text-muted-foreground">Track and manage inventory assignments to units</p>
+                        </div>
+                        <InventoryAssignmentDialog />
+                    </div>
+
+                    {/* Assignment Filters */}
+                    <AssignmentFilters 
+                        properties={properties}
+                        inventoryItems={inventoryItems}
+                    />
+
+                    {/* Assignments List */}
+                    <InventoryAssignmentsList assignments={filteredAssignments as any} />
                 </TabsContent>
 
                 <TabsContent value="checkout" className="space-y-4">

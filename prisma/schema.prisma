@@ -97,7 +97,6 @@ model Property {
 
   tenants     Tenant[]
   amenities   Amenity[]
-  inventory   InventoryItem[]
   bookings    Booking[]
   units       Unit[]
   assignments InventoryAssignment[]
@@ -117,7 +116,6 @@ model Unit {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  inventory   InventoryItem[]
   bookings    Booking[]
   fromMovements InventoryMovement[] @relation("FromUnit")
   toMovements InventoryMovement[] @relation("ToUnit")
@@ -221,28 +219,19 @@ model Booking {
 }
 
 model InventoryItem {
-  id              Int      @id @default(autoincrement())
-  propertyId      Int?
-  property        Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  unitId          Int?     // Now nullable
-  unit            Unit?    @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  category        String   // Furniture, Electronics, Appliances, etc.
-  itemName        String
-  description     String
-  quantity        Int
-  condition       String   // Excellent, Good, Fair, Poor
-  purchaseDate    DateTime
-  purchasePrice   Int?
-  currentValue    Int?
-  location        String   // Living Room, Kitchen, etc.
-  serialNumber    String?
-  supplier        String?
-  warrantyExpiry  DateTime?
-  status          String   @default("active") // active, damaged, missing, maintenance
-  lastInspected   DateTime @default(now())
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                    Int      @id @default(autoincrement())
+  category              String   // Furniture, Electronics, Appliances, etc.
+  itemName              String
+  description           String
+  quantity              Int      // Store quantity available for assignment
+  purchasePrice         Int?
+  currentValue          Int?
+  supplier              String?
+  warrantyExpiry        DateTime?
+  status                String   @default("active") // active, discontinued
+  assignableOnBooking   Boolean  @default(true) // true = can be assigned to guests, false = fixed in room
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   checkoutItems   CheckoutItem[]
   movements       InventoryMovement[]

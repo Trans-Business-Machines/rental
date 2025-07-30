@@ -1,5 +1,6 @@
 "use client";
 
+import { InventoryAssignmentDialog } from "@/components/InventoryAssignmentDialog";
 import { InventoryEditDialog } from "@/components/InventoryEditDialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,24 +15,16 @@ import { useState } from "react";
 
 interface InventoryItem {
     id: number;
-    propertyId: number;
-    unitId: number | null;
     category: string;
     itemName: string;
     description: string;
     quantity: number;
-    condition: string;
-    purchaseDate: Date;
     purchasePrice?: number;
     currentValue?: number;
-    location: string;
-    serialNumber?: string | null;
     supplier?: string | null;
     warrantyExpiry?: Date | null;
     status: string;
-    notes?: string | null;
-    property: { id: number; name: string };
-    unit: { id: number; name: string } | null;
+    assignableOnBooking?: boolean;
 }
 
 interface InventoryActionsProps {
@@ -41,10 +34,16 @@ interface InventoryActionsProps {
 export function InventoryActions({ item }: InventoryActionsProps) {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
     const handleEditClick = () => {
         setDropdownOpen(false);
         setEditDialogOpen(true);
+    };
+
+    const handleAssignClick = () => {
+        setDropdownOpen(false);
+        setAssignDialogOpen(true);
     };
 
     return (
@@ -68,10 +67,12 @@ export function InventoryActions({ item }: InventoryActionsProps) {
                         Edit Item
                     </DropdownMenuItem>
                     
-                    <DropdownMenuItem>
-                        <Move className="h-4 w-4 mr-2" />
-                        Assign/Move
-                    </DropdownMenuItem>
+                    {item.assignableOnBooking !== false && (
+                        <DropdownMenuItem onClick={handleAssignClick}>
+                            <Move className="h-4 w-4 mr-2" />
+                            Assign/Move
+                        </DropdownMenuItem>
+                    )}
                 </DropdownMenuContent>
             </DropdownMenu>
 
@@ -79,6 +80,12 @@ export function InventoryActions({ item }: InventoryActionsProps) {
                 item={item} 
                 open={editDialogOpen} 
                 onOpenChange={setEditDialogOpen}
+            />
+
+            <InventoryAssignmentDialog
+                preselectedItemId={item.id}
+                open={assignDialogOpen}
+                onOpenChange={setAssignDialogOpen}
             />
         </div>
     );

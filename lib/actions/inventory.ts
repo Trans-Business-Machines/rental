@@ -7,8 +7,6 @@ export async function getInventoryItems() {
 	try {
 		const items = await prisma.inventoryItem.findMany({
 			include: {
-				property: true,
-				unit: true,
 				assignments: {
 					where: { isActive: true },
 					select: {
@@ -45,8 +43,6 @@ export async function getInventoryItemById(id: number) {
 		const item = await prisma.inventoryItem.findUnique({
 			where: { id },
 			include: {
-				property: true,
-				unit: true,
 				assignments: {
 					include: {
 						unit: { select: { id: true, name: true } },
@@ -74,35 +70,21 @@ export async function getInventoryItemById(id: number) {
 }
 
 export async function createInventoryItem(data: {
-	propertyId: number | null;
-	unitId: number | null;
 	category: string;
 	itemName: string;
 	description: string;
 	quantity: number;
-	condition: string;
-	purchaseDate: Date;
-	purchasePrice: number;
-	currentValue: number;
-	location: string;
-	serialNumber?: string;
+	purchasePrice?: number;
+	currentValue?: number;
 	supplier?: string;
 	warrantyExpiry?: Date;
-	notes?: string;
+	assignableOnBooking?: boolean;
 }) {
 	try {
-		const { unitId, propertyId, ...rest } = data;
 		const item = await prisma.inventoryItem.create({
 			data: {
-				...rest,
-				propertyId: propertyId === null ? undefined : propertyId,
-				unitId: unitId === null ? undefined : unitId,
+				...data,
 				status: "active",
-				lastInspected: new Date(),
-			},
-			include: {
-				property: true,
-				unit: true,
 			},
 		});
 		revalidatePath("/inventory");
@@ -116,38 +98,21 @@ export async function createInventoryItem(data: {
 export async function updateInventoryItem(
 	id: number,
 	data: {
-		propertyId: number | null;
-		unitId: number | null;
 		category: string;
 		itemName: string;
 		description: string;
-		quantity: number;
-		condition: string;
-		purchaseDate: Date;
-		purchasePrice: number;
-		currentValue: number;
-		location: string;
-		serialNumber?: string;
+		purchasePrice?: number;
+		currentValue?: number;
 		supplier?: string;
 		warrantyExpiry?: Date;
 		status: string;
-		notes?: string;
+		assignableOnBooking?: boolean;
 	}
 ) {
 	try {
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const { unitId, propertyId, quantity, ...rest } = data; // Exclude quantity from updates
 		const item = await prisma.inventoryItem.update({
 			where: { id },
-			data: {
-				...rest,
-				propertyId: propertyId === null ? undefined : propertyId,
-				unitId: unitId === null ? undefined : unitId,
-			},
-			include: {
-				property: true,
-				unit: true,
-			},
+			data: data,
 		});
 		revalidatePath("/inventory");
 		return item;
@@ -185,24 +150,16 @@ export async function searchInventoryItems(query: string) {
 						},
 					},
 					{
-						property: {
-							name: {
-								contains: query,
-							},
+						category: {
+							contains: query,
 						},
 					},
 					{
-						unit: {
-							name: {
-								contains: query,
-							},
+						supplier: {
+							contains: query,
 						},
 					},
 				],
-			},
-			include: {
-				property: true,
-				unit: true,
 			},
 			orderBy: {
 				createdAt: "desc",
@@ -215,53 +172,14 @@ export async function searchInventoryItems(query: string) {
 	}
 }
 
-export async function getInventoryByProperty(propertyId: number) {
-	try {
-		const items = await prisma.inventoryItem.findMany({
-			where: { propertyId },
-			include: {
-				property: true,
-				unit: true,
-			},
-			orderBy: {
-				createdAt: "desc",
-			},
-		});
-		return items;
-	} catch (error) {
-		console.error("Error fetching inventory by property:", error);
-		throw new Error("Failed to fetch inventory by property");
-	}
-}
-
-export async function getInventoryByUnit(unitId: number) {
-	try {
-		const items = await prisma.inventoryItem.findMany({
-			where: { unitId },
-			include: {
-				property: true,
-				unit: true,
-			},
-			orderBy: {
-				createdAt: "desc",
-			},
-		});
-		return items;
-	} catch (error) {
-		console.error("Error fetching inventory by unit:", error);
-		throw new Error("Failed to fetch inventory by unit");
-	}
-}
+// Note: getInventoryByProperty and getInventoryByUnit are no longer needed
+// as inventory items are now templates and assignments track actual placement
 
 export async function getRecentInventoryActivities(limit: number = 5) {
 	try {
 		const items = await prisma.inventoryItem.findMany({
 			where: {
-				OR: [{ status: "damaged" }, { status: "maintenance" }],
-			},
-			include: {
-				property: true,
-				unit: true,
+				status: "discontinued", // Only show discontinued items as "activities"
 			},
 			orderBy: {
 				updatedAt: "desc",
@@ -278,29 +196,24 @@ export async function getRecentInventoryActivities(limit: number = 5) {
 export async function getInventoryStats() {
 	try {
 		const totalItems = await prisma.inventoryItem.count();
-		const damagedItems = await prisma.inventoryItem.count({
-			where: { status: "damaged" },
-		});
-		const maintenanceItems = await prisma.inventoryItem.count({
-			where: { status: "maintenance" },
-		});
 		const activeItems = await prisma.inventoryItem.count({
 			where: { status: "active" },
+		});
+		const discontinuedItems = await prisma.inventoryItem.count({
+			where: { status: "discontinued" },
 		});
 
 		return {
 			total: totalItems,
-			damaged: damagedItems,
-			maintenance: maintenanceItems,
 			active: activeItems,
+			discontinued: discontinuedItems,
 		};
 	} catch (error) {
 		console.error("Error fetching inventory stats:", error);
 		return {
 			total: 0,
-			damaged: 0,
-			maintenance: 0,
 			active: 0,
+			discontinued: 0,
 		};
 	}
 }
@@ -629,9 +542,10 @@ export async function getAssignmentStats() {
 export async function getInventoryItemsWithAvailability() {
 	try {
 		const items = await prisma.inventoryItem.findMany({
+			where: {
+				assignableOnBooking: true, // Only show assignable items for assignments
+			},
 			include: {
-				property: true,
-				unit: true,
 				assignments: {
 					where: { isActive: true },
 					select: { id: true },

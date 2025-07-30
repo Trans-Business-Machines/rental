@@ -42,10 +42,7 @@ export function UnitQuickActions({ unit, property }: UnitQuickActionsProps) {
 						<p className="text-xs text-muted-foreground">
 							Add new items to unit inventory
 						</p>
-						<InventoryDialog 
-							preselectedPropertyId={property.id}
-							preselectedUnitId={unit.id}
-						/>
+						      <InventoryDialog />
 					</div>
 					
 					<div className="space-y-2">

@@ -4,83 +4,58 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { createInventoryItem, updateInventoryItem } from "@/lib/actions/inventory";
-import { getAllPropertiesWithUnits } from "@/lib/actions/properties";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 interface InventoryItem {
     id: number;
-    propertyId: number | null;
-    unitId: number | null;
     category: string;
     itemName: string;
     description: string;
     quantity: number;
-    condition: string;
-    purchaseDate: Date;
     purchasePrice?: number;
     currentValue?: number;
-    location: string;
-    serialNumber?: string | null;
     supplier?: string | null;
     warrantyExpiry?: Date | null;
     status: string;
-    notes?: string | null;
-    property: { id: number; name: string } | null;
-    unit: { id: number; name: string } | null;
+    assignableOnBooking?: boolean;
 }
 
 interface InventoryFormProps {
     item?: InventoryItem;
     onSuccess?: () => void;
     onCancel?: () => void;
-    preselectedPropertyId?: number;
-    preselectedUnitId?: number;
 }
 
-export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId, preselectedUnitId }: InventoryFormProps) {
-    const [properties, setProperties] = useState<any[]>([]);
+export function InventoryForm({ item, onSuccess, onCancel }: InventoryFormProps) {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
-        propertyId: item?.propertyId || preselectedPropertyId || null,
-        unitId: typeof item?.unitId === 'undefined' ? (typeof preselectedUnitId === 'undefined' ? null : preselectedUnitId) : item.unitId,
         category: item?.category || "",
         itemName: item?.itemName || "",
         description: item?.description || "",
         quantity: item?.quantity || 1,
-        notes: item?.notes || "",
+        purchasePrice: item?.purchasePrice || 0,
+        currentValue: item?.currentValue || 0,
+        supplier: item?.supplier || "",
+        warrantyExpiry: item?.warrantyExpiry ? new Date(item.warrantyExpiry).toISOString().split('T')[0] : "",
+        assignableOnBooking: item?.assignableOnBooking ?? true,
     });
 
-    useEffect(() => {
-        const fetchProperties = async () => {
-            try {
-                const props = await getAllPropertiesWithUnits();
-                setProperties(props);
-            } catch (error) {
-                console.error("Error fetching properties:", error);
-            }
-        };
-        fetchProperties();
-    }, []);
+    // No need to fetch properties since inventory items are now templates
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-            // Set default values for optional fields
             const submitData = {
                 ...formData,
-                condition: item?.condition || "Good",
-                purchaseDate: item?.purchaseDate ? new Date(item.purchaseDate) : new Date(),
-                purchasePrice: item?.purchasePrice || 0,
-                currentValue: item?.currentValue || 0,
-                location: item?.location || "General",
-                serialNumber: item?.serialNumber || "",
-                supplier: item?.supplier || "",
-                warrantyExpiry: item?.warrantyExpiry ? new Date(item.warrantyExpiry) : undefined,
+                purchasePrice: formData.purchasePrice || undefined,
+                currentValue: formData.currentValue || undefined,
+                supplier: formData.supplier || undefined,
+                warrantyExpiry: formData.warrantyExpiry ? new Date(formData.warrantyExpiry) : undefined,
                 status: item?.status || "active",
             };
 
@@ -102,7 +77,7 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
         }
     };
 
-    const handleInputChange = (field: string, value: string | number) => {
+    const handleInputChange = (field: string, value: string | number | boolean) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
@@ -110,32 +85,14 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="property-unit">Property & Unit *</Label>
-                    <Select
-                        value={formData.propertyId === null ? `store` : `${formData.propertyId}-${formData.unitId}`}
-                        onValueChange={(value) => {
-                            if (value === 'store') {
-                                setFormData(prev => ({ ...prev, propertyId: null, unitId: null }));
-                            } else {
-                                const [propertyId, unitId] = value.split('-').map(Number);
-                                setFormData(prev => ({ ...prev, propertyId, unitId }));
-                            }
-                        }}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select unit or store" className="max-w-[200px] overflow-hidden text-ellipsis"/>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="store">Store (Unassigned)</SelectItem>
-                            {properties.map(property =>
-                                property.units.map((unit: any) => (
-                                    <SelectItem key={unit.id} value={`${property.id}-${unit.id}`}>
-                                        {property.name} - {unit.name}
-                                    </SelectItem>
-                                ))
-                            )}
-                        </SelectContent>
-                    </Select>
+                    <Label htmlFor="item-name">Item Name *</Label>
+                    <Input
+                        id="item-name"
+                        value={formData.itemName}
+                        onChange={(e) => handleInputChange("itemName", e.target.value)}
+                        placeholder="e.g., Plates, Laptops, Chairs"
+                        required
+                    />
                 </div>
                 
                 <div className="space-y-2">
@@ -160,14 +117,13 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                     </Select>
                 </div>
                 
-                <div className="space-y-2">
-                    <Label htmlFor="item-name">Item Name *</Label>
+                <div className="col-span-2 space-y-2">
+                    <Label htmlFor="description">Description</Label>
                     <Input
-                        id="item-name"
-                        value={formData.itemName}
-                        onChange={(e) => handleInputChange("itemName", e.target.value)}
-                        placeholder="e.g., Sofa Set"
-                        required
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => handleInputChange("description", e.target.value)}
+                        placeholder="Detailed description of the item"
                     />
                 </div>
                 
@@ -176,36 +132,83 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                     <Input
                         id="quantity"
                         type="number"
-                        min="1"
+                        min="0"
                         value={formData.quantity}
-                        onChange={(e) => handleInputChange("quantity", parseInt(e.target.value))}
-                        placeholder="1"
+                        onChange={(e) => handleInputChange("quantity", parseInt(e.target.value) || 0)}
+                        placeholder="Available quantity"
                         required
-                        disabled={!!item} // Disable when editing existing item
-                        className={item ? "bg-muted cursor-not-allowed" : ""} // Visual indication when disabled
                     />
                 </div>
                 
-                <div className="col-span-2 space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Input
-                        id="description"
-                        value={formData.description}
-                        onChange={(e) => handleInputChange("description", e.target.value)}
-                        placeholder="Detailed description of the item (optional)"
-                    />
+                <div className="col-span-2 space-y-3">
+                    <div className="flex items-center space-x-3">
+                        <Switch
+                            id="assignable-on-booking"
+                            checked={formData.assignableOnBooking}
+                            onCheckedChange={(checked) => handleInputChange("assignableOnBooking", checked)}
+                        />
+                        <div className="space-y-1">
+                            <Label htmlFor="assignable-on-booking" className="text-sm font-medium">
+                                Can be assigned to guests
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                                {formData.assignableOnBooking 
+                                    ? "This item can be given to guests during check-in and returned at checkout" 
+                                    : "This item is fixed in the room and cannot be assigned to guests"
+                                }
+                            </p>
+                        </div>
+                    </div>
                 </div>
                 
-                <div className="col-span-2 space-y-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                        id="notes"
-                        value={formData.notes}
-                        onChange={(e) => handleInputChange("notes", e.target.value)}
-                        placeholder="Additional notes (optional)..."
-                        rows={3}
-                    />
-                </div>
+                {/* Show these fields only when editing */}
+                {item && (
+                    <>
+                        <div className="space-y-2">
+                            <Label htmlFor="supplier">Supplier</Label>
+                            <Input
+                                id="supplier"
+                                value={formData.supplier}
+                                onChange={(e) => handleInputChange("supplier", e.target.value)}
+                                placeholder="Supplier name (optional)"
+                            />
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <Label htmlFor="purchase-price">Purchase Price (KES)</Label>
+                            <Input
+                                id="purchase-price"
+                                type="number"
+                                min="0"
+                                value={formData.purchasePrice}
+                                onChange={(e) => handleInputChange("purchasePrice", parseInt(e.target.value) || 0)}
+                                placeholder="0"
+                            />
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <Label htmlFor="current-value">Current Value (KES)</Label>
+                            <Input
+                                id="current-value"
+                                type="number"
+                                min="0"
+                                value={formData.currentValue}
+                                onChange={(e) => handleInputChange("currentValue", parseInt(e.target.value) || 0)}
+                                placeholder="0"
+                            />
+                        </div>
+                        
+                        <div className="col-span-2 space-y-2">
+                            <Label htmlFor="warranty-expiry">Warranty Expiry</Label>
+                            <Input
+                                id="warranty-expiry"
+                                type="date"
+                                value={formData.warrantyExpiry}
+                                onChange={(e) => handleInputChange("warrantyExpiry", e.target.value)}
+                            />
+                        </div>
+                    </>
+                )}
             </div>
             
             <div className="flex space-x-2">
