@@ -48,7 +48,7 @@ interface UnitInventoryProps {
 	assignments?: Assignment[];
 }
 
-export function UnitInventory({ unit, inventory, assignments = [] }: UnitInventoryProps) {
+export function UnitInventory({  inventory, assignments = [] }: UnitInventoryProps) {
 	const [returningIds, setReturningIds] = useState<Set<number>>(new Set());
 
 	const handleReturn = async (assignmentId: number) => {

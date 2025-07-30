@@ -241,7 +241,7 @@ export function CheckoutForm({ onSuccess, onCancel }: CheckoutFormProps) {
                         {inventoryItems.length === 0 ? (
                             <div className="text-center text-muted-foreground py-8">
                                 <p>No assignable items found for this unit.</p>
-                                <p className="text-xs mt-1">Only items marked as "assignable to guests" will appear here.</p>
+                                <p className="text-xs mt-1">Only items marked as &quot;assignable to guests&quot; will appear here.</p>
                             </div>
                         ) : (
                             inventoryItems.map((item) => {
