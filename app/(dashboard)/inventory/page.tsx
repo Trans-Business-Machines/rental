@@ -1,5 +1,7 @@
 import { CheckoutDialog } from '@/components/CheckoutDialog';
 import { InventoryActions } from '@/components/InventoryActions';
+import { InventoryAssignmentDialog } from '@/components/InventoryAssignmentDialog';
+import { InventoryAssignmentsList } from '@/components/InventoryAssignmentsList';
 import { InventoryDialog } from '@/components/InventoryDialog';
 import { InventoryFilters } from '@/components/InventoryFilters';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getCheckoutReports } from '@/lib/actions/checkout';
-import { getInventoryItems } from '@/lib/actions/inventory';
+import { getAssignmentStats, getInventoryAssignments, getInventoryItems } from '@/lib/actions/inventory';
 import { getAllPropertiesWithUnits as getProperties } from '@/lib/actions/properties';
 import {
     AlertTriangle,

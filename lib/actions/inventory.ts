@@ -9,12 +9,31 @@ export async function getInventoryItems() {
 			include: {
 				property: true,
 				unit: true,
+				assignments: {
+					where: { isActive: true },
+					select: {
+						id: true,
+						unit: { select: { id: true, name: true } },
+						property: { select: { id: true, name: true } },
+						assignedAt: true,
+						serialNumber: true,
+					},
+				},
 			},
 			orderBy: {
 				createdAt: "desc",
 			},
 		});
-		return items;
+
+		// Add availability info to each item
+		const itemsWithAvailability = items.map((item) => ({
+			...item,
+			availableQuantity: item.quantity, // Store quantity is available quantity
+			assignedQuantity: item.assignments.length, // Count of active assignments
+			isAvailable: item.quantity > 0, // Can be assigned if quantity > 0
+		}));
+
+		return itemsWithAvailability;
 	} catch (error) {
 		console.error("Error fetching inventory items:", error);
 		throw new Error("Failed to fetch inventory items");
@@ -28,9 +47,26 @@ export async function getInventoryItemById(id: number) {
 			include: {
 				property: true,
 				unit: true,
+				assignments: {
+					include: {
+						unit: { select: { id: true, name: true } },
+						property: { select: { id: true, name: true } },
+					},
+					orderBy: { createdAt: "desc" },
+				},
 			},
 		});
-		return item;
+
+		if (!item) return null;
+
+		// Add availability info
+		const activeAssignments = item.assignments.filter((a) => a.isActive);
+		return {
+			...item,
+			availableQuantity: item.quantity,
+			assignedQuantity: activeAssignments.length,
+			isAvailable: item.quantity > 0,
+		};
 	} catch (error) {
 		console.error("Error fetching inventory item:", error);
 		throw new Error("Failed to fetch inventory item");
@@ -283,5 +319,371 @@ export async function getInventoryMovementsForItem(itemId: number) {
 	} catch (error) {
 		console.error("Error fetching inventory movements:", error);
 		return [];
+	}
+}
+
+// ============= INVENTORY ASSIGNMENT FUNCTIONS =============
+
+export async function validateAvailableQuantity(
+	inventoryItemId: number,
+	requestedQuantity: number = 1
+) {
+	try {
+		const item = await prisma.inventoryItem.findUnique({
+			where: { id: inventoryItemId },
+			select: { quantity: true, itemName: true },
+		});
+
+		if (!item) {
+			throw new Error("Inventory item not found");
+		}
+
+		if (item.quantity < requestedQuantity) {
+			throw new Error(
+				`Insufficient quantity. Available: ${item.quantity}, Requested: ${requestedQuantity}`
+			);
+		}
+
+		return true;
+	} catch (error) {
+		console.error("Error validating quantity:", error);
+		throw error;
+	}
+}
+
+export async function createInventoryAssignment(data: {
+	inventoryItemId: number;
+	unitId?: number;
+	propertyId?: number;
+	serialNumber?: string;
+	notes?: string;
+}) {
+	try {
+		// Use transaction to ensure atomicity
+		const result = await prisma.$transaction(async (tx) => {
+			// 1. Validate available quantity
+			await validateAvailableQuantity(data.inventoryItemId, 1);
+
+			// 2. Create the assignment
+			const assignment = await tx.inventoryAssignment.create({
+				data: {
+					...data,
+					isActive: true,
+					assignedAt: new Date(),
+				},
+				include: {
+					inventoryItem: true,
+					unit: true,
+					property: true,
+				},
+			});
+
+			// 3. Decrease store quantity
+			await tx.inventoryItem.update({
+				where: { id: data.inventoryItemId },
+				data: {
+					quantity: {
+						decrement: 1,
+					},
+				},
+			});
+
+			// 4. Create movement record
+			await tx.inventoryMovement.create({
+				data: {
+					inventoryItemId: data.inventoryItemId,
+					fromUnitId: null, // From store
+					toUnitId: data.unitId || null,
+					movedBy: "system", // TODO: Get from auth context
+					direction: "to_unit",
+					quantity: 1,
+					notes: `Assigned to ${data.unitId ? `unit ${data.unitId}` : "property"}`,
+				},
+			});
+
+			return assignment;
+		});
+
+		revalidatePath("/inventory");
+		revalidatePath("/assignments");
+		return result;
+	} catch (error) {
+		console.error("Error creating inventory assignment:", error);
+		throw new Error(
+			`Failed to create inventory assignment: ${error instanceof Error ? error.message : "Unknown error"}`
+		);
+	}
+}
+
+export async function updateInventoryAssignment(
+	id: number,
+	data: {
+		unitId?: number;
+		propertyId?: number;
+		serialNumber?: string;
+		notes?: string;
+		isActive?: boolean;
+	}
+) {
+	try {
+		const assignment = await prisma.inventoryAssignment.update({
+			where: { id },
+			data: {
+				...data,
+				returnedAt: data.isActive === false ? new Date() : undefined,
+			},
+			include: {
+				inventoryItem: true,
+				unit: true,
+				property: true,
+			},
+		});
+
+		revalidatePath("/inventory");
+		revalidatePath("/assignments");
+		return assignment;
+	} catch (error) {
+		console.error("Error updating inventory assignment:", error);
+		throw new Error("Failed to update inventory assignment");
+	}
+}
+
+export async function returnInventoryAssignment(
+	assignmentId: number,
+	notes?: string
+) {
+	try {
+		// Use transaction to ensure atomicity
+		const result = await prisma.$transaction(async (tx) => {
+			// 1. Get assignment details
+			const assignment = await tx.inventoryAssignment.findUnique({
+				where: { id: assignmentId },
+				include: { inventoryItem: true, unit: true },
+			});
+
+			if (!assignment) {
+				throw new Error("Assignment not found");
+			}
+
+			if (!assignment.isActive) {
+				throw new Error("Assignment is already returned");
+			}
+
+			// 2. Update assignment to returned
+			const updatedAssignment = await tx.inventoryAssignment.update({
+				where: { id: assignmentId },
+				data: {
+					isActive: false,
+					returnedAt: new Date(),
+					notes: notes
+						? `${assignment.notes || ""}\n\nReturn: ${notes}`.trim()
+						: assignment.notes,
+				},
+				include: {
+					inventoryItem: true,
+					unit: true,
+					property: true,
+				},
+			});
+
+			// 3. Increase store quantity
+			await tx.inventoryItem.update({
+				where: { id: assignment.inventoryItemId },
+				data: {
+					quantity: {
+						increment: 1,
+					},
+				},
+			});
+
+			// 4. Create movement record
+			await tx.inventoryMovement.create({
+				data: {
+					inventoryItemId: assignment.inventoryItemId,
+					fromUnitId: assignment.unitId,
+					toUnitId: null, // To store
+					movedBy: "system", // TODO: Get from auth context
+					direction: "to_store",
+					quantity: 1,
+					notes: `Returned from ${assignment.unitId ? `unit ${assignment.unitId}` : "property"}`,
+				},
+			});
+
+			return updatedAssignment;
+		});
+
+		revalidatePath("/inventory");
+		revalidatePath("/assignments");
+		return result;
+	} catch (error) {
+		console.error("Error returning inventory assignment:", error);
+		throw new Error(
+			`Failed to return inventory assignment: ${error instanceof Error ? error.message : "Unknown error"}`
+		);
+	}
+}
+
+export async function getInventoryAssignments(filters?: {
+	unitId?: number;
+	propertyId?: number;
+	isActive?: boolean;
+	inventoryItemId?: number;
+}) {
+	try {
+		const assignments = await prisma.inventoryAssignment.findMany({
+			where: filters,
+			include: {
+				inventoryItem: true,
+				unit: true,
+				property: true,
+			},
+			orderBy: {
+				createdAt: "desc",
+			},
+		});
+		return assignments;
+	} catch (error) {
+		console.error("Error fetching inventory assignments:", error);
+		throw new Error("Failed to fetch inventory assignments");
+	}
+}
+
+export async function getAssignmentsByUnit(unitId: number) {
+	try {
+		const assignments = await prisma.inventoryAssignment.findMany({
+			where: {
+				unitId,
+				isActive: true, // Only active assignments
+			},
+			include: {
+				inventoryItem: true,
+				unit: true,
+				property: true,
+			},
+			orderBy: {
+				assignedAt: "desc",
+			},
+		});
+		return assignments;
+	} catch (error) {
+		console.error("Error fetching assignments by unit:", error);
+		throw new Error("Failed to fetch assignments by unit");
+	}
+}
+
+export async function getAssignmentsByItem(inventoryItemId: number) {
+	try {
+		const assignments = await prisma.inventoryAssignment.findMany({
+			where: { inventoryItemId },
+			include: {
+				inventoryItem: true,
+				unit: true,
+				property: true,
+			},
+			orderBy: {
+				createdAt: "desc",
+			},
+		});
+		return assignments;
+	} catch (error) {
+		console.error("Error fetching assignments by item:", error);
+		throw new Error("Failed to fetch assignments by item");
+	}
+}
+
+export async function getAssignmentStats() {
+	try {
+		const totalAssignments = await prisma.inventoryAssignment.count();
+		const activeAssignments = await prisma.inventoryAssignment.count({
+			where: { isActive: true },
+		});
+		const returnedAssignments = await prisma.inventoryAssignment.count({
+			where: { isActive: false },
+		});
+		const overdueAssignments = await prisma.inventoryAssignment.count({
+			where: {
+				isActive: true,
+				assignedAt: {
+					lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+				},
+			},
+		});
+
+		return {
+			total: totalAssignments,
+			active: activeAssignments,
+			returned: returnedAssignments,
+			overdue: overdueAssignments,
+		};
+	} catch (error) {
+		console.error("Error fetching assignment stats:", error);
+		return {
+			total: 0,
+			active: 0,
+			returned: 0,
+			overdue: 0,
+		};
+	}
+}
+
+export async function getInventoryItemsWithAvailability() {
+	try {
+		const items = await prisma.inventoryItem.findMany({
+			include: {
+				property: true,
+				unit: true,
+				assignments: {
+					where: { isActive: true },
+					select: { id: true },
+				},
+			},
+			orderBy: {
+				createdAt: "desc",
+			},
+		});
+
+		// Add availability info to each item
+		const itemsWithAvailability = items.map((item) => ({
+			...item,
+			availableQuantity: item.quantity,
+			assignedQuantity: item.assignments.length,
+			isAvailable: item.quantity > 0,
+		}));
+
+		return itemsWithAvailability;
+	} catch (error) {
+		console.error(
+			"Error fetching inventory items with availability:",
+			error
+		);
+		throw new Error("Failed to fetch inventory items with availability");
+	}
+}
+
+export async function getAllUnitsForAssignment() {
+	try {
+		const units = await prisma.unit.findMany({
+			include: {
+				property: {
+					select: { id: true, name: true },
+				},
+			},
+			orderBy: [{ property: { name: "asc" } }, { name: "asc" }],
+		});
+
+		// Format units for dropdown: "PropertyX - Unit1"
+		const formattedUnits = units.map((unit) => ({
+			id: unit.id,
+			propertyId: unit.propertyId,
+			name: unit.name,
+			propertyName: unit.property.name,
+			displayName: `${unit.property.name} - ${unit.name}`,
+			value: `${unit.propertyId}-${unit.id}`, // For form handling
+		}));
+
+		return formattedUnits;
+	} catch (error) {
+		console.error("Error fetching units for assignment:", error);
+		throw new Error("Failed to fetch units for assignment");
 	}
 }

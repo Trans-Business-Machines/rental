@@ -152,7 +152,9 @@ export function InventoryForm({ item, onSuccess, onCancel, preselectedPropertyId
                             <SelectItem value="Electronics">Electronics</SelectItem>
                             <SelectItem value="Cutlery">Cutlery</SelectItem>
                             <SelectItem value="Bathroom">Bathroom</SelectItem>
-                            <SelectItem value="Lighting">Lighting</SelectItem>                            
+                            <SelectItem value="Lighting">Lighting</SelectItem>
+                            <SelectItem value="Kitchen Accessories">Kitchen Accessories</SelectItem>
+                            <SelectItem value="Bedroom Accessories">Bedroom Accessories</SelectItem>
                             <SelectItem value="Other">Other</SelectItem>
                         </SelectContent>
                     </Select>

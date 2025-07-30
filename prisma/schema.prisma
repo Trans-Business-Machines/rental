@@ -100,6 +100,7 @@ model Property {
   inventory   InventoryItem[]
   bookings    Booking[]
   units       Unit[]
+  assignments InventoryAssignment[]
 
   @@map("properties")
 }
@@ -120,6 +121,7 @@ model Unit {
   bookings    Booking[]
   fromMovements InventoryMovement[] @relation("FromUnit")
   toMovements InventoryMovement[] @relation("ToUnit")
+  assignments InventoryAssignment[]
 
   @@map("units")
 }
@@ -244,6 +246,7 @@ model InventoryItem {
 
   checkoutItems   CheckoutItem[]
   movements       InventoryMovement[]
+  assignments     InventoryAssignment[]
 
   @@map("inventory_items")
 }
@@ -261,6 +264,27 @@ model InventoryMovement {
   direction      String // "to_unit", "to_store"
   quantity       Int
   notes          String?
+
+  @@map("inventory_movements")
+}
+
+model InventoryAssignment {
+  id                Int      @id @default(autoincrement())
+  inventoryItemId   Int      // Required - links to the inventory item
+  inventoryItem     InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  unitId            Int?     // Optional - which unit it's assigned to
+  unit              Unit?    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  propertyId        Int?     // Optional - which property it's assigned to
+  property          Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  serialNumber      String?  // Optional - unique identifier for this instance
+  notes             String?  // Optional - additional notes
+  isActive          Boolean  @default(true) // Boolean to track if assignment is active
+  assignedAt        DateTime @default(now())
+  returnedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("inventory_assignments")
 }
 
 model CheckoutReport {
