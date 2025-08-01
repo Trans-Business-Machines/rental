@@ -98,12 +98,13 @@ export function InventoryFilters({ search, category, status, property, unit, pro
                     <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
                     <SelectItem value="Furniture">Furniture</SelectItem>
                     <SelectItem value="Electronics">Electronics</SelectItem>
-                    <SelectItem value="Appliances">Appliances</SelectItem>
+                    <SelectItem value="Cutlery">Cutlery</SelectItem>
                     <SelectItem value="Bathroom">Bathroom</SelectItem>
                     <SelectItem value="Lighting">Lighting</SelectItem>
+                    <SelectItem value="Kitchen Accessories">Kitchen Accessories</SelectItem>
+                    <SelectItem value="Bedroom Accessories">Bedroom Accessories</SelectItem>
                     <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
             </Select>

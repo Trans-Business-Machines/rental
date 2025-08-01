@@ -50,10 +50,10 @@ interface NavItem {
 
 const navigationConfig: NavItem[] = [
 	{ id: "dashboard", label: "Dashboard", icon: BarChart3 },
-	{ id: "properties", label: "Properties", icon: Building2 },
-	{ id: "inventory", label: "Inventory", icon: FileText },
 	{ id: "bookings", label: "Bookings", icon: Calendar },
 	{ id: "guests", label: "Guests", icon: Users },
+	{ id: "inventory", label: "Inventory", icon: FileText },
+	{ id: "properties", label: "Properties", icon: Building2 },
 	// { id: "payments", label: "Payments", icon: CreditCard },
 	// { id: "maintenance", label: "Maintenance", icon: Wrench },
 	{ id: "users", label: "Users", icon: Shield, role: "admin" },
