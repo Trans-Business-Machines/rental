@@ -88,6 +88,7 @@ export async function createInventoryItem(data: {
 			},
 		});
 		revalidatePath("/inventory");
+		revalidatePath("/dashboard");
 		return item;
 	} catch (error) {
 		console.error("Error creating inventory item:", error);
@@ -115,6 +116,7 @@ export async function updateInventoryItem(
 			data: data,
 		});
 		revalidatePath("/inventory");
+		revalidatePath("/dashboard");
 		return item;
 	} catch (error) {
 		console.error("Error updating inventory item:", error);
@@ -128,6 +130,7 @@ export async function deleteInventoryItem(id: number) {
 			where: { id },
 		});
 		revalidatePath("/inventory");
+		revalidatePath("/dashboard");
 	} catch (error) {
 		console.error("Error deleting inventory item:", error);
 		throw new Error("Failed to delete inventory item");
@@ -319,6 +322,7 @@ export async function createInventoryAssignment(data: {
 
 		revalidatePath("/inventory");
 		revalidatePath("/assignments");
+		revalidatePath("/dashboard");
 		return result;
 	} catch (error) {
 		console.error("Error creating inventory assignment:", error);
@@ -354,6 +358,7 @@ export async function updateInventoryAssignment(
 
 		revalidatePath("/inventory");
 		revalidatePath("/assignments");
+		revalidatePath("/dashboard");
 		return assignment;
 	} catch (error) {
 		console.error("Error updating inventory assignment:", error);
@@ -427,6 +432,7 @@ export async function returnInventoryAssignment(
 
 		revalidatePath("/inventory");
 		revalidatePath("/assignments");
+		revalidatePath("/dashboard");
 		return result;
 	} catch (error) {
 		console.error("Error returning inventory assignment:", error);

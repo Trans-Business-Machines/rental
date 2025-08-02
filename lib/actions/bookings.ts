@@ -86,6 +86,7 @@ export async function createBooking(data: {
 			},
 		});
 		revalidatePath("/bookings");
+		revalidatePath("/dashboard");
 		return booking;
 	} catch (error) {
 		console.error("Error creating booking:", error);
@@ -116,6 +117,7 @@ export async function updateBooking(
 			},
 		});
 		revalidatePath("/bookings");
+		revalidatePath("/dashboard");
 		return booking;
 	} catch (error) {
 		console.error("Error updating booking:", error);
@@ -129,6 +131,7 @@ export async function deleteBooking(id: number) {
 			where: { id },
 		});
 		revalidatePath("/bookings");
+		revalidatePath("/dashboard");
 		return true;
 	} catch (error) {
 		console.error("Error deleting booking:", error);

@@ -28,18 +28,21 @@ export async function getUnitById(id: number) {
 export async function createUnit(data: any) {
 	const unit = await prisma.unit.create({ data });
 	revalidatePath("/properties");
+	revalidatePath("/dashboard");
 	return unit;
 }
 
 export async function updateUnit(id: number, data: any) {
 	const unit = await prisma.unit.update({ where: { id }, data });
 	revalidatePath("/properties");
+	revalidatePath("/dashboard");
 	return unit;
 }
 
 export async function deleteUnit(id: number) {
 	await prisma.unit.delete({ where: { id } });
 	revalidatePath("/properties");
+	revalidatePath("/dashboard");
 }
 
 export async function getUnitAvailability() {

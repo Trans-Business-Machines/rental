@@ -12,6 +12,7 @@ import { InventoryTable } from "./_components/inventory-table"
 import { RecentBookingsTable } from "./_components/recent-bookings-table"
 import { UnitAvailabilityTable } from "./_components/unit-availability-table"
 
+export const dynamic = "force-dynamic"
 // This is temporary - will move to server actions later
 async function getDashboardData() {
   // Get all units with their current bookings to determine status
@@ -20,7 +21,7 @@ async function getDashboardData() {
       property: true,
       bookings: {
         where: {
-          status: "checked-in",
+          status: "confirmed",
           checkOutDate: {
             gte: new Date(),
           },
