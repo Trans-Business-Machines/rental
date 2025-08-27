@@ -7,6 +7,8 @@ import { prisma } from "../prisma";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://rentmanager.app";
 
+
+
 export async function createInvitation({
 	email,
 	role,

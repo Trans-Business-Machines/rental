@@ -549,7 +549,6 @@ export async function getInventoryItemsWithAvailability() {
 	try {
 		const items = await prisma.inventoryItem.findMany({
 			where: {
-				assignableOnBooking: true, // Only show assignable items for assignments
 			},
 			include: {
 				assignments: {
