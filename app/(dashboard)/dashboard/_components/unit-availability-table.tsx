@@ -1,37 +1,49 @@
-"use client"
+"use client";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-    CheckCircle,
-    Clock,
-    Download,
-    Edit,
-    Eye,
-    Filter,
-    Search,
-    Settings,
-    XCircle,
-} from "lucide-react"
-import { useState } from "react"
-import { UnitEditDialog } from "./unit-edit-dialog"
-import { UnitViewDialog } from "./unit-view-dialog"
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  CheckCircle,
+  Clock,
+  Download,
+  Edit,
+  Eye,
+  Search,
+  Settings,
+  XCircle,
+} from "lucide-react";
+import { useState } from "react";
+import { UnitEditDialog } from "./unit-edit-dialog";
+import { UnitViewDialog } from "./unit-view-dialog";
 
 interface Unit {
-  id: string
-  property: string
-  type: string
-  status: string
-  guest: string | null
-  checkOut: string | null
-  rent: number
+  id: string;
+  property: string;
+  type: string;
+  status: string;
+  guest: string | null;
+  checkOut: string | null;
+  rent: number;
 }
 
 interface UnitAvailabilityTableProps {
-  units: Unit[]
+  units: Unit[];
 }
 
 function getStatusBadge(status: string) {
@@ -42,42 +54,45 @@ function getStatusBadge(status: string) {
           <XCircle className="h-3 w-3" />
           Occupied
         </Badge>
-      )
+      );
     case "available":
       return (
-        <Badge variant="default" className="gap-1 bg-green-500 hover:bg-green-600">
+        <Badge
+          variant="default"
+          className="gap-1 bg-green-500 hover:bg-green-600"
+        >
           <CheckCircle className="h-3 w-3" />
           Available
         </Badge>
-      )
+      );
     case "maintenance":
       return (
         <Badge variant="secondary" className="gap-1">
           <Settings className="h-3 w-3" />
           Maintenance
         </Badge>
-      )
+      );
     case "reserved":
       return (
         <Badge variant="outline" className="gap-1">
           <Clock className="h-3 w-3" />
           Reserved
         </Badge>
-      )
+      );
     default:
-      return <Badge variant="outline">{status}</Badge>
+      return <Badge variant="outline">{status}</Badge>;
   }
 }
 
 export function UnitAvailabilityTable({ units }: UnitAvailabilityTableProps) {
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = useState("");
 
   const filteredUnits = units.filter(
     (unit) =>
       unit.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       unit.property.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      unit.guest?.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      unit.guest?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <Card>
@@ -99,9 +114,7 @@ export function UnitAvailabilityTable({ units }: UnitAvailabilityTableProps) {
                 className="pl-8 w-[300px]"
               />
             </div>
-            <Button variant="outline" size="icon">
-              <Filter className="h-4 w-4" />
-            </Button>
+
             <Button variant="outline" size="icon">
               <Download className="h-4 w-4" />
             </Button>
@@ -110,16 +123,16 @@ export function UnitAvailabilityTable({ units }: UnitAvailabilityTableProps) {
       </CardHeader>
       <CardContent>
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-[#002147]">
             <TableRow>
-              <TableHead>Unit ID</TableHead>
-              <TableHead>Property</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Current Guest</TableHead>
-              <TableHead>Checkout Date</TableHead>
-              <TableHead>Monthly Rent</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="text-white">Unit ID</TableHead>
+              <TableHead className="text-white">Property</TableHead>
+              <TableHead className="text-white">Type</TableHead>
+              <TableHead className="text-white">Status</TableHead>
+              <TableHead className="text-white">Current Guest</TableHead>
+              <TableHead className="text-white">Checkout Date</TableHead>
+              <TableHead className="text-white">Monthly Rent</TableHead>
+              <TableHead className="text-white">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -158,5 +171,5 @@ export function UnitAvailabilityTable({ units }: UnitAvailabilityTableProps) {
         </Table>
       </CardContent>
     </Card>
-  )
+  );
 }
