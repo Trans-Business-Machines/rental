@@ -17,14 +17,14 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
+  ChartColumnBig,
   Bell,
   Building2,
   Calendar,
   CalendarDays,
   ChevronDown,
   ChevronRight,
-  Clipboard,
+  Box,
   Home,
   LogOut,
   Menu,
@@ -50,10 +50,10 @@ interface NavItem {
 }
 
 const navigationConfig: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "dashboard", label: "Dashboard", icon: ChartColumnBig },
   { id: "bookings", label: "Bookings", icon: CalendarDays },
   { id: "guests", label: "Guests", icon: Users },
-  { id: "inventory", label: "Inventory", icon: Clipboard },
+  { id: "inventory", label: "Inventory", icon: Box },
   { id: "properties", label: "Properties", icon: Building2 },
   { id: "payments", label: "Payments", icon: CreditCard },
   { id: "maintenance", label: "Maintenance", icon: Wrench },
@@ -159,18 +159,18 @@ export function Layout({ children }: LayoutProps) {
           <CollapsibleTrigger asChild>
             <button
               className={cn(
-                "w-full flex items-center text-sidebar-primary-foreground space-x-3 px-3 py-2 rounded-lg transition-colors",
+                "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2  transition-colors cursor-pointer",
                 isActive
                   ? "bg-sidebar-primary font-bold"
                   : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
             >
-              {Icon && <Icon className="h-5 w-5" />}
+              {Icon && <Icon className="size-5" />}
               <span className="flex-1 text-left">{item.label}</span>
               {isOpen ? (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="size-4" />
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="size-4" />
               )}
             </button>
           </CollapsibleTrigger>
@@ -183,13 +183,13 @@ export function Layout({ children }: LayoutProps) {
                   setSidebarOpen(false);
                 }}
                 className={cn(
-                  "w-11/12 flex items-center space-x-3 px-3 py-2 ml-6 rounded-lg transition-colors text-sm text-sidebar-primary-foreground",
+                  "w-12/12 flex items-center space-x-3 px-3 py-2 ml-6 rounded-none transition-colors text-sm cursor-pointer text-sidebar-primary-foreground",
                   currentPage === subItem.id
                     ? "bg-sidebar-primary font-bold"
                     : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 )}
               >
-                <div className="w-1 h-1 bg-current rounded-full" />
+                <div className="size-1 bg-current rounded-full" />
                 <span>{subItem.label}</span>
               </button>
             ))}
@@ -207,13 +207,13 @@ export function Layout({ children }: LayoutProps) {
           setSidebarOpen(false);
         }}
         className={cn(
-          "w-full flex items-center space-x-3 px-3 text-sidebar-primary-foreground py-2 rounded-lg transition-colors",
+          "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2  transition-colors cursor-pointer",
           isActive
             ? "bg-sidebar-primary font-bold"
             : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         )}
       >
-        {Icon && <Icon className="h-5 w-5" />}
+        {Icon && <Icon className="size-5" />}
         <span>{item.label}</span>
       </button>
     );
@@ -242,15 +242,15 @@ export function Layout({ children }: LayoutProps) {
       )}
 
       {/* Sidebar */}
-      <div
+      <aside
         className={cn(
-          "fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-200  ease-in-out z-50 overflow-x-hidden",
+          "fixed inset-y-0 left-0 w-52 bg-sidebar border-r border-sidebar-border transform transition-transform duration-200  ease-in-out z-50 overflow-x-hidden",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
+        <div className="flex items-center justify-between px-5 h-16 border-b border-sidebar-border">
           <div className="flex items-center space-x-2">
-            <Home className="h-8 w-8 text-sidebar-primary-foreground" />
+            <Home className="size-6 text-sidebar-primary-foreground" />
             <span className="font-semibold text-sidebar-primary-foreground">
               RentManager
             </span>
@@ -265,15 +265,25 @@ export function Layout({ children }: LayoutProps) {
           </Button>
         </div>
 
-        <nav className="p-4 space-y-2">
+        <nav className="py-4 space-y-2">
           {filteredNavigationConfig.map(renderNavItem)}
         </nav>
-      </div>
+
+        <div className="absolute bottom-0  border-t border-sidebar-border  w-full">
+          <Button
+            className="rounded-none w-full cursor-pointer flex justify-start items-center gap-2 py-6 bg-transparent text-sidebar-primary-foreground  transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            onClick={handleLogout}
+          >
+            <LogOut className="size-4 ml-4" />
+            <span className="font-normal text-sm">Log out</span>
+          </Button>
+        </div>
+      </aside>
 
       {/* Main content */}
-      <div className="lg:ml-64">
+      <div className="lg:ml-52">
         {/* Top bar */}
-        <div className="bg-card border-b border-border px-4 py-[14px] flex items-center justify-between sticky top-0 z-30 backdrop-blur-sm ">
+        <div className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
           {/* Mobile: Hamburger menu */}
           <div className="flex items-center gap-4 flex-1">
             <Button
@@ -336,7 +346,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Page content */}
-        <main className="p-6">{children}</main>
+        <main className="p-4">{children}</main>
       </div>
     </div>
   );
