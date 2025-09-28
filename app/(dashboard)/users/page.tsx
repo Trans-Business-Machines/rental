@@ -5,7 +5,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,19 +23,24 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   useBanUser,
   useDeleteUser,
   useRevokeUserSessions,
   useSetUserRole,
   useUnbanUser,
-  useUsers
+  useUsers,
 } from "@/hooks/useUsers";
 import {
   Ban,
   Calendar,
-  Download,
   Edit,
   Eye,
   Flag,
@@ -41,9 +53,10 @@ import {
   Check as Unban,
   UserCheck,
   UserPlus,
-  Users
+  Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { toast } from "sonner";
 
 interface User {
@@ -73,20 +86,20 @@ function UsersPageContent() {
   // Invite form state
   const [inviteForm, setInviteForm] = useState({
     email: "",
-    role: "user" as "user" | "admin"
+    role: "user" as "user" | "admin",
   });
 
   // Ban form state
   const [banForm, setBanForm] = useState({
     reason: "",
-    expiresIn: "7" // days
+    expiresIn: "7", // days
   });
 
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   useEffect(() => {
     fetch("/api/invitations/list")
-      .then(res => res.json())
-      .then(data => setInvitations(data.invitations || []));
+      .then((res) => res.json())
+      .then((data) => setInvitations(data.invitations || []));
   }, []);
 
   const handleResendInvite = async (email: string) => {
@@ -129,18 +142,21 @@ function UsersPageContent() {
     if (!selectedUser) return;
 
     const expiresIn = parseInt(banForm.expiresIn) * 24 * 60 * 60; // Convert days to seconds
-    
-    banUserMutation.mutate({
-      userId: selectedUser.id,
-      reason: banForm.reason || undefined,
-      expiresIn
-    }, {
-      onSuccess: () => {
-        setBanDialogOpen(false);
-        setBanForm({ reason: "", expiresIn: "7" });
-        setSelectedUser(null);
+
+    banUserMutation.mutate(
+      {
+        userId: selectedUser.id,
+        reason: banForm.reason || undefined,
+        expiresIn,
+      },
+      {
+        onSuccess: () => {
+          setBanDialogOpen(false);
+          setBanForm({ reason: "", expiresIn: "7" });
+          setSelectedUser(null);
+        },
       }
-    });
+    );
   };
 
   const handleUnbanUser = async (userId: string) => {
@@ -148,7 +164,11 @@ function UsersPageContent() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this user? This action cannot be undone."
+      )
+    ) {
       return;
     }
     deleteUserMutation.mutate(userId);
@@ -179,16 +199,44 @@ function UsersPageContent() {
 
   // Statistics
   const totalUsers = users.length;
-  const adminUsers = users.filter(u => u.role === "admin").length;
-  const regularUsers = users.filter(u => u.role === "user").length;
-  const bannedUsers = users.filter(u => u.banned).length;
+  const adminUsers = users.filter((u) => u.role === "admin").length;
+  const regularUsers = users.filter((u) => u.role === "user").length;
+  const bannedUsers = users.filter((u) => u.banned).length;
+
+  const stats: StatCardsProps[] = [
+    {
+      title: "Total Users",
+      value: totalUsers,
+      icon: Users,
+      color: "blue",
+    },
+    {
+      title: "Admins",
+      value: adminUsers,
+      icon: Shield,
+      color: "orange",
+    },
+    {
+      title: "Regular Users",
+      value: regularUsers,
+      icon: UserCheck,
+      color: "",
+    },
+    {
+      title: "Banned Users",
+      value: bannedUsers,
+      icon: Flag,
+      color: "red",
+    },
+  ];
 
   // Filter users based on search
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = !searchQuery || 
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      !searchQuery ||
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     return matchesSearch;
   });
 
@@ -196,7 +244,9 @@ function UsersPageContent() {
     return (
       <div className="text-center py-8">
         <Users className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-red-600">Error loading users</h3>
+        <h3 className="text-lg font-medium text-red-600">
+          Error loading users
+        </h3>
         <p className="text-muted-foreground">
           There was an error loading the users. Please try again.
         </p>
@@ -209,19 +259,19 @@ function UsersPageContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1>User Management</h1>
-          <p className="text-muted-foreground">Manage user accounts, roles, and permissions</p>
+          <h1 className="text-3xl font-bold tracking-normal text-foreground">
+            User Management
+          </h1>
+          <p className="text-muted-foreground">
+            Manage user accounts, roles, and permissions
+          </p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
           <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
             <DialogTrigger asChild>
               <Button>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Invite User
+                <UserPlus className="size-4 mr-1" />
+                <span>Invite User</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -238,7 +288,12 @@ function UsersPageContent() {
                     id="email"
                     type="email"
                     value={inviteForm.email}
-                    onChange={(e) => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
+                    onChange={(e) =>
+                      setInviteForm((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
                     required
                   />
                 </div>
@@ -246,7 +301,9 @@ function UsersPageContent() {
                   <Label htmlFor="role">Role</Label>
                   <Select
                     value={inviteForm.role}
-                    onValueChange={(value: "user" | "admin") => setInviteForm(prev => ({ ...prev, role: value }))}
+                    onValueChange={(value: "user" | "admin") =>
+                      setInviteForm((prev) => ({ ...prev, role: value }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -258,18 +315,14 @@ function UsersPageContent() {
                   </Select>
                 </div>
                 <div className="flex justify-end space-x-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => setInviteDialogOpen(false)}
                   >
                     Cancel
                   </Button>
-                  <Button 
-                    type="submit"
-                  >
-                    Invite User
-                  </Button>
+                  <Button type="submit">Invite User</Button>
                 </div>
               </form>
             </DialogContent>
@@ -278,52 +331,7 @@ function UsersPageContent() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold">{totalUsers}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <Shield className="h-5 w-5 text-red-600" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Admins</p>
-                <p className="text-2xl font-bold text-red-600">{adminUsers}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <UserCheck className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Regular Users</p>
-                <p className="text-2xl font-bold text-blue-600">{regularUsers}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <Flag className="h-5 w-5 text-orange-600" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Banned</p>
-                <p className="text-2xl font-bold text-orange-600">{bannedUsers}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <StatCards stats={stats} />
 
       {/* Search */}
       <div className="flex items-center space-x-4">
@@ -366,24 +374,25 @@ function UsersPageContent() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredUsers.map((user) => (
-            <Card
-              key={user.id}
-              className="hover:shadow-lg transition-shadow"
-            >
+            <Card key={user.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-12 w-12">
                       <AvatarFallback className="text-lg">
-                        {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        {user.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-lg">
-                        {user.name}
-                      </CardTitle>
+                      <CardTitle className="text-lg">{user.name}</CardTitle>
                       <p className="text-sm text-muted-foreground">
-                        {user.role === "admin" ? "Administrator" : "Regular User"}
+                        {user.role === "admin"
+                          ? "Administrator"
+                          : "Regular User"}
                       </p>
                     </div>
                   </div>
@@ -408,12 +417,16 @@ function UsersPageContent() {
                   </div>
                   <div className="flex items-center space-x-2 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Joined {formatDate(user.createdAt)}</span>
+                    <span className="text-muted-foreground">
+                      Joined {formatDate(user.createdAt)}
+                    </span>
                   </div>
                   <div className="flex items-center space-x-2 text-sm">
                     <Shield className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">
-                      {user.emailVerified ? "Email Verified" : "Email Not Verified"}
+                      {user.emailVerified
+                        ? "Email Verified"
+                        : "Email Not Verified"}
                     </span>
                   </div>
                 </div>
@@ -421,7 +434,9 @@ function UsersPageContent() {
                 {/* Ban Information */}
                 {user.banned && (
                   <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                    <p className="text-sm font-medium text-red-800 dark:text-red-200">Banned</p>
+                    <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                      Banned
+                    </p>
                     {user.banReason && (
                       <p className="text-xs text-red-600 dark:text-red-300 mt-1">
                         Reason: {user.banReason}
@@ -454,27 +469,32 @@ function UsersPageContent() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      
-                      <DropdownMenuItem 
-                        onClick={() => handleSetRole(user.id, user.role === "admin" ? "user" : "admin")}
+
+                      <DropdownMenuItem
+                        onClick={() =>
+                          handleSetRole(
+                            user.id,
+                            user.role === "admin" ? "user" : "admin"
+                          )
+                        }
                         disabled={setUserRoleMutation.isPending}
                       >
                         <Shield className="h-4 w-4 mr-2" />
                         {user.role === "admin" ? "Remove Admin" : "Make Admin"}
                       </DropdownMenuItem>
-                      
-                      <DropdownMenuItem 
+
+                      <DropdownMenuItem
                         onClick={() => handleRevokeAllSessions(user.id)}
                         disabled={revokeSessionsMutation.isPending}
                       >
                         <LogOut className="h-4 w-4 mr-2" />
                         Revoke All Sessions
                       </DropdownMenuItem>
-                      
+
                       <DropdownMenuSeparator />
-                      
+
                       {user.banned ? (
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => handleUnbanUser(user.id)}
                           disabled={unbanUserMutation.isPending}
                         >
@@ -482,18 +502,20 @@ function UsersPageContent() {
                           Unban User
                         </DropdownMenuItem>
                       ) : (
-                        <DropdownMenuItem onClick={() => {
-                          setSelectedUser(user);
-                          setBanDialogOpen(true);
-                        }}>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setBanDialogOpen(true);
+                          }}
+                        >
                           <Ban className="h-4 w-4 mr-2" />
                           Ban User
                         </DropdownMenuItem>
                       )}
-                      
+
                       <DropdownMenuSeparator />
-                      
-                      <DropdownMenuItem 
+
+                      <DropdownMenuItem
                         onClick={() => handleDeleteUser(user.id)}
                         disabled={deleteUserMutation.isPending}
                         className="text-red-600"
@@ -507,22 +529,35 @@ function UsersPageContent() {
               </CardContent>
             </Card>
           ))}
-          {invitations.filter(i => !i.acceptedAt).map(invite => (
-            <Card key={invite.email} className="hover:shadow-lg transition-shadow border-dashed border-2 border-blue-400">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{invite.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{invite.email}</p>
-                    <p className="text-xs text-blue-600">Invitation Pending</p>
+          {invitations
+            .filter((i) => !i.acceptedAt)
+            .map((invite) => (
+              <Card
+                key={invite.email}
+                className="hover:shadow-lg transition-shadow border-dashed border-2 border-blue-400"
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{invite.name}</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {invite.email}
+                      </p>
+                      <p className="text-xs text-blue-600">
+                        Invitation Pending
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleResendInvite(invite.email)}
+                    >
+                      Resend Invite
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => handleResendInvite(invite.email)}>
-                    Resend Invite
-                  </Button>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
+                </CardHeader>
+              </Card>
+            ))}
         </div>
       )}
 
@@ -531,7 +566,9 @@ function UsersPageContent() {
           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium">No users found</h3>
           <p className="text-muted-foreground">
-            {searchQuery ? "Try adjusting your search criteria" : "Get started by inviting your first user"}
+            {searchQuery
+              ? "Try adjusting your search criteria"
+              : "Get started by inviting your first user"}
           </p>
         </div>
       )}
@@ -551,7 +588,9 @@ function UsersPageContent() {
               <Input
                 id="reason"
                 value={banForm.reason}
-                onChange={(e) => setBanForm(prev => ({ ...prev, reason: e.target.value }))}
+                onChange={(e) =>
+                  setBanForm((prev) => ({ ...prev, reason: e.target.value }))
+                }
                 placeholder="Enter reason for ban..."
                 disabled={banUserMutation.isPending}
               />
@@ -560,7 +599,9 @@ function UsersPageContent() {
               <Label htmlFor="expiresIn">Ban Duration</Label>
               <Select
                 value={banForm.expiresIn}
-                onValueChange={(value) => setBanForm(prev => ({ ...prev, expiresIn: value }))}
+                onValueChange={(value) =>
+                  setBanForm((prev) => ({ ...prev, expiresIn: value }))
+                }
                 disabled={banUserMutation.isPending}
               >
                 <SelectTrigger>
@@ -575,16 +616,16 @@ function UsersPageContent() {
               </Select>
             </div>
             <div className="flex justify-end space-x-2">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setBanDialogOpen(false)}
                 disabled={banUserMutation.isPending}
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 variant="destructive"
                 disabled={banUserMutation.isPending}
               >
