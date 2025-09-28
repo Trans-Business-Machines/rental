@@ -1,81 +1,135 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button";
 import {
-    Edit,
-    Eye,
-} from "lucide-react"
-import { BookingEditDialog } from "./booking-edit-dialog"
-import { BookingViewDialog } from "./booking-view-dialog"
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Edit, Eye, Search } from "lucide-react";
+import { BookingEditDialog } from "./booking-edit-dialog";
+import { BookingViewDialog } from "./booking-view-dialog";
+import { useState } from "react";
 
 interface Booking {
-  id: number
+  id: number;
   guest: {
-    firstName: string
-    lastName: string
-  }
+    firstName: string;
+    lastName: string;
+  };
   unit: {
-    name: string
-  }
-  checkInDate: Date
-  checkOutDate: Date
-  totalAmount: number
+    name: string;
+  };
+  checkInDate: Date;
+  checkOutDate: Date;
+  totalAmount: number;
 }
 
-interface RecentBookingsTableProps {
-  bookings: Booking[]
-}
+export function RecentBookingsTable({ bookings }: { bookings: Booking[] }) {
+  const [searchTerm, setSearchTerm] = useState("");
 
-export function RecentBookingsTable({ bookings }: RecentBookingsTableProps) {
+  const filteredBookings = bookings.filter((booking) => {
+    const term = searchTerm.toLowerCase();
+
+    return (
+      booking.guest.firstName.toLowerCase().includes(term) ||
+      booking.guest.lastName.toLowerCase().includes(term) ||
+      booking.unit.name.toLowerCase().includes(term)
+    );
+  });
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent Bookings</CardTitle>
-        <CardDescription>Latest guest bookings and reservations</CardDescription>
+        <div className="flex flex-col gap-4 md:gap-0 md:flex-row md:items-center md:justify-between">
+          <div>
+            <CardTitle>Recent Bookings</CardTitle>
+            <CardDescription>
+              Latest guest bookings and reservations
+            </CardDescription>
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search a recent booking..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8 w-xs md:w-lg"
+            />
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Guest Name</TableHead>
-              <TableHead>Unit</TableHead>
-              <TableHead>Check-in</TableHead>
-              <TableHead>Check-out</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {bookings.map((booking) => (
-              <TableRow key={booking.id}>
-                <TableCell className="font-medium">
-                  {booking.guest.firstName} {booking.guest.lastName}
-                </TableCell>
-                <TableCell>{booking.unit.name}</TableCell>
-                <TableCell>{new Date(booking.checkInDate).toLocaleDateString()}</TableCell>
-                <TableCell>{new Date(booking.checkOutDate).toLocaleDateString()}</TableCell>
-                <TableCell>${booking.totalAmount}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <BookingViewDialog booking={booking}>
-                      <Button variant="ghost" size="icon">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </BookingViewDialog>
-                    <BookingEditDialog booking={booking}>
-                      <Button variant="ghost" size="icon">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </BookingEditDialog>
-                  </div>
-                </TableCell>
+        <div className="rounded-lg overflow-hidden border border-border">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted">
+                <TableHead className="font-semibold text-foreground">
+                  Guest Name
+                </TableHead>
+                <TableHead className="font-semibold text-foreground">
+                  Unit
+                </TableHead>
+                <TableHead className="font-semibold text-foreground">
+                  Check-in
+                </TableHead>
+                <TableHead className="font-semibold text-foreground">
+                  Check-out
+                </TableHead>
+                <TableHead className="font-semibold text-foreground">
+                  Amount
+                </TableHead>
+                <TableHead className="font-semibold text-foreground">
+                  Actions
+                </TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredBookings.map((booking) => (
+                <TableRow key={booking.id}>
+                  <TableCell className="font-medium">
+                    {booking.guest.firstName} {booking.guest.lastName}
+                  </TableCell>
+                  <TableCell>{booking.unit.name}</TableCell>
+                  <TableCell>
+                    {new Date(booking.checkInDate).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    {new Date(booking.checkOutDate).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>${booking.totalAmount}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <BookingViewDialog booking={booking}>
+                        <Button variant="ghost" size="icon">
+                          <Eye className="size-4" />
+                        </Button>
+                      </BookingViewDialog>
+                      <BookingEditDialog booking={booking}>
+                        <Button variant="ghost" size="icon">
+                          <Edit className="size-4" />
+                        </Button>
+                      </BookingEditDialog>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
-  )
+  );
 }
