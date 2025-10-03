@@ -7,7 +7,7 @@
     /* Modern color palette inspired by design examples */
     --background: oklch(0.99 0.005 106.423);
     --foreground: oklch(0.15 0.01 106.423);
-    --card: oklch(1 0 0);
+    --card: oklch(100% 0.00011 271.152);
     --card-foreground: oklch(0.15 0.01 106.423);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.15 0.01 106.423);
