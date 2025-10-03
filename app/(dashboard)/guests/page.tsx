@@ -1,29 +1,25 @@
 "use client";
 
 import { GuestDialog } from "@/components/GuestDialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { useGuests } from "@/hooks/useGuests";
 import {
-  Bed,
   Clock,
-  Edit,
-  Eye,
   Flag,
-  Mail,
-  Phone,
   Search,
-  Star,
   UserCheck,
   Users,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
+import { GuestCards } from "@/components/GuestCards";
+import { GuestsTable } from "@/components/GuestsTable";
 
 export default function GuestsPage() {
   const router = useRouter();
@@ -31,6 +27,7 @@ export default function GuestsPage() {
   const [searchValue, setSearchValue] = useState(
     () => searchParams.get("search") || ""
   );
+  const [tableMode, setTableMode] = useState(true);
   const initializedRef = useRef(false);
 
   // Get search parameters from URL
@@ -74,31 +71,6 @@ export default function GuestsPage() {
     setSearchValue(search);
     initializedRef.current = true;
   }
-
-  const getVerificationColor = (status: string) => {
-    switch (status) {
-      case "verified":
-        return "default";
-      case "pending":
-        return "secondary";
-      case "rejected":
-        return "destructive";
-      default:
-        return "secondary";
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-KE", {
-      style: "currency",
-      currency: "KES",
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string | Date | null) => {
-    if (!dateString) return "Never";
-    return new Date(dateString).toLocaleDateString();
-  };
 
   // Statistics
   const totalGuests = guests.length;
@@ -161,8 +133,8 @@ export default function GuestsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <section className="space-y-6">
+      <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-normal text-foreground">
             Guest Management
@@ -171,13 +143,13 @@ export default function GuestsPage() {
         </div>
 
         <GuestDialog />
-      </div>
+      </header>
 
       {/* Statistics Cards */}
       <StatCards stats={stats} />
 
       {/* Search and Filters */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-4 ">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
@@ -188,6 +160,14 @@ export default function GuestsPage() {
             disabled={isLoading}
             autoFocus
           />
+        </div>
+        <div className="self-center flex items-center gap-2">
+          <Switch
+            checked={tableMode}
+            onCheckedChange={setTableMode}
+            className="cursor-pointer"
+          />
+          <span className="text-muted-foreground text-sm">Table mode</span>
         </div>
       </div>
 
@@ -200,121 +180,33 @@ export default function GuestsPage() {
       )}
 
       {/* Guests Grid */}
-      {!isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {guests.map((guest) => (
-            <Card key={guest.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="text-lg">
-                        {guest.firstName[0]}
-                        {guest.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle className="text-lg">
-                        {guest.firstName} {guest.lastName}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {guest.occupation || "Not specified"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end space-y-1">
-                    <Badge
-                      variant={
-                        getVerificationColor(
-                          guest.verificationStatus || "pending"
-                        ) as "default" | "secondary" | "destructive" | "outline"
-                      }
-                    >
-                      {guest.verificationStatus || "pending"}
-                    </Badge>
-                    {guest.blacklisted && (
-                      <Badge variant="destructive" className="text-xs">
-                        Blacklisted
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Contact Information */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{guest.email}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{guest.phone}</span>
-                  </div>
-                </div>
+      {!isLoading &&
+        (!tableMode ? (
+          <GuestCards guests={guests} />
+        ) : (
+          <GuestsTable guests={guests} />
+        ))}
 
-                {/* Statistics */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="text-center p-2 bg-muted/50 rounded-lg">
-                    <p className="font-medium">{guest.totalStays || 0}</p>
-                    <p className="text-muted-foreground">Total Stays</p>
-                  </div>
-                  <div className="text-center p-2 bg-muted/50 rounded-lg">
-                    <p className="font-medium">{guest.totalNights || 0}</p>
-                    <p className="text-muted-foreground">Total Nights</p>
-                  </div>
-                </div>
-
-                {/* Financial Info */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Total Spent
-                    </span>
-                    <span className="font-medium">
-                      {formatCurrency(guest.totalSpent || 0)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Last Stay
-                    </span>
-                    <span className="text-sm">
-                      {formatDate(guest.lastStay || null)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Rating */}
-                {guest.rating && (
-                  <div className="flex items-center space-x-2">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="font-medium">{guest.rating}</span>
-                    <span className="text-sm text-muted-foreground">
-                      rating
-                    </span>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex space-x-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Bed className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      {/* Pagination */}
+      <footer className="flex items-center justify-between pt-4 w-full">
+        <p className="text-sm text-muted-foreground">Page 1 of 1</p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0 bg-transparent"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0 bg-transparent"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
-      )}
+      </footer>
 
       {!isLoading && guests.length === 0 && (
         <div className="text-center py-8">
@@ -327,6 +219,6 @@ export default function GuestsPage() {
           </p>
         </div>
       )}
-    </div>
+    </section>
   );
 }
