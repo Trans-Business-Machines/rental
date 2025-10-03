@@ -12,16 +12,18 @@ import {
 import { Plus } from "lucide-react";
 import { useState } from "react";
 
-export function InventoryDialog() {
+export function InventoryDialog({ children }: { children?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="size-4 mr-1" />
-          <span>Add Item</span>
-        </Button>
+        {children || (
+          <Button>
+            <Plus className="size-4 mr-1" />
+            <span>Add Item</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
