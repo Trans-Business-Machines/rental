@@ -2,7 +2,7 @@ import { createGuest, getGuests, searchGuests } from "@/lib/actions/guests";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-interface Guest {
+export interface Guest {
 	id: number;
 	firstName: string;
 	lastName: string;
