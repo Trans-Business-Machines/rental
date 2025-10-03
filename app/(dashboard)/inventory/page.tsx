@@ -1,6 +1,5 @@
 import { AssignmentFilters } from "@/components/AssignmentFilters";
 import { CheckoutDialog } from "@/components/CheckoutDialog";
-import { InventoryActions } from "@/components/InventoryActions";
 import { InventoryAssignmentDialog } from "@/components/InventoryAssignmentDialog";
 import { InventoryAssignmentsList } from "@/components/InventoryAssignmentsList";
 import { InventoryDialog } from "@/components/InventoryDialog";
@@ -16,19 +15,15 @@ import {
 } from "@/lib/actions/inventory";
 import { getAllPropertiesWithUnits as getProperties } from "@/lib/actions/properties";
 import {
-  Bath,
   Bed,
   CheckCircle,
   Download,
   Eye,
-  Lamp,
-  Monitor,
   Package,
-  UtensilsCrossed,
   XCircle,
 } from "lucide-react";
-import Link from "next/link";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
+import { InventoryItems } from "@/components/InventoryItems";
 
 interface InventoryPageProps {
   searchParams: Promise<{
@@ -103,47 +98,6 @@ export default async function InventoryPage({
 
     return matchesProperty && matchesItem && matchesStatus;
   });
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "default";
-      case "discontinued":
-        return "secondary";
-      default:
-        return "secondary";
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "active":
-        return CheckCircle;
-      case "discontinued":
-        return XCircle;
-      default:
-        return Package;
-    }
-  };
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Furniture":
-        return Bed;
-      case "Electronics":
-        return Monitor;
-      case "Appliances":
-        return UtensilsCrossed;
-      case "Bathroom":
-        return Bath;
-      case "Lighting":
-        return Lamp;
-      case "Other":
-        return Package;
-      default:
-        return Package;
-    }
-  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-KE", {
@@ -242,7 +196,7 @@ export default async function InventoryPage({
 
         <TabsContent value="inventory" className="space-y-4">
           {/* Inventory Items Grid */}
-          {filteredItems.length > 0 ? (
+          {/*  {filteredItems.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredItems.map((item) => {
                 const StatusIcon = getStatusIcon(item.status);
@@ -299,7 +253,6 @@ export default async function InventoryPage({
                       </div>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      {/* Key Stats */}
                       <div className="grid grid-cols-2 gap-3 mb-4">
                         <div className="text-center p-3 bg-green-50 border border-green-200 rounded-lg">
                           <p className="text-lg font-semibold text-green-700">
@@ -329,7 +282,8 @@ export default async function InventoryPage({
                   : "Get started by adding your first inventory item"}
               </p>
             </div>
-          )}
+          )} */}
+          <InventoryItems items={filteredItems} />
         </TabsContent>
 
         <TabsContent value="assignments" className="space-y-4">
