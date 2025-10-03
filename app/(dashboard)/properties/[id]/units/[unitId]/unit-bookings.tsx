@@ -1,4 +1,4 @@
-'use client'
+/* 'use client'
 
 import { BookingDialog } from "@/components/BookingDialog";
 import { Badge } from "@/components/ui/badge";
@@ -133,4 +133,54 @@ export function UnitBookings({ unit, bookings }: UnitBookingsProps) {
 			</CardContent>
 		</Card>
 	);
-} 
+}  */
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar, Plus } from "lucide-react";
+
+export default function UnitBookings() {
+  // Mock data - replace with actual data fetching
+  const bookings = [];
+
+  return (
+    <Card className="border-border shadow-sm bg-card rounded-xl">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-xl font-bold text-foreground">
+              Recent Bookings
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              {bookings.length} bookings
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className="gap-2 cursor-pointer bg-chart-1 hover:bg-chart-1/90"
+          >
+            <Plus className="h-4 w-4" />
+            New Booking
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {bookings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="p-4 rounded-full bg-muted mb-4">
+              <Calendar className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-foreground mb-1">
+              No bookings yet
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Create a booking to get started
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">{/* Bookings list will go here */}</div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
