@@ -5,7 +5,7 @@ export function PropertyAmenities({ property }: { property: Property }) {
   return (
     <Card className="flex-1 border-0 shadow-sm bg-card">
       <CardHeader>
-        <CardTitle className="text-xl font-bold text-foreground">
+        <CardTitle className="text-xl lg:text-2xl font-bold text-foreground">
           Amenities
         </CardTitle>
         <p className="text-sm text-muted-foreground">

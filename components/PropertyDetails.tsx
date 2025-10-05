@@ -7,7 +7,7 @@ import Link from "next/link";
 
 function PropertyDetails({ property }: { property: Property }) {
   return (
-    <Card className="flex-2 border-0 bg-card shadow-sm">
+    <Card className="flex-2 gap-4 border-0 bg-card shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl lg:text-2xl font-bold text-foreground">
@@ -61,16 +61,16 @@ function PropertyDetails({ property }: { property: Property }) {
         </div>
 
         {/* Room Details */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center gap-3">
-            <Bath className="h-5 w-5 text-muted-foreground" />
-            <span className="text-foreground">
+        <div className="flex gap-4">
+          <div className="flex bg-muted/60 border border-border p-3 rounded-xl items-center gap-3">
+            <Bath className="size-4 text-muted-foreground" />
+            <span className="text-foreground text-sm">
               {property.bathrooms} Bathroom
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <Bed className="h-5 w-5 text-muted-foreground" />
-            <span className="text-foreground">
+          <div className="flex bg-muted/60 border border-border p-3 rounded-xl items-center gap-3">
+            <Bed className="size-4 text-muted-foreground" />
+            <span className="text-foreground text-sm">
               {property.bedrooms} Bedrooms
             </span>
           </div>
@@ -81,7 +81,9 @@ function PropertyDetails({ property }: { property: Property }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-muted-foreground" />
-              <span className="font-medium text-foreground">Occupancy</span>
+              <span className="font-medium text-secondary-foreground">
+                Occupancy
+              </span>
             </div>
             <span className="text-sm font-medium text-muted-foreground">
               0/48 (0%)
