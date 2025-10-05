@@ -51,50 +51,39 @@ const getItemIcon = (category: string) => {
 
 function InventoryItems({ items }: InventoryItemsProps) {
   return items.length > 0 ? (
-    <div className="grid gap-4  md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {items.map((item) => {
         const Icon = getItemIcon(item.category.toLowerCase());
 
         return (
           <Card
             key={item.id}
-            className="group bg-card shadow-sm hover:shadow-lg transition-all duration-200 border-border"
+            className="group gap-4 pb-0 rounded-md border-border hover:shadow-lg transition-all duration-200 "
           >
-            <CardHeader className="pb-4 flex items-center justify-between">
-              <div className="flex gap-3 items-center">
-                <div className="p-5 bg-primary/10 flex-shrink-0 rounded-lg">
+            <CardHeader className="flex items-center justify-between">
+              <header className="flex gap-2">
+                {/* Icon container */}
+                <div className="p-5 bg-primary/10 flex-shrink-0 rounded-sm">
                   <Icon className="size-5 text-primary" />
                 </div>
-                <div className="flex flex-col gap-1">
-                  <p className="capitalize font-semibold text-primary text-base">
+
+                {/* Item Name and category */}
+                <div className="flex justify-center flex-col gap-0">
+                  <p className="font-semibold capitalize text-gray-900 text-base m-0 p-0">
                     {item.itemName}
                   </p>
-
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className="capitalize text-xs font-normal"
-                    >
-                      {item.category}
-                    </Badge>
-                    <Badge
-                      className={cn(
-                        "capitalize text-xs font-normal",
-                        item.status === "active" && "bg-primary",
-                        item.status === "discontinued" && "bg-chart-5"
-                      )}
-                    >
-                      {item.status}
-                    </Badge>
-                  </div>
+                  <p className="text-sm text-gray-500 m-0 p-0">
+                    {item.category}
+                  </p>
                 </div>
-              </div>
+              </header>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     className={cn(
-                      "size-5 self-start opacity-40 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer",
+                      "size-5 self-start opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer",
                       "data-[state=open]:opacity-100"
                     )}
                   >
@@ -119,19 +108,31 @@ function InventoryItems({ items }: InventoryItemsProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div className="text-center p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-lg font-semibold text-green-700">
+            <CardContent className="space-y-4 px-0">
+              <div className="pl-6">
+                <Badge
+                  className={cn(
+                    "capitalize text-sm font-medium border-0",
+                    item.status === "active" && "bg-green-100 text-green-700 ",
+                    item.status === "discontinued" && "bg-red-100 text-red-700"
+                  )}
+                >
+                  {item.status}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2  gap-3 border-t border-border">
+                <div className="text-center py-4 border-r border-border">
+                  <p className="text-2xl font-bold text-green-600">
                     {item.availableQuantity || 0}
                   </p>
-                  <p className="text-xs text-green-600">Available</p>
+                  <p className="text-xs text-gray-500">Available</p>
                 </div>
-                <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-lg font-semibold text-blue-700">
+                <div className="text-center py-4">
+                  <p className="text-2xl font-bold text-blue-600">
                     {item.assignedQuantity || 0}
                   </p>
-                  <p className="text-xs text-blue-600">Assigned</p>
+                  <p className="text-xs text-gray-500">Assigned</p>
                 </div>
               </div>
             </CardContent>
