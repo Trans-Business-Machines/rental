@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProperties, searchProperties } from "@/lib/actions/properties";
-import { Building2, DollarSign, Home, MapPin, Plus, Users } from "lucide-react";
+import { Building2, Home, MapPin, Plus, Users, Banknote } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -69,7 +69,7 @@ export default async function PropertiesPage({
         {properties.map((property) => (
           <Card
             key={property.id}
-            className="hover:shadow-lg transition-shadow p-0 pb-6"
+            className="hover:shadow-lg transition-shadow p-0 pb-4"
           >
             <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
               <img
@@ -103,7 +103,7 @@ export default async function PropertiesPage({
                   <span className="capitalize">{property.type}</span>
                 </div>
                 <div className="flex items-center">
-                  <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <Banknote className="size-5 mr-2 text-muted-foreground" />
                   <span>${property.rent}/month</span>
                 </div>
               </div>

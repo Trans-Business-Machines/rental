@@ -62,13 +62,13 @@ function PropertyDetails({ property }: { property: Property }) {
 
         {/* Room Details */}
         <div className="flex gap-4">
-          <div className="flex bg-muted/60 border border-border p-3 rounded-xl items-center gap-3">
+          <div className="flex bg-muted/80 border border-gray-400/80 p-3 rounded-xl items-center gap-3">
             <Bath className="size-4 text-muted-foreground" />
             <span className="text-foreground text-sm">
               {property.bathrooms} Bathroom
             </span>
           </div>
-          <div className="flex bg-muted/60 border border-border p-3 rounded-xl items-center gap-3">
+          <div className="flex bg-muted/80 border border-gray-400/80 p-3 rounded-xl items-center gap-3">
             <Bed className="size-4 text-muted-foreground" />
             <span className="text-foreground text-sm">
               {property.bedrooms} Bedrooms
@@ -77,7 +77,7 @@ function PropertyDetails({ property }: { property: Property }) {
         </div>
 
         {/* Occupancy */}
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-muted-foreground" />

@@ -27,7 +27,7 @@ interface PropertyCardActionsProps {
 
 export function PropertyCardActions({ property }: PropertyCardActionsProps) {
   return (
-    <div className="flex space-x-2">
+    <div className="flex space-x-2 mt-2">
       <Button
         variant="default"
         className="flex-1 gap-2 bg-chart-1 hover:bg-chart-1/90"

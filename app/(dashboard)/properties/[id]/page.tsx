@@ -17,12 +17,14 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
   console.log("Property id: ", id);
 
   return (
-    <section>
+    <section className="pb-6">
       <header className="flex justify-between p-2">
         <div className="flex gap-2">
-          <Link href="/properties" className="self-center">
-            <ArrowLeft className="size-5 hover:text-primary/50" />
-          </Link>
+          <Button asChild className="self-center" size="icon" variant="ghost">
+            <Link href="/properties">
+              <ArrowLeft className="size-5" />
+            </Link>
+          </Button>
 
           <div className="flex flex-col">
             <p className="text-2xl font-bold text-foreground capitalize">

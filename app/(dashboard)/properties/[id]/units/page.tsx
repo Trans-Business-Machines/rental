@@ -59,7 +59,7 @@ export default function UnitsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-2  size-4  text-muted-foreground" />
           <Input
-            placeholder="seach by name..."
+            placeholder="seach by name or type ..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"

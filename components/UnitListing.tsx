@@ -61,7 +61,7 @@ export function UnitListing({ units }: UnitListingProps) {
       {units.map((unit) => (
         <Card
           key={unit.id}
-          className="border-0 shadow-sm hover:shadow-md group pt-0 bg-card"
+          className="border-0 shadow-sm hover:shadow-md group pt-0 pb-4 bg-card"
         >
           <Carousel
             opts={{ loop: true }}
@@ -105,20 +105,20 @@ export function UnitListing({ units }: UnitListingProps) {
               </div>
             </div>
 
-            <div className="flex items-center my-3 gap-2">
-              <div className="flex items-center gap-2 px-3 border border-accent-foreground/30 py-2 rounded-lg bg-muted/50">
+            <div className="flex items-center my-3 gap-4">
+              <div className="shrink-0 flex items-center gap-2 px-3 border border-accent-foreground/30 py-2 rounded-lg bg-muted/50">
                 <Bath className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground">
                   {unit.bathrooms}
                 </span>
               </div>
-              <div className="flex items-center gap-2 px-3 py-2 border border-accent-foreground/30  rounded-lg bg-muted/50">
+              <div className="shrink-0 flex items-center gap-2 px-3 py-2 border border-accent-foreground/30  rounded-lg bg-muted/50">
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground">
                   {unit.maxGuests === 1 ? "1" : `1 - ${unit.maxGuests}`}
                 </span>
               </div>
-              <div className="flex items-center gap-2 px-3 py-2 border border-accent-foreground/30 rounded-lg bg-muted/50">
+              <div className="shrink-0 flex items-center gap-2 px-3 py-2 border border-accent-foreground/30 rounded-lg bg-muted/50">
                 <Bed className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground">
                   {unit.bedrooms}
@@ -126,7 +126,7 @@ export function UnitListing({ units }: UnitListingProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-2 pt-2 mt-1">
               <Button
                 variant="default"
                 className="flex-1 gap-2 bg-chart-1 hover:bg-chart-1/90"
