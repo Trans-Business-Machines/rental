@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { Booking } from "@/lib/types/types";
 import { format, differenceInDays } from "date-fns";
+import Link from "next/link";
 
 interface BookingsProps {
   bookings: Booking[];
@@ -84,11 +85,16 @@ function Bookings({ bookings }: BookingsProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem>
-                      <Eye className="size-4" />
-                      <span>View Details</span>
+                    <DropdownMenuItem
+                      className="cursor-pointer focus:bg-chart-1/40 hover:bg-chart-1/40"
+                      asChild
+                    >
+                      <Link href={`/bookings/${booking.id}`}>
+                        <Eye className="size-4" />
+                        <span>View Details</span>
+                      </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer focus:bg-chart-1/40 hover:bg-chart-1/40">
                       <Edit className="size-4" />
                       <span>Edit Booking</span>
                     </DropdownMenuItem>
@@ -141,10 +147,9 @@ function Bookings({ bookings }: BookingsProps) {
               <div className="flex items-center justify-between border-t  border-border pt-2">
                 <Badge
                   variant="secondary"
-                  className={getStatusColor(booking.status)}
+                  className={`${getStatusColor(booking.status)} capitalize`}
                 >
-                  {booking.status.charAt(0).toUpperCase() +
-                    booking.status.slice(1)}
+                  {booking.status}
                 </Badge>
 
                 <div className="text-right">
