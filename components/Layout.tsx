@@ -20,7 +20,6 @@ import {
   ChartColumnBig,
   Bell,
   Building2,
-  Calendar,
   CalendarDays,
   ChevronDown,
   ChevronRight,
@@ -28,8 +27,6 @@ import {
   Home,
   LogOut,
   Menu,
-  CreditCard,
-  Wrench,
   User,
   Users,
   X,
@@ -55,10 +52,10 @@ const navigationConfig: NavItem[] = [
   { id: "guests", label: "Guests", icon: Users },
   { id: "inventory", label: "Inventory", icon: Box },
   { id: "properties", label: "Properties", icon: Building2 },
-  { id: "payments", label: "Payments", icon: CreditCard },
-  { id: "maintenance", label: "Maintenance", icon: Wrench },
+  /*   { id: "payments", label: "Payments", icon: CreditCard }, */
+  /*  { id: "maintenance", label: "Maintenance", icon: Wrench }, */
   { id: "users", label: "Users", icon: User, role: "admin" },
-  {
+  /* {
     id: "amenities",
     label: "Amenities",
     icon: Calendar,
@@ -66,7 +63,7 @@ const navigationConfig: NavItem[] = [
       { id: "amenities", label: "Amenities" },
       { id: "booking-requests", label: "Booking Requests" },
     ],
-  },
+  }, */
 ];
 
 export function Layout({ children }: LayoutProps) {
