@@ -44,7 +44,7 @@ export const useUsers = (searchQuery?: string) => {
 		queryFn: async (): Promise<User[]> => {
 			const { data: response, error } = await authClient.admin.listUsers({
 				query: {
-					limit: 100,
+					limit: 6,
 					offset: 0,
 					searchField: searchQuery ? "email" : undefined,
 					searchOperator: searchQuery ? "contains" : undefined,
