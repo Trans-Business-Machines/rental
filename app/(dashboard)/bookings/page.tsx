@@ -9,18 +9,10 @@ import {
 } from "@/components/ui/select";
 import { getBookings } from "@/lib/actions/bookings";
 import { getAllPropertiesWithUnits as getProperties } from "@/lib/actions/properties";
-import {
-  Calendar,
-  CheckCircle,
-  Clock,
-  Search,
-  Users,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Calendar, CheckCircle, Clock, Search, Users } from "lucide-react";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { Bookings } from "@/components/Bookings";
-import { Button } from "@/components/ui/button";
+import Pagination from "@/components/Pagination";
 
 export default async function BookingsPage() {
   // Fetch real data from database
@@ -116,39 +108,13 @@ export default async function BookingsPage() {
         </Select>
       </div>
 
-      {/* Bookings Grid */}
+      {/* Bookings cards and table*/}
       <Bookings bookings={bookings} />
 
       {/* Pagination */}
       <footer className="flex items-center justify-between pt-4 w-full">
-        <p className="text-sm text-muted-foreground">Page 1 of 1</p>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0 bg-transparent"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0 bg-transparent"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        <Pagination />
       </footer>
-
-      {bookings.length === 0 && (
-        <div className="text-center py-8">
-          <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium">No bookings found</h3>
-          <p className="text-muted-foreground">
-            Get started by creating your first booking
-          </p>
-        </div>
-      )}
     </section>
   );
 }

@@ -115,7 +115,7 @@ function GuestsTable({ guests }: GuestsTableProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem className="hover:bg-primary/30 focus:bg-primary/30 cursor-pointer">
                       <div className="flex gap-2 items-center">
                         <Eye className="size-4 text-muted-foreground" />
                         <span className="text-accent-foreground">
@@ -123,7 +123,7 @@ function GuestsTable({ guests }: GuestsTableProps) {
                         </span>
                       </div>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem className="hover:bg-primary/30 focus:bg-primary/30 cursor-pointer">
                       <div className="flex gap-2 items-center">
                         <Pencil className="size-4 text-muted-foreground" />
                         <span className="text-accent-foreground">

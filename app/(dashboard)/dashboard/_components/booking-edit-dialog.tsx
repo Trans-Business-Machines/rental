@@ -1,56 +1,294 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { useState } from "react"
-
-interface Booking {
-  id: number
-  guest: {
-    firstName: string
-    lastName: string
-  }
-  unit: {
-    name: string
-  }
-  checkInDate: Date
-  checkOutDate: Date
-  totalAmount: number
-}
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Edit } from "lucide-react";
+import type { Booking } from "@/lib/types/types";
 
 interface BookingEditDialogProps {
   booking: Booking
-  children: React.ReactNode
+  children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function BookingEditDialog({ booking, children }: BookingEditDialogProps) {
-  const [open, setOpen] = useState(false)
+export function BookingEditDialog({
+  booking,
+  children,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: BookingEditDialogProps) {
+  // Detect if this Dialog is controlled or not.
+  const isControlled =
+    controlledOpen !== undefined && controlledOnOpenChange !== undefined;
+
+  // Define state to control dialog if its an uncontrolled dialog box
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  // Fallback to internal state if not controlled
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? controlledOnOpenChange : setInternalOpen;
+
+  const [formData, setFormData] = useState({
+    checkInDate: booking.checkInDate,
+    checkOutDate: booking.checkOutDate,
+    numberOfGuests: booking.numberOfGuests,
+    totalAmount: booking.totalAmount,
+    source: booking.source,
+    purpose: booking.purpose || "personal",
+    paymentMethod: booking.paymentMethod || "",
+    specialRequests: booking.specialRequests || "",
+    status: booking.status,
+  });
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        name === "numberOfGuests" || name === "totalAmount"
+          ? Number(value)
+          : value,
+    }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // TODO: Implement update booking action
+    console.log("Updating booking:", formData);
+    setOpen(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Edit Booking - #{booking.id}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="text-center p-8">
-            <p className="text-muted-foreground">
-              Booking editing functionality is not yet implemented.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Use the bookings page for detailed editing.
-            </p>
-          </div>
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Close
+      {/* Use DialogTrigger Only if th dialog is uncontrolled by parent */}
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {children || (
+            <Button size="sm" className="gap-2">
+              <Edit className="size-4" />
+              Edit Booking
             </Button>
-          </div>
-        </div>
+          )}
+        </DialogTrigger>
+      )}
+
+      <DialogContent className=" w-11/12  lg:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Booking</DialogTitle>
+          <DialogDescription>
+            Update booking details and information
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Stay Dates */}
+          <article className="space-y-4">
+            <h3 className="font-semibold text-foreground">Stay Dates</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="checkInDate">Check-in Date</Label>
+                <Input
+                  id="checkInDate"
+                  name="checkInDate"
+                  type="date"
+                  value={
+                    new Date(booking.checkInDate).toISOString().split("T")[0]
+                  }
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkOutDate">Check-out Date</Label>
+                <Input
+                  id="checkOutDate"
+                  name="checkOutDate"
+                  type="date"
+                  value={
+                    new Date(booking.checkOutDate).toISOString().split("T")[0]
+                  }
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+          </article>
+
+          {/* Guest Information */}
+          <article className="space-y-4">
+            <h3 className="font-semibold text-foreground">Guest Information</h3>
+            <div className="space-y-2">
+              <Label htmlFor="numberOfGuests">Number of Guests</Label>
+              <Input
+                id="numberOfGuests"
+                name="numberOfGuests"
+                type="number"
+                min="1"
+                value={formData.numberOfGuests}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </article>
+
+          {/* Booking Details */}
+          <article className="space-y-4">
+            <h3 className="font-semibold text-foreground">Booking Details</h3>
+            <div className="grid  gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="source">Booking Source</Label>
+                <Select
+                  value={formData.source}
+                  onValueChange={(value) => handleSelectChange("source", value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="direct">Direct</SelectItem>
+                    <SelectItem value="booking.com">Booking.com</SelectItem>
+                    <SelectItem value="airbnb">Airbnb</SelectItem>
+                    <SelectItem value="expedia">Expedia</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="purpose">Purpose</Label>
+                <Select
+                  value={formData.purpose}
+                  onValueChange={(value) =>
+                    handleSelectChange("purpose", value)
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="personal">Personal</SelectItem>
+                    <SelectItem value="leisure">Leisure</SelectItem>
+                    <SelectItem value="business">Business</SelectItem>
+                    <SelectItem value="family">Family</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="paymentMethod">Payment Method</Label>
+                <Select
+                  value={formData.paymentMethod}
+                  onValueChange={(value) =>
+                    handleSelectChange("paymentMethod", value)
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mpesa_till">M-Pesa Till</SelectItem>
+                    <SelectItem value="credit_card">Credit Card</SelectItem>
+                    <SelectItem value="debit_card">Debit Card</SelectItem>
+                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="totalAmount">Total Amount</Label>
+                <Input
+                  id="totalAmount"
+                  name="totalAmount"
+                  type="number"
+                  min="0"
+                  value={formData.totalAmount}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+          </article>
+
+          {/* Status */}
+          <article className="space-y-4">
+            <h3 className="font-semibold text-foreground">Status</h3>
+            <div className="space-y-2">
+              <Label htmlFor="status">Booking Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => handleSelectChange("status", value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="checked-in">Checked In</SelectItem>
+                  <SelectItem value="checked-out">Checked Out</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </article>
+
+          {/* Special Requests */}
+          <article className="space-y-4">
+            <h3 className="font-semibold text-foreground">Special Requests</h3>
+            <div className="space-y-2">
+              <Label htmlFor="specialRequests">
+                Special Requests (optional)
+              </Label>
+              <Textarea
+                id="specialRequests"
+                name="specialRequests"
+                value={formData.specialRequests}
+                onChange={handleChange}
+                placeholder="Add any special requests for this booking..."
+                rows={4}
+              />
+            </div>
+          </article>
+
+          {/* Actions */}
+          <article className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="bg-chart-5  px-10 hover:bg-chart-5/90 cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="bg-chart-1 hover:bg-chart-1/90 cursor-pointer"
+            >
+              Save Changes
+            </Button>
+          </article>
+        </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

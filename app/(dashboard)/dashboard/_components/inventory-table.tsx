@@ -10,6 +10,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Table,
@@ -22,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Edit, Plus, Search } from "lucide-react";
 import { useState } from "react";
+import Pagination from "@/components/Pagination";
 
 interface InventoryItem {
   id: number;
@@ -173,6 +175,9 @@ export function InventoryTable({ items }: InventoryTableProps) {
           </Table>
         </div>
       </CardContent>
+      <CardFooter>
+        <Pagination />
+      </CardFooter>
     </Card>
   );
 }

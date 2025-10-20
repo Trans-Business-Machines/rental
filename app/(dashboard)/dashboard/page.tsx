@@ -1,4 +1,3 @@
-//import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { prisma } from "@/lib/prisma";
 import { DollarSign, Home, Wrench } from "lucide-react";
@@ -30,18 +29,20 @@ async function getDashboardData() {
         },
       },
     },
+    take: 6,
   });
 
   // Get recent bookings
   const recentBookings = await prisma.booking.findMany({
     include: {
       guest: true,
+      property: true,
       unit: true,
     },
     orderBy: {
       createdAt: "desc",
     },
-    take: 10,
+    take: 6,
   });
 
   // Get inventory items
@@ -56,6 +57,7 @@ async function getDashboardData() {
     orderBy: {
       itemName: "asc",
     },
+    take: 6,
   });
 
   // Calculate monthly revenue from current month bookings

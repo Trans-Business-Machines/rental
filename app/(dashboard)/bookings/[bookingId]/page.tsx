@@ -79,7 +79,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
 
   return (
     <section className="space-y-6">
-      <Header />
+      <Header booking={booking} />
 
       {/* Booking status banner */}
       <Card className="border-l-2 border-l-chart-2 mb-6">

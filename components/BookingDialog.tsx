@@ -21,6 +21,7 @@ interface BookingDialogProps {
 export function BookingDialog({
   preselectedPropertyId,
   preselectedUnitId,
+  children,
 }: BookingDialogProps) {
   const [open, setOpen] = useState(false);
 
@@ -35,10 +36,12 @@ export function BookingDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="default" className="rounded-md">
-          <Plus className="size-4 mr-1" />
-          <span>New Booking</span>
-        </Button>
+        {children || (
+          <Button variant="default" className="rounded-md">
+            <Plus className="size-4 mr-1" />
+            <span>New Booking</span>
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">

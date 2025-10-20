@@ -3,31 +3,27 @@
 import { GuestDialog } from "@/components/GuestDialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import { useGuests } from "@/hooks/useGuests";
-import {
-  Clock,
-  Flag,
-  Search,
-  UserCheck,
-  Users,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Clock, Flag, Search, UserCheck, Users } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { GuestCards } from "@/components/GuestCards";
 import { GuestsTable } from "@/components/GuestsTable";
+import { useTableMode } from "@/hooks/useTableMode";
+import Pagination from "@/components/Pagination";
 
 export default function GuestsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const [searchValue, setSearchValue] = useState(
     () => searchParams.get("search") || ""
   );
-  const [tableMode, setTableMode] = useState(true);
+
+  // Get table mode context from useTableMode Hook
+  const { tableMode, setTableMode } = useTableMode();
   const initializedRef = useRef(false);
 
   // Get search parameters from URL
@@ -187,27 +183,6 @@ export default function GuestsPage() {
           <GuestsTable guests={guests} />
         ))}
 
-      {/* Pagination */}
-      <footer className="flex items-center justify-between pt-4 w-full">
-        <p className="text-sm text-muted-foreground">Page 1 of 1</p>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0 bg-transparent"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 p-0 bg-transparent"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </footer>
-
       {!isLoading && guests.length === 0 && (
         <div className="text-center py-8">
           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -219,6 +194,11 @@ export default function GuestsPage() {
           </p>
         </div>
       )}
+
+      {/* Pagination */}
+      <footer className="flex items-center justify-between pt-4 w-full">
+        <Pagination />
+      </footer>
     </section>
   );
 }

@@ -7,6 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Table,
@@ -21,22 +22,14 @@ import { Edit, Eye, Search } from "lucide-react";
 import { BookingEditDialog } from "./booking-edit-dialog";
 import { BookingViewDialog } from "./booking-view-dialog";
 import { useState } from "react";
+import Pagination from "@/components/Pagination";
+import type { Booking } from "@/lib/types/types";
 
-interface Booking {
-  id: number;
-  guest: {
-    firstName: string;
-    lastName: string;
-  };
-  unit: {
-    name: string;
-  };
-  checkInDate: Date;
-  checkOutDate: Date;
-  totalAmount: number;
+interface RecentBookingsTableProps {
+  bookings: Booking[];
 }
 
-export function RecentBookingsTable({ bookings }: { bookings: Booking[] }) {
+export function RecentBookingsTable({ bookings }: RecentBookingsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredBookings = bookings.filter((booking) => {
@@ -80,6 +73,9 @@ export function RecentBookingsTable({ bookings }: { bookings: Booking[] }) {
                   Guest Name
                 </TableHead>
                 <TableHead className="font-semibold text-foreground">
+                  Property
+                </TableHead>
+                <TableHead className="font-semibold text-foreground">
                   Unit
                 </TableHead>
                 <TableHead className="font-semibold text-foreground">
@@ -102,6 +98,7 @@ export function RecentBookingsTable({ bookings }: { bookings: Booking[] }) {
                   <TableCell className="font-medium">
                     {booking.guest.firstName} {booking.guest.lastName}
                   </TableCell>
+                  <TableCell>{booking.property.name}</TableCell>
                   <TableCell>{booking.unit.name}</TableCell>
                   <TableCell>
                     {new Date(booking.checkInDate).toLocaleDateString()}
@@ -130,6 +127,9 @@ export function RecentBookingsTable({ bookings }: { bookings: Booking[] }) {
           </Table>
         </div>
       </CardContent>
+      <CardFooter>
+        <Pagination />
+      </CardFooter>
     </Card>
   );
 }

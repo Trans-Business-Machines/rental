@@ -44,6 +44,7 @@ export function BookingForm({
   preselectedPropertyId,
   preselectedUnitId,
 }: BookingFormProps) {
+  
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
 
   // Get today's date in YYYY-MM-DD format for auto-selection

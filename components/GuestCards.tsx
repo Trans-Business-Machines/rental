@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bed, Edit, Eye, Mail, Phone, Star } from "lucide-react";
+import { Edit, Eye, Mail, Phone } from "lucide-react";
 import type { Guest } from "@/hooks/useGuests";
 
 interface GuestCardsProps {
@@ -101,7 +101,7 @@ function GuestCards({ guests }: GuestCardsProps) {
             </div>
 
             {/* Financial Info */}
-            <div className="space-y-2">
+            <div className="">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
                   Total Spent
@@ -118,27 +118,21 @@ function GuestCards({ guests }: GuestCardsProps) {
               </div>
             </div>
 
-            {/* Rating */}
-            {guest.rating && (
-              <div className="flex items-center space-x-2">
-                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                <span className="font-medium">{guest.rating}</span>
-                <span className="text-sm text-muted-foreground">rating</span>
-              </div>
-            )}
-
             {/* Action Buttons */}
-            <div className="flex space-x-2 pt-2">
-              <Button variant="outline" size="sm" className="flex-1">
-                <Eye className="h-4 w-4 mr-2" />
+            <div className="flex space-x-2">
+              <Button
+                size="sm"
+                className="flex-1 gap-2 bg-chart-1 hover:bg-chart-1/90 cursor-pointer"
+              >
+                <Eye className="size-4 mr-2" />
                 View
               </Button>
-              <Button variant="outline" size="sm" className="flex-1">
-                <Edit className="h-4 w-4 mr-2" />
+              <Button
+                size="sm"
+                className="flex-1 gap-2 bg-chart-3 hover:bg-chart-3/90 cursor-pointer"
+              >
+                <Edit className="size-4 mr-2" />
                 Edit
-              </Button>
-              <Button variant="outline" size="sm">
-                <Bed className="h-4 w-4" />
               </Button>
             </div>
           </CardContent>

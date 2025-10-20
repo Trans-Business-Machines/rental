@@ -1,169 +1,74 @@
-import { Card, CardHeader, CardContent } from "./ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "./ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import {
-  Building,
-  Calendar,
-  Eye,
-  Edit,
-  MoreVertical,
-  Clock,
-} from "lucide-react";
+"use client";
+
+import { BookingCards } from "./BookingCards";
+import { BookingsTable } from "./BookingsTable";
+import { Calendar } from "lucide-react";
+import { Switch } from "./ui/switch";
+import { useState } from "react";
+import { BookingEditDialog } from "@/app/(dashboard)/dashboard/_components/booking-edit-dialog";
+import { useTableMode } from "@/hooks/useTableMode";
 import type { Booking } from "@/lib/types/types";
-import { format, differenceInDays } from "date-fns";
-import Link from "next/link";
 
 interface BookingsProps {
   bookings: Booking[];
 }
 
 function Bookings({ bookings }: BookingsProps) {
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case "confirmed":
-        return "bg-chart-4/10 text-chart-4 border-chart-2/20";
-      case "checked-in":
-        return "bg-chart-1/10 text-chart-1 border-chart-3/20";
-      case "completed":
-        return "bg-chart-2/10 text-chart-2 border-chart-4/20";
-      case "cancelled":
-        return "bg-destructive/10 text-destructive border-destructive/20";
-      case "checked-out":
-        return "bg-chart-3/10 text-chart-3 border-destructive/20";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
-  };
+  // Get table mode context from useTableMode Hook
+  const { tableMode, setTableMode } = useTableMode();
 
+  // Define state to control the Booking Edit Dialog Box
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Define state to hold the booking to edit
+  const [editBooking, setEditBooking] = useState<Booking | null>(null);
+
+  if (bookings.length === 0 || !bookings) {
+    return (
+      <div className="text-center py-8">
+        <Calendar className="size-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium">No bookings found!</h3>
+        <p className="text-muted-foreground">
+          Get started by creating your first booking.
+        </p>
+      </div>
+    );
+  }
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {bookings.map((booking) => {
-        const guestInitials =
-          booking.guest.firstName[0].toUpperCase() +
-          booking.guest.lastName[0].toUpperCase();
+    <>
+      <div>
+        <div className="flex items-center gap-2 mb-2 text-muted-foreground/90 text-sm">
+          <Switch
+            checked={tableMode}
+            onCheckedChange={setTableMode}
+            className="cursor-pointer"
+          />
+          <span>Table mode</span>
+        </div>
 
-        const numOfNights = Math.max(
-          1,
-          differenceInDays(
-            new Date(booking.checkOutDate),
-            new Date(booking.checkInDate)
-          )
-        );
+        {tableMode ? (
+          <BookingsTable
+            bookings={bookings}
+            setEditBooking={setEditBooking}
+            setIsDialogOpen={setIsDialogOpen}
+          />
+        ) : (
+          <BookingCards
+            bookings={bookings}
+            setEditBooking={setEditBooking}
+            setIsDialogOpen={setIsDialogOpen}
+          />
+        )}
+      </div>
 
-        return (
-          <Card
-            key={booking.id}
-            className="group shadow-sm hover:shadow-md  transition-all duration-200 border-0 bg-card"
-          >
-            <CardHeader className="pb-3">
-              <article className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="size-12">
-                    <AvatarFallback>{guestInitials}</AvatarFallback>
-                  </Avatar>
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-foreground leading-none">
-                      {booking.guest.firstName} {booking.guest.lastName}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {booking.guest.email}
-                    </p>
-                  </div>
-                </div>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="size-8">
-                      <MoreVertical className="size-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem
-                      className="cursor-pointer focus:bg-chart-1/40 hover:bg-chart-1/40"
-                      asChild
-                    >
-                      <Link href={`/bookings/${booking.id}`}>
-                        <Eye className="size-4" />
-                        <span>View Details</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer focus:bg-chart-1/40 hover:bg-chart-1/40">
-                      <Edit className="size-4" />
-                      <span>Edit Booking</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </article>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Building className="size-4 text-muted-foreground" />
-                  <span className="font-medium text-foreground">
-                    {booking.property.name}
-                  </span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className="text-muted-foreground">
-                    {booking.unit.name}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="size-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Created At - </span>
-                  <span className="text-muted-foreground">
-                    {format(new Date(booking.createdAt), "PPp")}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground mb-1">Check-in</p>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="size-4 text-muted-foreground" />
-                    <span className="font-medium text-foreground">
-                      {format(new Date(booking.checkInDate), "dd/MM/yyyy")}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-muted-foreground mb-1">Check-out</p>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="size-4 text-muted-foreground" />
-                    <span className="font-medium text-foreground">
-                      {format(new Date(booking.checkOutDate), "dd/MM/yyyy")}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between border-t  border-border pt-2">
-                <Badge
-                  variant="secondary"
-                  className={`${getStatusColor(booking.status)} capitalize`}
-                >
-                  {booking.status}
-                </Badge>
-
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">{`${numOfNights} ${numOfNights === 1 ? "night" : "nights"}`}</p>
-                  <p className="font-semibold text-foreground">
-                    ${booking.unit.rent}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+      {isDialogOpen && editBooking && (
+        <BookingEditDialog
+          booking={editBooking}
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+        />
+      )}
+    </>
   );
 }
 

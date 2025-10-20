@@ -19,10 +19,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, Eye, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit, Eye, Search } from "lucide-react";
 import { useState } from "react";
 import { UnitEditDialog } from "./unit-edit-dialog";
 import { UnitViewDialog } from "./unit-view-dialog";
+import Pagination from "@/components/Pagination";
 
 interface Unit {
   id: string;
@@ -182,25 +183,7 @@ export function UnitAvailabilityTable({ units }: UnitAvailabilityTableProps) {
         </div>
       </CardContent>
       <CardFooter>
-        <div className="flex items-center justify-between pt-4 w-full">
-          <p className="text-sm text-muted-foreground">Page 1 of 1</p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0 bg-transparent"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0 bg-transparent"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <Pagination />
       </CardFooter>
     </Card>
   );
