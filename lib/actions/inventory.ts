@@ -21,6 +21,7 @@ export async function getInventoryItems() {
 			orderBy: {
 				createdAt: "desc",
 			},
+			take: 6
 		});
 
 		// Add availability info to each item
@@ -459,6 +460,7 @@ export async function getInventoryAssignments(filters?: {
 			orderBy: {
 				createdAt: "desc",
 			},
+			take: 6
 		});
 		return assignments;
 	} catch (error) {

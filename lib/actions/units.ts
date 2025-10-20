@@ -7,6 +7,7 @@ export async function getUnits() {
 	return prisma.unit.findMany({
 		include: { property: true },
 		orderBy: { createdAt: "desc" },
+		take: 6
 	});
 }
 

@@ -24,6 +24,7 @@ export async function getCheckoutReports() {
 			orderBy: {
 				createdAt: "desc",
 			},
+			take: 6
 		});
 		return reports;
 	} catch (error) {

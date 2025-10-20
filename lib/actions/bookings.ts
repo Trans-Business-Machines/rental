@@ -14,6 +14,7 @@ export async function getBookings() {
 			orderBy: {
 				createdAt: "desc",
 			},
+			take: 6
 		});
 		return bookings;
 	} catch (error) {

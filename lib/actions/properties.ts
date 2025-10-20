@@ -18,6 +18,7 @@ export async function getProperties() {
 			orderBy: {
 				createdAt: "desc",
 			},
+			take: 6
 		});
 		return properties;
 	} catch (error) {

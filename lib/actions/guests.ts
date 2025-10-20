@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 export async function getGuests() {
 	return prisma.guest.findMany({
 		orderBy: { createdAt: "desc" },
+		take: 6
 	});
 }
 
