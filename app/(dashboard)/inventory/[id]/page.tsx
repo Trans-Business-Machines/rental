@@ -1,32 +1,66 @@
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getInventoryItemById, getInventoryMovementsForItem } from '@/lib/actions/inventory';
-import { Archive, ArrowRightLeft, Bath, Bed, Calendar, DollarSign, Home, Lamp, MapPin, Monitor, Package, User, UtensilsCrossed } from 'lucide-react';
-import { notFound } from 'next/navigation';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  getInventoryItemById,
+  getInventoryMovementsForItem,
+} from "@/lib/actions/inventory";
+import {
+  Archive,
+  ArrowRightLeft,
+  Bath,
+  Bed,
+  Calendar,
+  DollarSign,
+  Home,
+  Lamp,
+  ArrowLeft,
+  MapPin,
+  Monitor,
+  Package,
+  User,
+  UtensilsCrossed,
+} from "lucide-react";
+import { notFound } from "next/navigation";
+import Link from "next/link";
 
 function getCategoryIcon(category: string) {
   switch (category) {
-    case 'Furniture': return Bed;
-    case 'Electronics': return Monitor;
-    case 'Appliances': return UtensilsCrossed;
-    case 'Bathroom': return Bath;
-    case 'Lighting': return Lamp;
-    default: return Package;
+    case "Furniture":
+      return Bed;
+    case "Electronics":
+      return Monitor;
+    case "Appliances":
+      return UtensilsCrossed;
+    case "Bathroom":
+      return Bath;
+    case "Lighting":
+      return Lamp;
+    default:
+      return Package;
   }
 }
 
 function getStatusColor(status: string) {
   switch (status) {
-    case 'active': return 'default';
-    case 'damaged': return 'destructive';
-    case 'missing': return 'destructive';
-    case 'maintenance': return 'secondary';
-    default: return 'secondary';
+    case "active":
+      return "default";
+    case "damaged":
+      return "destructive";
+    case "missing":
+      return "destructive";
+    case "maintenance":
+      return "secondary";
+    default:
+      return "secondary";
   }
 }
 
-export default async function InventoryDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function InventoryDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const itemId = Number(id);
   if (isNaN(itemId)) return notFound();
@@ -39,6 +73,18 @@ export default async function InventoryDetailsPage({ params }: { params: Promise
 
   return (
     <div className="max-w-4xl mx-auto py-10 space-y-8">
+      {/* Header and Navigation */}
+      <div className="flex items-center gap-2">
+        <div>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/inventory">
+              <ArrowLeft className="size-4" />
+            </Link>
+          </Button>
+        </div>
+        <h2 className="text-lg font-medium">Back to Inventory</h2>
+      </div>
+
       {/* Hero Section */}
       <Card className="shadow-lg border-0 bg-gradient-to-br from-muted/50 to-white">
         <CardContent className="flex items-center gap-6 py-8">
@@ -47,14 +93,27 @@ export default async function InventoryDetailsPage({ params }: { params: Promise
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold tracking-tight">{item.itemName}</h1>
-              <Badge variant={getStatusColor(item.status)} className="uppercase">{item.status}</Badge>
+              <h1 className="text-3xl font-bold tracking-tight">
+                {item.itemName}
+              </h1>
+              <Badge
+                variant={getStatusColor(item.status)}
+                className="uppercase"
+              >
+                {item.status}
+              </Badge>
               <Badge variant="outline">Qty: {item.quantity}</Badge>
             </div>
-            <div className="text-muted-foreground text-lg mb-2">{item.description}</div>
+            <div className="text-muted-foreground text-lg mb-2">
+              {item.description}
+            </div>
             <div className="flex gap-2 mt-2">
-              <Button size="sm" variant="outline">Edit</Button>
-              <Button size="sm" variant="secondary">Move/Assign</Button>
+              <Button size="sm" variant="outline">
+                Edit
+              </Button>
+              <Button size="sm" variant="secondary">
+                Move/Assign
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -80,21 +139,27 @@ export default async function InventoryDetailsPage({ params }: { params: Promise
           <Calendar className="h-5 w-5 text-muted-foreground" />
           <div>
             <div className="text-xs text-muted-foreground">Assigned</div>
-            <div className="font-medium">{(item as any).assignedQuantity || 0} items</div>
+            <div className="font-medium">
+              {(item as any).assignedQuantity || 0} items
+            </div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
           <DollarSign className="h-5 w-5 text-muted-foreground" />
           <div>
             <div className="text-xs text-muted-foreground">Current Value</div>
-            <div className="font-medium">KES {item.currentValue?.toLocaleString()}</div>
+            <div className="font-medium">
+              KES {item.currentValue?.toLocaleString()}
+            </div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
           <User className="h-5 w-5 text-muted-foreground" />
           <div>
             <div className="text-xs text-muted-foreground">Supplier</div>
-            <div className="font-medium">{item.supplier || 'Not specified'}</div>
+            <div className="font-medium">
+              {item.supplier || "Not specified"}
+            </div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
@@ -115,7 +180,9 @@ export default async function InventoryDetailsPage({ params }: { params: Promise
         </CardHeader>
         <CardContent>
           {movements.length === 0 ? (
-            <div className="text-muted-foreground text-center py-8">No movement history for this item.</div>
+            <div className="text-muted-foreground text-center py-8">
+              No movement history for this item.
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm border rounded-lg overflow-hidden">
@@ -132,16 +199,40 @@ export default async function InventoryDetailsPage({ params }: { params: Promise
                 </thead>
                 <tbody>
                   {movements.map((move: any, idx: number) => {
-                    const DirectionIcon = move.direction === 'to_unit' ? ArrowRightLeft : Archive;
+                    const DirectionIcon =
+                      move.direction === "to_unit" ? ArrowRightLeft : Archive;
                     return (
-                      <tr key={move.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-muted/50'}>
-                        <td className="p-3 whitespace-nowrap">{new Date(move.movedAt).toLocaleString()}</td>
-                        <td className="p-3 whitespace-nowrap flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" />{move.movedBy}</td>
-                        <td className="p-3 whitespace-nowrap">{move.fromUnit?.name || <span className="italic text-gray-400">Store</span>}</td>
-                        <td className="p-3 whitespace-nowrap">{move.toUnit?.name || <span className="italic text-gray-400">Store</span>}</td>
-                        <td className="p-3 whitespace-nowrap flex items-center gap-1"><DirectionIcon className="h-4 w-4 text-primary" />{move.direction.replace('_', ' ')}</td>
-                        <td className="p-3 whitespace-nowrap">{move.quantity}</td>
-                        <td className="p-3 whitespace-nowrap">{move.notes || '-'}</td>
+                      <tr
+                        key={move.id}
+                        className={idx % 2 === 0 ? "bg-white" : "bg-muted/50"}
+                      >
+                        <td className="p-3 whitespace-nowrap">
+                          {new Date(move.movedAt).toLocaleString()}
+                        </td>
+                        <td className="p-3 whitespace-nowrap flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          {move.movedBy}
+                        </td>
+                        <td className="p-3 whitespace-nowrap">
+                          {move.fromUnit?.name || (
+                            <span className="italic text-gray-400">Store</span>
+                          )}
+                        </td>
+                        <td className="p-3 whitespace-nowrap">
+                          {move.toUnit?.name || (
+                            <span className="italic text-gray-400">Store</span>
+                          )}
+                        </td>
+                        <td className="p-3 whitespace-nowrap flex items-center gap-1">
+                          <DirectionIcon className="h-4 w-4 text-primary" />
+                          {move.direction.replace("_", " ")}
+                        </td>
+                        <td className="p-3 whitespace-nowrap">
+                          {move.quantity}
+                        </td>
+                        <td className="p-3 whitespace-nowrap">
+                          {move.notes || "-"}
+                        </td>
                       </tr>
                     );
                   })}
@@ -153,4 +244,4 @@ export default async function InventoryDetailsPage({ params }: { params: Promise
       </Card>
     </div>
   );
-} 
+}
