@@ -1,31 +1,7 @@
 import { authClient } from "@/lib/auth-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-
-interface User {
-	id: string;
-	name: string;
-	email: string;
-	role: string;
-	banned: boolean;
-	banReason?: string;
-	banExpires?: string;
-	createdAt: string;
-	emailVerified: boolean;
-}
-
-interface CreateUserData {
-	name: string;
-	email: string;
-	password: string;
-	role: "user" | "admin";
-}
-
-interface BanUserData {
-	userId: string;
-	reason?: string;
-	expiresIn: number;
-}
+import type { BanUserData, CreateUserData, User } from "@/lib/types/types"
 
 // Query keys
 export const userKeys = {

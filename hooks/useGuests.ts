@@ -1,47 +1,7 @@
 import { createGuest, getGuests, searchGuests } from "@/lib/actions/guests";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-
-export interface Guest {
-	id: number;
-	firstName: string;
-	lastName: string;
-	email: string;
-	phone: string;
-	nationality?: string | null;
-	idType?: string | null;
-	idNumber?: string | null;
-	passportNumber?: string | null;
-	dateOfBirth?: string | null;
-	address?: string | null;
-	city?: string | null;
-	country?: string | null;
-	occupation?: string | null;
-	employer?: string | null;
-	emergencyContactName?: string | null;
-	emergencyContactPhone?: string | null;
-	emergencyContactRelation?: string | null;
-	notes?: string | null;
-	verificationStatus?: string | null;
-	blacklisted?: boolean | null;
-	totalStays?: number | null;
-	totalNights?: number | null;
-	totalSpent?: number | null;
-	lastStay?: Date | null;
-	rating?: number | null;
-	createdAt: Date | null;
-	updatedAt: Date | null;
-}
-
-interface CreateGuestData {
-	firstName: string;
-	lastName: string;
-	email: string;
-	phone: string;
-	idNumber?: string;
-	passportNumber?: string;
-	notes?: string;
-}
+import type { Guest, CreateGuestData } from "@/lib/types/types"
 
 // Query keys
 export const guestKeys = {
