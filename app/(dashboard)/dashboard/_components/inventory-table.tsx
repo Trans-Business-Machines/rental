@@ -24,27 +24,13 @@ import { Input } from "@/components/ui/input";
 import { Edit, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import Pagination from "@/components/Pagination";
-
-interface InventoryItem {
-  id: number;
-  category: string;
-  itemName: string;
-  description: string;
-  quantity: number;
-  purchasePrice?: number;
-  currentValue?: number;
-  supplier?: string | null;
-  warrantyExpiry?: Date | null;
-  status: string;
-  assignableOnBooking?: boolean;
-  assignments: any[];
-}
+import type { InvetoryItem } from "@/lib/types/types";
 
 interface InventoryTableProps {
-  items: InventoryItem[];
+  items: InvetoryItem[];
 }
 
-function getInventoryStatus(item: InventoryItem) {
+function getInventoryStatus(item: InvetoryItem) {
   const assignedQuantity = item.assignments.length;
   const availableQuantity = item.quantity - assignedQuantity;
 
