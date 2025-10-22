@@ -1,3 +1,9 @@
+"use client"
+
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { format } from "date-fns";
+import { MoreHorizontal, Eye, Pencil, Mail, Phone } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -12,14 +18,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "./ui/dropdown-menu";
-import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
-import type { Guest } from "@/hooks/useGuests";
-import { format } from "date-fns";
-import { MoreHorizontal, Eye, Pencil, Mail, Phone } from "lucide-react";
+import type { Guest } from "@/lib/types/types";
+import Link from "next/link";
 
 interface GuestsTableProps {
   guests: Guest[];
+  setIsDialogOpen: (open: boolean) => void;
+  setEditGuest: (guest: Guest) => void;
 }
 
 const getVerificationColor = (status: string) => {
@@ -35,7 +40,11 @@ const getVerificationColor = (status: string) => {
   }
 };
 
-function GuestsTable({ guests }: GuestsTableProps) {
+function GuestsTable({
+  guests,
+  setEditGuest,
+  setIsDialogOpen,
+}: GuestsTableProps) {
   return (
     <div className="rounded-lg border border-border overflow-hidden pb-6">
       <Table className="px-2">
@@ -115,15 +124,28 @@ function GuestsTable({ guests }: GuestsTableProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem className="hover:bg-primary/30 focus:bg-primary/30 cursor-pointer">
-                      <div className="flex gap-2 items-center">
+                    <DropdownMenuItem
+                      className="hover:bg-primary/30 focus:bg-primary/30 cursor-pointer"
+                      asChild
+                    >
+                      <Link
+                        href={`/guests/${guest.id}`}
+                        className="flex gap-2 items-center"
+                      >
                         <Eye className="size-4 text-muted-foreground" />
                         <span className="text-accent-foreground">
                           View details
                         </span>
-                      </div>
+                      </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="hover:bg-primary/30 focus:bg-primary/30 cursor-pointer">
+
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setEditGuest(guest);
+                        setIsDialogOpen(true);
+                      }}
+                      className="hover:bg-primary/30 focus:bg-primary/30 cursor-pointer"
+                    >
                       <div className="flex gap-2 items-center">
                         <Pencil className="size-4 text-muted-foreground" />
                         <span className="text-accent-foreground">

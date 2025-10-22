@@ -1,12 +1,17 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Eye, Mail, Phone } from "lucide-react";
-import type { Guest } from "@/hooks/useGuests";
+import type { Guest } from "@/lib/types/types";
+import Link from "next/link";
 
 interface GuestCardsProps {
   guests: Guest[];
+  setIsDialogOpen: (open: boolean) => void;
+  setEditGuest: (guest: Guest) => void;
 }
 
 const getVerificationColor = (status: string) => {
@@ -34,7 +39,11 @@ const formatDate = (dateString: string | Date | null) => {
   return new Date(dateString).toLocaleDateString();
 };
 
-function GuestCards({ guests }: GuestCardsProps) {
+function GuestCards({
+  guests,
+  setEditGuest,
+  setIsDialogOpen,
+}: GuestCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {guests.map((guest) => (
@@ -123,16 +132,23 @@ function GuestCards({ guests }: GuestCardsProps) {
               <Button
                 size="sm"
                 className="flex-1 gap-2 bg-chart-1 hover:bg-chart-1/90 cursor-pointer"
+                asChild
               >
-                <Eye className="size-4 mr-2" />
-                View
+                <Link href={`/guests/${guest.id}`}>
+                  <Eye className="size-4 mr-2" />
+                  <span>View</span>
+                </Link>
               </Button>
               <Button
                 size="sm"
                 className="flex-1 gap-2 bg-chart-3 hover:bg-chart-3/90 cursor-pointer"
+                onClick={() => {
+                  setEditGuest(guest);
+                  setIsDialogOpen(true);
+                }}
               >
                 <Edit className="size-4 mr-2" />
-                Edit
+                <span>Edit</span>
               </Button>
             </div>
           </CardContent>
