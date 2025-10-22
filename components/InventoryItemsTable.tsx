@@ -6,17 +6,11 @@ import {
   TableBody,
   TableCell,
 } from "./ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "./ui/dropdown-menu";
+
 import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import { Eye, SquarePen, Move, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { InvetoryItem } from "@/lib/types/types";
+import { InventoryActions } from "./InventoryActions";
 
 interface InventoryItemsTableProps {
   items: InvetoryItem[];
@@ -55,36 +49,7 @@ function InventoryItemsTable({ items }: InventoryItemsTableProps) {
               <TableCell>{item.availableQuantity || 0}</TableCell>
               <TableCell>{item.assignedQuantity || 0}</TableCell>
               <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        "cursor-pointer",
-                        "data-[state=open]:opacity-100"
-                      )}
-                    >
-                      <MoreHorizontal className="size-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem className="hover:bg-primary/30 focus:bg-primary/30">
-                      <Eye className="size-4 text-muted-foreground" />
-                      <span>View details</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="hover:bg-primary/30 focus:bg-primary/30">
-                      <SquarePen className="size-4 text-muted-foreground" />
-                      <span>Edit</span>
-                    </DropdownMenuItem>
-                    {item.assignableOnBooking && (
-                      <DropdownMenuItem className="hover:bg-primary/30 focus:bg-primary/30">
-                        <Move className="size-4 text-muted-foreground" />
-                        <span>Assign/move</span>
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <InventoryActions item={item} />
               </TableCell>
             </TableRow>
           ))}

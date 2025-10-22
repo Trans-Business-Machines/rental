@@ -38,7 +38,7 @@ function InventoryItems({ items }: InventoryItemsProps) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-2 text-muted-foreground/90 text-sm">
+      <div className="flex items-center gap-2 mb-2 text-muted-foreground/90 text-sm pb-2">
         {/* Search and Filters */}
         <div className="flex items-center space-x-4">
           

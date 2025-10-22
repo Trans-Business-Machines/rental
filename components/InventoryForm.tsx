@@ -17,23 +17,10 @@ import {
 } from "@/lib/actions/inventory";
 import { useState } from "react";
 import { toast } from "sonner";
-
-interface InventoryItem {
-  id: number;
-  category: string;
-  itemName: string;
-  description: string;
-  quantity: number;
-  purchasePrice?: number;
-  currentValue?: number;
-  supplier?: string | null;
-  warrantyExpiry?: Date | null;
-  status: string;
-  assignableOnBooking?: boolean;
-}
+import type { InvetoryItem } from "@/lib/types/types";
 
 interface InventoryFormProps {
-  item?: InventoryItem;
+  item?: InvetoryItem;
   onSuccess?: () => void;
   onCancel?: () => void;
 }

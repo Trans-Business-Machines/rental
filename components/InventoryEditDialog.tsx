@@ -9,23 +9,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useState } from "react";
-
-interface InventoryItem {
-  id: number;
-  category: string;
-  itemName: string;
-  description: string;
-  quantity: number;
-  purchasePrice?: number;
-  currentValue?: number;
-  supplier?: string | null;
-  warrantyExpiry?: Date | null;
-  status: string;
-  assignableOnBooking?: boolean;
-}
+import type { InvetoryItem } from "@/lib/types/types";
 
 interface InventoryEditDialogProps {
-  item: InventoryItem;
+  item: InvetoryItem;
   children?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
