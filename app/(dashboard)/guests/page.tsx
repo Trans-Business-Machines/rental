@@ -9,9 +9,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
-import { GuestCards } from "@/components/GuestCards";
-import { GuestsTable } from "@/components/GuestsTable";
 import { useTableMode } from "@/hooks/useTableMode";
+import GuestListings from "@/components/GuestListings";
 import Pagination from "@/components/Pagination";
 
 export default function GuestsPage() {
@@ -176,12 +175,7 @@ export default function GuestsPage() {
       )}
 
       {/* Guests Grid */}
-      {!isLoading &&
-        (!tableMode ? (
-          <GuestCards guests={guests} />
-        ) : (
-          <GuestsTable guests={guests} />
-        ))}
+      {!isLoading && <GuestListings guests={guests} tableMode={tableMode} />}
 
       {!isLoading && guests.length === 0 && (
         <div className="text-center py-8">
