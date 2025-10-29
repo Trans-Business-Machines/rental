@@ -102,3 +102,15 @@ export interface Invitation {
     email: string;
     acceptedAt: string | null;
 }
+
+export interface Invitation {
+    name: string;
+    email: string;
+    role: "user" | "admin",
+    acceptedAt: string | null;
+}
+
+export interface InvitationCardAndTableProps {
+    invitations: Invitation[],
+    handleResendInvite: (email: string) => void
+}
