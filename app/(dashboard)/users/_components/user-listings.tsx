@@ -1,6 +1,3 @@
-"use client";
-
-import { Users } from "lucide-react";
 import { UserCards } from "./user-cards";
 import { UsersTable } from "./users-table";
 import { Switch } from "@/components/ui/switch";
@@ -21,18 +18,6 @@ function UserListings({
   handleUnbanUser,
 }: UsersTableAndCardsProps) {
   const { tableMode, setTableMode } = useTableMode();
-
-  if (!users || users.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-medium">No users found</h3>
-        <p className="text-muted-foreground">
-          Get started by inviting your first user
-        </p>
-      </div>
-    );
-  }
 
   return (
     <section className="space-y-4">

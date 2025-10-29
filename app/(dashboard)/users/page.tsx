@@ -19,47 +19,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  useBanUser,
-  useDeleteUser,
-  useRevokeUserSessions,
-  useSetUserRole,
-  useUnbanUser,
-  useUsers,
-} from "@/hooks/useUsers";
-import { Flag, Search, Shield, UserCheck, UserPlus, Users } from "lucide-react";
+import { StatCards } from "@/components/StatCards";
+import { useUsers } from "@/hooks/useUsers";
+import { useInvitations, useResendInvite } from "@/hooks/useInvitations";
 import { useState } from "react";
-import { StatCards, StatCardsProps } from "@/components/StatCards";
+import { UserInvitationsSwitch } from "./_components/user-invitations-switch";
 import { toast } from "sonner";
-import type { User } from "@/lib/types/types";
-import UserListings from "./_components/user-listings";
-import Pagination from "@/components/Pagination";
+import { Users, UserPlus, Shield, UserCheck, Flag } from "lucide-react";
+import type { StatCardsProps } from "@/components/StatCards";
 
 function UsersPageContent() {
-  const [searchQuery, setSearchQuery] = useState("");
+  // State to keep track of the invite user Dialog box
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [banDialogOpen, setBanDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Invite form state
   const [inviteForm, setInviteForm] = useState({
+    name: "",
     email: "",
     role: "user" as "user" | "admin",
   });
 
-  // Ban form state
-  const [banForm, setBanForm] = useState({
-    reason: "",
-    expiresIn: "7", // days
-  });
+  // Get users and invitations via react Query hook
+  const { data: users = [], isLoading, error } = useUsers();
+  const { invitations, invitationsError, invitationsPending } =
+    useInvitations();
 
-  // React Query hooks
-  const { data: users = [], isLoading, error } = useUsers(searchQuery);
-  const banUserMutation = useBanUser();
-  const unbanUserMutation = useUnbanUser();
-  const deleteUserMutation = useDeleteUser();
-  const setUserRoleMutation = useSetUserRole();
-  const revokeSessionsMutation = useRevokeUserSessions();
+  // Resend Invite mutation
+  const { resendInvite } = useResendInvite();
 
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +56,7 @@ function UsersPageContent() {
         body: JSON.stringify(inviteForm),
       });
       setInviteDialogOpen(false);
-      setInviteForm({ email: "", role: "user" });
+      setInviteForm({ email: "", role: "user", name: "" });
       // Optionally show a toast
     } catch (err: any) {
       console.error(err);
@@ -79,50 +65,47 @@ function UsersPageContent() {
     }
   };
 
-  const handleBanUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser) return;
+  const handleResendInvite = (email: string) => {
+    resendInvite(email);
+  };
 
-    const expiresIn = parseInt(banForm.expiresIn) * 24 * 60 * 60; // Convert days to seconds
-
-    banUserMutation.mutate(
-      {
-        userId: selectedUser.id,
-        reason: banForm.reason || undefined,
-        expiresIn,
-      },
-      {
-        onSuccess: () => {
-          setBanDialogOpen(false);
-          setBanForm({ reason: "", expiresIn: "7" });
-          setSelectedUser(null);
-        },
-      }
+  if (error || invitationsError) {
+    return (
+      <div className="text-center py-8">
+        <Users className="h-12 w-12 text-red-500 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-red-600">
+          Error loading users or invitations
+        </h3>
+        <p className="text-muted-foreground">
+          There was an error loading the users. Please try again.
+        </p>
+      </div>
     );
-  };
+  }
 
-  const handleUnbanUser = async (userId: string) => {
-    unbanUserMutation.mutate(userId);
-  };
+  if (!isLoading && users.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium">No users found</h3>
+        <p className="text-muted-foreground">
+          Get started by inviting your first user
+        </p>
+      </div>
+    );
+  }
 
-  const handleDeleteUser = async (userId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this user? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
-    deleteUserMutation.mutate(userId);
-  };
-
-  const handleRevokeAllSessions = async (userId: string) => {
-    revokeSessionsMutation.mutate(userId);
-  };
-
-  const handleSetRole = async (userId: string, role: "user" | "admin") => {
-    setUserRoleMutation.mutate({ userId, role });
-  };
+  if (!invitationsPending && invitations && invitations.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium">No invitations found</h3>
+        <p className="text-muted-foreground">
+          Get started by inviting your first user
+        </p>
+      </div>
+    );
+  }
 
   // Statistics
   const totalUsers = users.length;
@@ -157,34 +140,10 @@ function UsersPageContent() {
     },
   ];
 
-  // Filter users based on search
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      !searchQuery ||
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase());
-
-    return matchesSearch;
-  });
-
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <Users className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-red-600">
-          Error loading users
-        </h3>
-        <p className="text-muted-foreground">
-          There was an error loading the users. Please try again.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
+    <section className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-normal text-foreground">
             User Management
@@ -208,7 +167,24 @@ function UsersPageContent() {
                   Create a new user account with the specified role.
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleInviteUser} className="space-y-4">
+              <form onSubmit={handleInviteUser} className="space-y-3">
+                {/* Name input */}
+                <div>
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={inviteForm.name}
+                    onChange={(e) =>
+                      setInviteForm((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                {/* Email input */}
                 <div>
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -224,6 +200,8 @@ function UsersPageContent() {
                     required
                   />
                 </div>
+
+                {/* Role Input */}
                 <div>
                   <Label htmlFor="role">Role</Label>
                   <Select
@@ -232,7 +210,7 @@ function UsersPageContent() {
                       setInviteForm((prev) => ({ ...prev, role: value }))
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -241,146 +219,47 @@ function UsersPageContent() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Action buttons */}
                 <div className="flex justify-end space-x-2">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="default"
+                    size="sm"
+                    className="bg-chart-5 hover:bg-chart-5/90"
                     onClick={() => setInviteDialogOpen(false)}
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">Invite User</Button>
+                  <Button
+                    type="submit"
+                    variant="default"
+                    size="sm"
+                    className="bg-chart-1 hover:bg-chart-1/90"
+                  >
+                    Invite User
+                  </Button>
                 </div>
               </form>
             </DialogContent>
           </Dialog>
         </div>
-      </div>
+      </header>
 
-      {/* Statistics Cards */}
       <StatCards stats={stats} />
 
-      {/* Search */}
-      <div className="flex items-center space-x-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search users..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select defaultValue="all">
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="user">User</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select defaultValue="all">
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="banned">Banned</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Users Grid */}
-      {isLoading ? (
+      {users && invitations ? (
+        <UserInvitationsSwitch
+          users={users}
+          invitations={invitations}
+          handleResendInvite={handleResendInvite}
+        />
+      ) : (
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full size-10 border-b-2 border-primary"></div>
         </div>
-      ) : (
-        <UserListings
-          users={filteredUsers}
-          handleDeleteUser={handleDeleteUser}
-          handleRevokeAllSessions={handleRevokeAllSessions}
-          handleSetRole={handleSetRole}
-          handleUnbanUser={handleUnbanUser}
-          setBanDialogOpen={setBanDialogOpen}
-          setSelectedUser={setSelectedUser}
-          deleteUserMutationPending={deleteUserMutation.isPending}
-          revokeSessionsMutationPending={revokeSessionsMutation.isPending}
-          unbanUserMutationPending={unbanUserMutation.isPending}
-          userRoleMutationPending={setUserRoleMutation.isPending}
-        />
       )}
-
-      <footer className="my-4">
-        <Pagination />
-      </footer>
-
-      {/* Ban User Dialog */}
-      <Dialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ban User</DialogTitle>
-            <DialogDescription>
-              Ban {selectedUser?.name} from accessing the system.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleBanUser} className="space-y-4">
-            <div>
-              <Label htmlFor="reason">Ban Reason (Optional)</Label>
-              <Input
-                id="reason"
-                value={banForm.reason}
-                onChange={(e) =>
-                  setBanForm((prev) => ({ ...prev, reason: e.target.value }))
-                }
-                placeholder="Enter reason for ban..."
-                disabled={banUserMutation.isPending}
-              />
-            </div>
-            <div>
-              <Label htmlFor="expiresIn">Ban Duration</Label>
-              <Select
-                value={banForm.expiresIn}
-                onValueChange={(value) =>
-                  setBanForm((prev) => ({ ...prev, expiresIn: value }))
-                }
-                disabled={banUserMutation.isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 Day</SelectItem>
-                  <SelectItem value="7">7 Days</SelectItem>
-                  <SelectItem value="30">30 Days</SelectItem>
-                  <SelectItem value="permanent">Permanent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setBanDialogOpen(false)}
-                disabled={banUserMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-                disabled={banUserMutation.isPending}
-              >
-                {banUserMutation.isPending ? "Banning..." : "Ban User"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+    </section>
   );
 }
 
