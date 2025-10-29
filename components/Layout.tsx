@@ -121,7 +121,7 @@ export function Layout({ children }: LayoutProps) {
   };
 
   const isItemActive = (item: NavItem): boolean => {
-    if (item.id === currentPage) return true;
+    if (currentPage.includes(item.id)) return true;
     if (item.items) {
       return item.items.some((subItem) => subItem.id === currentPage);
     }
