@@ -1,5 +1,6 @@
 import { authClient } from "@/lib/auth-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getUserStats } from "@/lib/actions/user-stats"
 import { toast } from "sonner";
 import type { BanUserData, CreateUserData, User } from "@/lib/types/types"
 
@@ -11,6 +12,7 @@ export const userKeys = {
 		[...userKeys.lists(), filters] as const,
 	details: () => [...userKeys.all, "detail"] as const,
 	detail: (id: string) => [...userKeys.details(), id] as const,
+	stats: () => [...userKeys.all, "stats"] as const
 };
 
 // Fetch users
@@ -39,6 +41,20 @@ export const useUsers = (searchQuery?: string) => {
 		staleTime: 30 * 1000, // 30 seconds
 	});
 };
+
+// Get user stats
+export const useUserStats = () => {
+	const { data } = useQuery({
+		queryKey: userKeys.stats(),
+		queryFn: async () => {
+			const stats = await getUserStats()
+			return stats
+
+		}
+	})
+
+	return { userStats: data }
+}
 
 // Create user
 export const useCreateUser = () => {

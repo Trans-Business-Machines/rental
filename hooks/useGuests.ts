@@ -1,4 +1,4 @@
-import { createGuest, getGuests, searchGuests } from "@/lib/actions/guests";
+import { createGuest, getGuests, searchGuests, getGuestStats } from "@/lib/actions/guests";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Guest, CreateGuestData } from "@/lib/types/types"
@@ -14,6 +14,7 @@ export const guestKeys = {
 	}) => [...guestKeys.lists(), filters] as const,
 	details: () => [...guestKeys.all, "detail"] as const,
 	detail: (id: number) => [...guestKeys.details(), id] as const,
+	stats: () => [...guestKeys.all, "stats"] as const
 };
 
 // Fetch guests with search
@@ -69,3 +70,17 @@ export const useCreateGuest = () => {
 		},
 	});
 };
+
+
+// Get guests statistics
+export const useGuestStats = () => {
+	const { data } = useQuery({
+		queryKey: guestKeys.stats(),
+		queryFn: async () => {
+			const stats = await getGuestStats()
+			return stats
+		}
+	})
+
+	return { guestStats: data }
+}
