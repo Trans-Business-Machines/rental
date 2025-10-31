@@ -282,17 +282,17 @@ export async function getBookingStats() {
 		const confirmedBookings = await prisma.booking.count({
 			where: { status: "confirmed" },
 		});
-		const checkedInBookings = await prisma.booking.count({
-			where: { status: "checked-in" },
+		const pendingBookings = await prisma.booking.count({
+			where: { status: "pending" },
 		});
 		const completedBookings = await prisma.booking.count({
-			where: { status: "checked-out" },
+			where: { status: "completed" },
 		});
 
 		return {
 			total: totalBookings,
 			confirmed: confirmedBookings,
-			checkedIn: checkedInBookings,
+			pending: pendingBookings,
 			completed: completedBookings,
 		};
 	} catch (error) {
@@ -300,7 +300,7 @@ export async function getBookingStats() {
 		return {
 			total: 0,
 			confirmed: 0,
-			checkedIn: 0,
+			pending: 0,
 			completed: 0,
 		};
 	}

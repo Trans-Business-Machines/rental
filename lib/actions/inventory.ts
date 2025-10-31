@@ -200,16 +200,30 @@ export async function getRecentInventoryActivities(limit: number = 5) {
 export async function getInventoryStats() {
 	try {
 		const totalItems = await prisma.inventoryItem.count();
+
 		const activeItems = await prisma.inventoryItem.count({
 			where: { status: "active" },
 		});
+
 		const discontinuedItems = await prisma.inventoryItem.count({
 			where: { status: "discontinued" },
 		});
 
+		const availableItems = await prisma.inventoryItem.count({
+			where: {
+				quantity: { gt: 0 }
+			}
+		})
+
+		const assignedItems = await prisma.inventoryAssignment.count({
+			where: { isActive: true }
+		})
+
 		return {
 			total: totalItems,
 			active: activeItems,
+			available: availableItems,
+			assigned: assignedItems,
 			discontinued: discontinuedItems,
 		};
 	} catch (error) {
@@ -217,6 +231,8 @@ export async function getInventoryStats() {
 		return {
 			total: 0,
 			active: 0,
+			available: 0,
+			assigned: 0,
 			discontinued: 0,
 		};
 	}

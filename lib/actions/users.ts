@@ -1,13 +1,11 @@
 import { render } from "@react-email/components";
 import { randomBytes } from "crypto";
 import { auth } from "../auth";
-import resend from "../emailClient";
 import { InviteUserEmail } from "../emails/InviteUserEmail";
 import { prisma } from "../prisma";
+import resend from "../emailClient";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://rentmanager.app";
-
-
 
 export async function createInvitation({
 	email,
@@ -21,9 +19,11 @@ export async function createInvitation({
 	// Check if invitation or user already exists
 	const existingUser = await prisma.user.findUnique({ where: { email } });
 	if (existingUser) throw new Error("A user with this email already exists.");
+
 	const existingInvite = await prisma.invitation.findUnique({
 		where: { email },
 	});
+
 	if (existingInvite && !existingInvite.acceptedAt)
 		throw new Error("An invitation has already been sent to this email.");
 
@@ -40,20 +40,6 @@ export async function createInvitation({
 	});
 	// Send invite email
 	await sendInviteEmail({ name: "", email, token, invitedById });
-	return invitation;
-}
-
-export async function resendInvitation(email: string) {
-	const invitation = await prisma.invitation.findUnique({ where: { email } });
-	if (!invitation) throw new Error("No invitation found for this email.");
-	if (invitation.acceptedAt)
-		throw new Error("This invitation has already been accepted.");
-	await sendInviteEmail({
-		name: invitation.name || undefined,
-		email: invitation.email,
-		token: invitation.token,
-		invitedById: invitation.invitedById,
-	});
 	return invitation;
 }
 
@@ -85,6 +71,20 @@ async function sendInviteEmail({
 		subject: "You're invited to join RentManager",
 		html: emailHtml,
 	});
+}
+
+export async function resendInvitation(email: string) {
+	const invitation = await prisma.invitation.findUnique({ where: { email } });
+	if (!invitation) throw new Error("No invitation found for this email.");
+	if (invitation.acceptedAt)
+		throw new Error("This invitation has already been accepted.");
+	await sendInviteEmail({
+		name: invitation.name || undefined,
+		email: invitation.email,
+		token: invitation.token,
+		invitedById: invitation.invitedById,
+	});
+	return invitation;
 }
 
 export async function acceptInvitation({
