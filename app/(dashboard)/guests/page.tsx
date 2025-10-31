@@ -3,7 +3,7 @@
 import { GuestDialog } from "@/components/GuestDialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { useGuests } from "@/hooks/useGuests";
+import { useGuests, useGuestStats } from "@/hooks/useGuests";
 import { Clock, Flag, Search, UserCheck, Users } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
@@ -30,7 +30,8 @@ export default function GuestsPage() {
   const nationality = searchParams.get("nationality") || "";
   const verification = searchParams.get("verification") || "";
 
-  // React Query hook
+  // Get guests and guests stats
+  const { guestStats } = useGuestStats();
   const {
     data: guests = [],
     isLoading,
@@ -67,38 +68,28 @@ export default function GuestsPage() {
     initializedRef.current = true;
   }
 
-  // Statistics
-  const totalGuests = guests.length;
-  const verifiedGuests = guests.filter(
-    (g) => g.verificationStatus === "verified"
-  ).length;
-  const pendingGuests = guests.filter(
-    (g) => g.verificationStatus === "pending"
-  ).length;
-  const blacklistedGuests = guests.filter((g) => g.blacklisted).length;
-
   const stats: StatCardsProps[] = [
     {
       title: "Total Guests",
-      value: totalGuests,
+      value: guestStats?.total || 0,
       icon: Users,
       color: "blue",
     },
     {
       title: "Verified Guests",
-      value: verifiedGuests,
+      value: guestStats?.verified || 0,
       icon: UserCheck,
       color: "green",
     },
     {
       title: "Pending",
-      value: pendingGuests,
+      value: guestStats?.pending || 0,
       icon: Clock,
       color: "orange",
     },
     {
       title: "Blacklisted",
-      value: blacklistedGuests,
+      value: guestStats?.blacklisted || 0,
       icon: Flag,
       color: "red",
     },

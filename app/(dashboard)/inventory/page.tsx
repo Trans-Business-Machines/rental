@@ -9,6 +9,7 @@ import { getCheckoutReports } from "@/lib/actions/checkout";
 import {
   getInventoryAssignments,
   getInventoryItems,
+  getInventoryStats,
 } from "@/lib/actions/inventory";
 import { getAllPropertiesWithUnits as getProperties } from "@/lib/actions/properties";
 import { CheckCircle, Package, XCircle } from "lucide-react";
@@ -47,6 +48,7 @@ export default async function InventoryPage({
   } = await searchParams;
 
   // Fetch real data from database
+  const inventoryStats = await getInventoryStats();
   const inventoryItems = await getInventoryItems();
   const properties = await getProperties();
   const checkoutReports = await getCheckoutReports();
@@ -90,47 +92,34 @@ export default async function InventoryPage({
     return matchesProperty && matchesItem && matchesStatus;
   });
 
-  // Statistics
-  const totalItems = inventoryItems.length;
-  const assignedItems = assignments.filter((a) => a.isActive).length;
-  const activeItems = inventoryItems.filter(
-    (i) => i.status === "active"
-  ).length;
-  const discontinuedItems = inventoryItems.filter(
-    (i) => i.status === "discontinued"
-  ).length;
-  const availableItems = inventoryItems.filter(
-    (i: any) => i.isAvailable
-  ).length;
-
   const stats: StatCardsProps[] = [
     {
       title: "Total Items",
-      value: totalItems,
+      value: inventoryStats.total,
       icon: Package,
       color: "blue",
     },
     {
       title: "Available",
-      value: availableItems,
+      value: inventoryStats.available,
       icon: CheckCircle,
       color: "green",
     },
     {
       title: "Assigned",
-      value: assignedItems,
+      value: inventoryStats.assigned,
       icon: Package,
       color: "",
     },
     {
       title: "Active",
-      value: activeItems,
+      value: inventoryStats.active,
       icon: CheckCircle,
       color: "green",
     },
     {
       title: "Discontinued",
-      value: discontinuedItems,
+      value: inventoryStats.discontinued,
       icon: XCircle,
       color: "red",
     },

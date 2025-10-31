@@ -1,113 +1,19 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { prisma } from "@/lib/prisma";
 import { DollarSign, Home, Wrench } from "lucide-react";
 import { InventoryTable } from "./_components/inventory-table";
 import { RecentBookingsTable } from "./_components/recent-bookings-table";
 import { UnitAvailabilityTable } from "./_components/unit-availability-table";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
-
-export const dynamic = "force-dynamic";
-// This is temporary - will move to server actions later
-async function getDashboardData() {
-  // Get all units with their current bookings to determine status
-  const units = await prisma.unit.findMany({
-    include: {
-      property: true,
-      bookings: {
-        where: {
-          status: "confirmed",
-          checkOutDate: {
-            gte: new Date(),
-          },
-        },
-        include: {
-          guest: true,
-        },
-        take: 1,
-        orderBy: {
-          checkOutDate: "asc",
-        },
-      },
-    },
-    take: 6,
-  });
-
-  // Get recent bookings
-  const recentBookings = await prisma.booking.findMany({
-    include: {
-      guest: true,
-      property: true,
-      unit: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    take: 6,
-  });
-
-  // Get inventory items
-  const inventoryItems = await prisma.inventoryItem.findMany({
-    include: {
-      assignments: {
-        where: {
-          isActive: true,
-        },
-      },
-    },
-    orderBy: {
-      itemName: "asc",
-    },
-    take: 6,
-  });
-
-  // Calculate monthly revenue from current month bookings
-  const currentMonth = new Date();
-  currentMonth.setDate(1);
-  currentMonth.setHours(0, 0, 0, 0);
-
-  const nextMonth = new Date(currentMonth);
-  nextMonth.setMonth(nextMonth.getMonth() + 1);
-
-  const monthlyBookings = await prisma.booking.findMany({
-    where: {
-      createdAt: {
-        gte: currentMonth,
-        lt: nextMonth,
-      },
-    },
-  });
-
-  const monthlyRevenue = monthlyBookings.reduce(
-    (sum, booking) => sum + booking.totalAmount,
-    0
-  );
-
-  return {
-    units,
-    recentBookings,
-    inventoryItems,
-    monthlyRevenue,
-  };
-}
+import { getDashboardData, getDashboardStats } from "@/lib/actions/dashboard";
 
 export default async function DashboardPage() {
   const data = await getDashboardData();
 
-  // Calculate metrics
-  const totalUnits = data.units.length;
-  const occupiedUnits = data.units.filter(
-    (unit) => unit.bookings.length > 0
-  ).length;
+  const unitsStats = await getDashboardStats();
 
-  const availableUnits = data.units.filter(
-    (unit) => unit.status === "available" && unit.bookings.length === 0
-  ).length;
-
-  const maintenanceUnits = data.units.filter(
-    (unit) => unit.status === "maintenance"
-  ).length;
-
-  const occupancyRate = Math.round((occupiedUnits / totalUnits) * 100);
+  const occupancyRate = Math.round(
+    (unitsStats.occupied / unitsStats.total) * 100
+  );
 
   // Transform units data for the table
   const unitsForTable = data.units.map((unit) => {
@@ -132,14 +38,14 @@ export default async function DashboardPage() {
   const stats: StatCardsProps[] = [
     {
       title: "Total units",
-      value: totalUnits,
+      value: unitsStats.total,
       subtitle: `${occupancyRate}% occupancy rate`,
       icon: Home,
       color: "blue",
     },
     {
       title: "Available units",
-      value: availableUnits,
+      value: unitsStats.available,
       subtitle: "Ready for booking",
       icon: Home,
       color: "orange",
@@ -153,7 +59,7 @@ export default async function DashboardPage() {
     },
     {
       title: "Maintenance",
-      value: maintenanceUnits,
+      value: unitsStats.maintenance,
       subtitle: "Units under maintenance",
       icon: Wrench,
       color: "red",

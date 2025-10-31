@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatCards } from "@/components/StatCards";
-import { useUsers } from "@/hooks/useUsers";
+import { useUsers, useUserStats } from "@/hooks/useUsers";
 import { useInvitations, useResendInvite } from "@/hooks/useInvitations";
 import { useState } from "react";
 import { UserInvitationsSwitch } from "./_components/user-invitations-switch";
@@ -39,7 +39,8 @@ function UsersPageContent() {
     role: "user" as "user" | "admin",
   });
 
-  // Get users and invitations via react Query hook
+  // Get usersStats, users, and invitations via custom hooks
+  const { userStats } = useUserStats();
   const { data: users = [], isLoading, error } = useUsers();
   const { invitations, invitationsError, invitationsPending } =
     useInvitations();
@@ -107,34 +108,28 @@ function UsersPageContent() {
     );
   }
 
-  // Statistics
-  const totalUsers = users.length;
-  const adminUsers = users.filter((u) => u.role === "admin").length;
-  const regularUsers = users.filter((u) => u.role === "user").length;
-  const bannedUsers = users.filter((u) => u.banned).length;
-
   const stats: StatCardsProps[] = [
     {
       title: "Total Users",
-      value: totalUsers,
+      value: userStats?.total || 0,
       icon: Users,
       color: "blue",
     },
     {
       title: "Admins",
-      value: adminUsers,
+      value: userStats?.admins || 0,
       icon: Shield,
       color: "orange",
     },
     {
       title: "Regular Users",
-      value: regularUsers,
+      value: userStats?.regular || 0,
       icon: UserCheck,
       color: "",
     },
     {
       title: "Banned Users",
-      value: bannedUsers,
+      value: userStats?.banned || 0,
       icon: Flag,
       color: "red",
     },

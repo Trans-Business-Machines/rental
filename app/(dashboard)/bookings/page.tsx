@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getBookings } from "@/lib/actions/bookings";
+import { getBookings, getBookingStats } from "@/lib/actions/bookings";
 import { getAllPropertiesWithUnits as getProperties } from "@/lib/actions/properties";
 import { Calendar, CheckCircle, Clock, Search, Users } from "lucide-react";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
@@ -17,40 +17,31 @@ import Pagination from "@/components/Pagination";
 export default async function BookingsPage() {
   // Fetch real data from database
   const bookings = await getBookings();
+  const bookingsStats = await getBookingStats();
   const properties = await getProperties();
-
-  // Statistics
-  const totalBookings = bookings.length;
-  const confirmedBookings = bookings.filter(
-    (b) => b.status === "confirmed"
-  ).length;
-  const pendingBookings = bookings.filter((b) => b.status === "pending").length;
-  const completedBookings = bookings.filter(
-    (b) => b.status === "completed"
-  ).length;
 
   const stats: StatCardsProps[] = [
     {
       title: "Total Bookings",
-      value: totalBookings,
+      value: bookingsStats.total,
       icon: Calendar,
       color: "blue",
     },
     {
       title: "Confirmed",
-      value: confirmedBookings,
+      value: bookingsStats.confirmed,
       icon: CheckCircle,
       color: "green",
     },
     {
       title: "Pending",
-      value: pendingBookings,
+      value: bookingsStats.pending,
       icon: Clock,
       color: "orange",
     },
     {
       title: "Completed",
-      value: completedBookings,
+      value: bookingsStats.completed,
       icon: Users,
       color: "",
     },
