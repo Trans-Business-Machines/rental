@@ -1,11 +1,16 @@
 import { getBookings } from "@/lib/actions/bookings";
-import { getInventoryItems } from "@/lib/actions/inventory"
-import { getCheckoutReports } from "../actions/checkout";
+import { getInventoryItems, getInventoryAssignments } from "@/lib/actions/inventory"
+import { getCheckoutReports } from "@/lib/actions/checkout";
+import { getProperties, getAllPropertiesWithUnits } from "@/lib/actions/properties";
 
 /* ---------------- Type Definitions ---------------- */
 export type Booking = Awaited<ReturnType<typeof getBookings>>[number]
 export type InvetoryItem = Awaited<ReturnType<typeof getInventoryItems>>[number]
 export type CheckoutReport = Awaited<ReturnType<typeof getCheckoutReports>>[number]
+export type Property = Awaited<ReturnType<typeof getProperties>>[number]
+export type PropertyWithUnits = Awaited<ReturnType<typeof getAllPropertiesWithUnits>>[number]
+export type Assignment = Awaited<ReturnType<typeof getInventoryAssignments>>[number]
+export type sortTypes = "none" | "asc" | "desc"
 
 /* ---------------- Interface Definitions ---------------- */
 export interface BookingsTableAndCardsProps {
@@ -41,7 +46,6 @@ export interface UsersTableAndCardsProps {
 
 
 }
-
 
 export interface CreateUserData {
     name: string;
