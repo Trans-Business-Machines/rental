@@ -21,9 +21,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Edit, Plus, Search } from "lucide-react";
+import { Edit, Plus, Search, Package } from "lucide-react";
 import { useState } from "react";
 import Pagination from "@/components/Pagination";
+import { useFilter } from "@/hooks/useFilter";
+import { SearchNotFound } from "@/components/SearchNotFound";
+import { ItemsNotFound } from "@/components/ItemsNotFound";
 import type { InvetoryItem } from "@/lib/types/types";
 
 interface InventoryTableProps {
@@ -70,11 +73,21 @@ function getInventoryBadge(status: string) {
 export function InventoryTable({ items }: InventoryTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredItems = items.filter((item) => {
-    const term = searchTerm.toLowerCase();
-
-    return item.itemName.toLowerCase().includes(term);
+  const filteredItems = useFilter({
+    items,
+    searchTerm,
+    searchFields: ["itemName"],
   });
+
+  if (!items || items.length === 0) {
+    return (
+      <ItemsNotFound
+        title="No Inventory Items found!"
+        message="Go to inventory page to add inventory items."
+        icon={Package}
+      />
+    );
+  }
 
   return (
     <Card>
@@ -98,69 +111,76 @@ export function InventoryTable({ items }: InventoryTableProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="rounded-lg overflow-hidden border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted">
-                <TableHead className="font-semibold text-foreground">
-                  Item
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Total Stock
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Available
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Assigned
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Status
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredItems.map((item) => {
-                const assignedQuantity = item.assignments.length;
-                const availableQuantity = item.quantity - assignedQuantity;
-                const inventoryStatus = getInventoryStatus(item);
+      {filteredItems.length === 0 ? (
+        <SearchNotFound
+          title="No inventory items matches the search criteria."
+          icon={Package}
+        />
+      ) : (
+        <CardContent>
+          <div className="rounded-lg overflow-hidden border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted">
+                  <TableHead className="font-semibold text-foreground">
+                    Item
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Total Stock
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Available
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Assigned
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredItems.map((item) => {
+                  const assignedQuantity = item.assignments.length;
+                  const availableQuantity = item.quantity - assignedQuantity;
+                  const inventoryStatus = getInventoryStatus(item);
 
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium capitalize">
-                      {item.itemName}
-                    </TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{availableQuantity}</TableCell>
-                    <TableCell>{assignedQuantity}</TableCell>
-                    <TableCell>
-                      {getInventoryBadge(inventoryStatus.status)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <InventoryDialog>
-                          <Button variant="ghost" size="icon">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </InventoryDialog>
-                        <InventoryEditDialog item={item}>
-                          <Button variant="ghost" size="icon">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </InventoryEditDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium capitalize">
+                        {item.itemName}
+                      </TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>{availableQuantity}</TableCell>
+                      <TableCell>{assignedQuantity}</TableCell>
+                      <TableCell>
+                        {getInventoryBadge(inventoryStatus.status)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <InventoryDialog>
+                            <Button variant="ghost" size="icon">
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </InventoryDialog>
+                          <InventoryEditDialog item={item}>
+                            <Button variant="ghost" size="icon">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </InventoryEditDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      )}
       <CardFooter>
         <Pagination />
       </CardFooter>

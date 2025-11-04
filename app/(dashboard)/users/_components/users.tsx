@@ -24,9 +24,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search } from "lucide-react";
+import { Search, User as UserIcon } from "lucide-react";
 import UserListings from "./user-listings";
 import Pagination from "@/components/Pagination";
+import { useFilter } from "@/hooks/useFilter";
+import { ItemsNotFound } from "@/components/ItemsNotFound";
+import { SearchNotFound } from "@/components/SearchNotFound";
 
 interface UsersProps {
   users: User[];
@@ -43,11 +46,34 @@ function Users({ users }: UsersProps) {
     expiresIn: "7", // days
   });
 
+  // State for Select filters
+  const [selectFilters, setSelectFilters] = useState({
+    role: "all",
+    status: "all",
+  });
+
   const banUserMutation = useBanUser();
   const unbanUserMutation = useUnbanUser();
   const deleteUserMutation = useDeleteUser();
   const setUserRoleMutation = useSetUserRole();
   const revokeSessionsMutation = useRevokeUserSessions();
+
+  const filteredUsers = useFilter<User>({
+    items: users,
+    searchTerm: searchQuery,
+    searchFields: ["name", "email"],
+    selectFilters: { role: selectFilters.role, banned: selectFilters.status },
+  });
+
+  if (users.length === 1) {
+    return (
+      <ItemsNotFound
+        title="No users found!"
+        icon={UserIcon}
+        message="Get started by inviting your first user."
+      />
+    );
+  }
 
   const handleBanUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +133,13 @@ function Users({ users }: UsersProps) {
             className="pl-10"
           />
         </div>
-        <Select defaultValue="all">
+        <Select
+          defaultValue="all"
+          value={selectFilters.role}
+          onValueChange={(value) => {
+            setSelectFilters((prev) => ({ ...prev, role: value }));
+          }}
+        >
           <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>
@@ -117,34 +149,46 @@ function Users({ users }: UsersProps) {
             <SelectItem value="user">User</SelectItem>
           </SelectContent>
         </Select>
-        <Select defaultValue="all">
+
+        <Select
+          defaultValue="all"
+          value={selectFilters.status}
+          onValueChange={(value) => {
+            setSelectFilters((prev) => ({ ...prev, status: value }));
+          }}
+        >
           <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="banned">Banned</SelectItem>
+            <SelectItem value="false">Active</SelectItem>
+            <SelectItem value="true">Banned</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* Users Grid */}
-
-      <UserListings
-        users={users}
-        handleDeleteUser={handleDeleteUser}
-        handleRevokeAllSessions={handleRevokeAllSessions}
-        handleSetRole={handleSetRole}
-        handleUnbanUser={handleUnbanUser}
-        setBanDialogOpen={setBanDialogOpen}
-        setSelectedUser={setSelectedUser}
-        deleteUserMutationPending={deleteUserMutation.isPending}
-        revokeSessionsMutationPending={revokeSessionsMutation.isPending}
-        unbanUserMutationPending={unbanUserMutation.isPending}
-        userRoleMutationPending={setUserRoleMutation.isPending}
-      />
-
+      {filteredUsers.length === 0 ? (
+        <SearchNotFound
+          title="No user matches your search criteria."
+          icon={UserIcon}
+        />
+      ) : (
+        <UserListings
+          users={filteredUsers}
+          handleDeleteUser={handleDeleteUser}
+          handleRevokeAllSessions={handleRevokeAllSessions}
+          handleSetRole={handleSetRole}
+          handleUnbanUser={handleUnbanUser}
+          setBanDialogOpen={setBanDialogOpen}
+          setSelectedUser={setSelectedUser}
+          deleteUserMutationPending={deleteUserMutation.isPending}
+          revokeSessionsMutationPending={revokeSessionsMutation.isPending}
+          unbanUserMutationPending={unbanUserMutation.isPending}
+          userRoleMutationPending={setUserRoleMutation.isPending}
+        />
+      )}
       <footer className="my-4">
         <Pagination />
       </footer>

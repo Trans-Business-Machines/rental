@@ -18,10 +18,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Edit, Eye, Search } from "lucide-react";
+import { Edit, Eye, Search, Calendar } from "lucide-react";
 import { BookingEditDialog } from "./booking-edit-dialog";
 import { BookingViewDialog } from "./booking-view-dialog";
 import { useState } from "react";
+import { useFilter } from "@/hooks/useFilter";
+import { SearchNotFound } from "@/components/SearchNotFound";
+import { ItemsNotFound } from "@/components/ItemsNotFound";
 import Pagination from "@/components/Pagination";
 import type { Booking } from "@/lib/types/types";
 
@@ -32,15 +35,19 @@ interface RecentBookingsTableProps {
 export function RecentBookingsTable({ bookings }: RecentBookingsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredBookings = bookings.filter((booking) => {
-    const term = searchTerm.toLowerCase();
-
-    return (
-      booking.guest.firstName.toLowerCase().includes(term) ||
-      booking.guest.lastName.toLowerCase().includes(term) ||
-      booking.unit.name.toLowerCase().includes(term)
-    );
+  const filteredBookings = useFilter<Booking>({
+    items: bookings,
+    searchTerm,
+    searchFields: ["guest.firstName", "guest.lastName", "unit.name"],
   });
+
+  if (!bookings || bookings.length === 0) {
+    <ItemsNotFound
+      title="No recent booking found!"
+      message="Go to booking page to create your first booking."
+      icon={Calendar}
+    />;
+  }
 
   return (
     <Card>
@@ -64,69 +71,76 @@ export function RecentBookingsTable({ bookings }: RecentBookingsTableProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="rounded-lg overflow-hidden border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted">
-                <TableHead className="font-semibold text-foreground">
-                  Guest Name
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Property
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Unit
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Check-in
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Check-out
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Amount
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredBookings.map((booking) => (
-                <TableRow key={booking.id}>
-                  <TableCell className="font-medium">
-                    {booking.guest.firstName} {booking.guest.lastName}
-                  </TableCell>
-                  <TableCell>{booking.property.name}</TableCell>
-                  <TableCell>{booking.unit.name}</TableCell>
-                  <TableCell>
-                    {new Date(booking.checkInDate).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(booking.checkOutDate).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>${booking.totalAmount}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <BookingViewDialog booking={booking}>
-                        <Button variant="ghost" size="icon">
-                          <Eye className="size-4" />
-                        </Button>
-                      </BookingViewDialog>
-                      <BookingEditDialog booking={booking}>
-                        <Button variant="ghost" size="icon">
-                          <Edit className="size-4" />
-                        </Button>
-                      </BookingEditDialog>
-                    </div>
-                  </TableCell>
+      {filteredBookings.length === 0 ? (
+        <SearchNotFound
+          title="No booking matches the search criteria."
+          icon={Calendar}
+        />
+      ) : (
+        <CardContent>
+          <div className="rounded-lg overflow-hidden border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted">
+                  <TableHead className="font-semibold text-foreground">
+                    Guest Name
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Property
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Unit
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Check-in
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Check-out
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Amount
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Actions
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+              </TableHeader>
+              <TableBody>
+                {filteredBookings.map((booking) => (
+                  <TableRow key={booking.id}>
+                    <TableCell className="font-medium">
+                      {booking.guest.firstName} {booking.guest.lastName}
+                    </TableCell>
+                    <TableCell>{booking.property.name}</TableCell>
+                    <TableCell>{booking.unit.name}</TableCell>
+                    <TableCell>
+                      {new Date(booking.checkInDate).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(booking.checkOutDate).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>${booking.totalAmount}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <BookingViewDialog booking={booking}>
+                          <Button variant="ghost" size="icon">
+                            <Eye className="size-4" />
+                          </Button>
+                        </BookingViewDialog>
+                        <BookingEditDialog booking={booking}>
+                          <Button variant="ghost" size="icon">
+                            <Edit className="size-4" />
+                          </Button>
+                        </BookingEditDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      )}
       <CardFooter>
         <Pagination />
       </CardFooter>

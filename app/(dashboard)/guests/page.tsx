@@ -5,68 +5,30 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useGuests, useGuestStats } from "@/hooks/useGuests";
 import { Clock, Flag, Search, UserCheck, Users } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
-import { useDebouncedCallback } from "use-debounce";
+import { useState } from "react";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { useTableMode } from "@/hooks/useTableMode";
+import { useFilter } from "@/hooks/useFilter";
+import { ItemsNotFound } from "@/components/ItemsNotFound";
 import GuestListings from "@/components/GuestListings";
 import Pagination from "@/components/Pagination";
+import type { Guest } from "@/lib/types/types";
 
 export default function GuestsPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const [searchValue, setSearchValue] = useState(
-    () => searchParams.get("search") || ""
-  );
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Get table mode context from useTableMode Hook
   const { tableMode, setTableMode } = useTableMode();
-  const initializedRef = useRef(false);
-
-  // Get search parameters from URL
-  const search = searchParams.get("search") || "";
-  const nationality = searchParams.get("nationality") || "";
-  const verification = searchParams.get("verification") || "";
 
   // Get guests and guests stats
   const { guestStats } = useGuestStats();
-  const {
-    data: guests = [],
-    isLoading,
-    error,
-  } = useGuests(search, nationality, verification);
+  const { data: guests = [], isLoading, error } = useGuests();
 
-  const createQueryString = useCallback(
-    (name: string, value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (value === "" || value === "all") {
-        params.delete(name);
-      } else {
-        params.set(name, value);
-      }
-      return params.toString();
-    },
-    [searchParams]
-  );
-
-  // Debounced search handler
-  const debouncedSearch = useDebouncedCallback((term: string) => {
-    const queryString = createQueryString("search", term);
-    router.push(`/guests?${queryString}`);
-  }, 300);
-
-  const handleSearchChange = (value: string) => {
-    setSearchValue(value);
-    debouncedSearch(value);
-  };
-
-  // Initialize search value from URL only once
-  if (!initializedRef.current && search !== "") {
-    setSearchValue(search);
-    initializedRef.current = true;
-  }
+  const filteredGuests = useFilter<Guest>({
+    items: guests,
+    searchTerm,
+    searchFields: ["firstName", "lastName"],
+  });
 
   const stats: StatCardsProps[] = [
     {
@@ -118,6 +80,28 @@ export default function GuestsPage() {
     );
   }
 
+  if (!isLoading && guests.length === 0) {
+    return (
+      <div className="space-y-6">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-normal text-foreground">
+              Guest Management
+            </h1>
+            <p className="text-muted-foreground">Manage guest registrations.</p>
+          </div>
+
+          <GuestDialog />
+        </header>
+        <ItemsNotFound
+          title="No guests found!"
+          message="Get Started by creating your first guest."
+          icon={Users}
+        />
+      </div>
+    );
+  }
+
   return (
     <section className="space-y-6">
       <header className="flex items-center justify-between">
@@ -140,8 +124,8 @@ export default function GuestsPage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Search guests..."
-            value={searchValue}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
             disabled={isLoading}
             autoFocus
@@ -166,18 +150,8 @@ export default function GuestsPage() {
       )}
 
       {/* Guests Grid */}
-      {!isLoading && <GuestListings guests={guests} tableMode={tableMode} />}
-
-      {!isLoading && guests.length === 0 && (
-        <div className="text-center py-8">
-          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium">No guests found</h3>
-          <p className="text-muted-foreground">
-            {search
-              ? "Try adjusting your search criteria"
-              : "Get started by adding your first guest"}
-          </p>
-        </div>
+      {!isLoading && (
+        <GuestListings guests={filteredGuests} tableMode={tableMode} />
       )}
 
       {/* Pagination */}

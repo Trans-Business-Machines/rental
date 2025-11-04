@@ -19,10 +19,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, Eye, Search } from "lucide-react";
+import { Edit, Eye, Search, Home } from "lucide-react";
 import { useState } from "react";
 import { UnitEditDialog } from "./unit-edit-dialog";
 import { UnitViewDialog } from "./unit-view-dialog";
+import { useFilter } from "@/hooks/useFilter";
+import { SearchNotFound } from "@/components/SearchNotFound";
+import { ItemsNotFound } from "@/components/ItemsNotFound";
 import Pagination from "@/components/Pagination";
 
 interface Unit {
@@ -85,12 +88,21 @@ function getStatusBadge(status: string) {
 export function UnitAvailabilityTable({ units }: UnitAvailabilityTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredUnits = units.filter(
-    (unit) =>
-      unit.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      unit.property.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      unit.guest?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUnits = useFilter<Unit>({
+    items: units,
+    searchTerm,
+    searchFields: ["id", "property", "guest"],
+  });
+
+  if (!units || units.length == 0) {
+    return (
+      <ItemsNotFound
+        title="No units found!"
+        icon={Home}
+        message="Get started by adding a property then add units."
+      />
+    );
+  }
 
   return (
     <Card>
@@ -106,7 +118,7 @@ export function UnitAvailabilityTable({ units }: UnitAvailabilityTableProps) {
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search units..."
+                placeholder="Search by unit name . . ."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8 w-xs md:w-lg"
@@ -115,73 +127,80 @@ export function UnitAvailabilityTable({ units }: UnitAvailabilityTableProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="rounded-lg border border-border overflow-hidden">
-          <Table className="px-2">
-            <TableHeader>
-              <TableRow className="bg-muted">
-                <TableHead className="font-semibold text-foreground">
-                  Unit
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Property
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Type
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Status
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Current Guest
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Checkout Date
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Monthly Rent
-                </TableHead>
-                <TableHead className="font-semibold text-foreground">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUnits.map((unit) => (
-                <TableRow key={unit.id}>
-                  <TableCell className="font-medium">{unit.id}</TableCell>
-                  <TableCell>{unit.property}</TableCell>
-                  <TableCell className="capitalize">{unit.type}</TableCell>
-                  <TableCell>{getStatusBadge(unit.status)}</TableCell>
-                  <TableCell>{unit.guest || "-"}</TableCell>
-                  <TableCell>
-                    {unit.checkOut ? (
-                      <span className="text-sm">{unit.checkOut}</span>
-                    ) : (
-                      "-"
-                    )}
-                  </TableCell>
-                  <TableCell>${unit.rent}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <UnitViewDialog unit={unit}>
-                        <Button variant="ghost" size="icon">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </UnitViewDialog>
-                      <UnitEditDialog unit={unit}>
-                        <Button variant="ghost" size="icon">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </UnitEditDialog>
-                    </div>
-                  </TableCell>
+      {filteredUnits.length === 0 ? (
+        <SearchNotFound
+          title="No units matches the search criteria."
+          icon={Home}
+        />
+      ) : (
+        <CardContent>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <Table className="px-2">
+              <TableHeader>
+                <TableRow className="bg-muted">
+                  <TableHead className="font-semibold text-foreground">
+                    Unit
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Property
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Type
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Current Guest
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Checkout Date
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Monthly Rent
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
+                    Actions
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+              </TableHeader>
+              <TableBody>
+                {filteredUnits.map((unit) => (
+                  <TableRow key={unit.id}>
+                    <TableCell className="font-medium">{unit.id}</TableCell>
+                    <TableCell>{unit.property}</TableCell>
+                    <TableCell className="capitalize">{unit.type}</TableCell>
+                    <TableCell>{getStatusBadge(unit.status)}</TableCell>
+                    <TableCell>{unit.guest || "-"}</TableCell>
+                    <TableCell>
+                      {unit.checkOut ? (
+                        <span className="text-sm">{unit.checkOut}</span>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell>${unit.rent}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <UnitViewDialog unit={unit}>
+                          <Button variant="ghost" size="icon">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </UnitViewDialog>
+                        <UnitEditDialog unit={unit}>
+                          <Button variant="ghost" size="icon">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </UnitEditDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      )}
       <CardFooter>
         <Pagination />
       </CardFooter>
