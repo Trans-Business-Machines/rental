@@ -3,8 +3,9 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-export async function getCheckoutReports() {
+export async function getCheckoutReports(page: number = 1) {
 	try {
+		const LIMIT = 6;
 		const reports = await prisma.checkoutReport.findMany({
 			include: {
 				booking: {
@@ -24,12 +25,34 @@ export async function getCheckoutReports() {
 			orderBy: {
 				createdAt: "desc",
 			},
-			take: 6
+			take: LIMIT,
+			skip: (page - 1) * LIMIT
 		});
-		return reports;
+
+		// count reports and calculate the total number of pages
+		const totalReports = await prisma.checkoutReport.count();
+		const totalPages = Math.ceil(totalReports / LIMIT);
+
+		// get hasNext and hasPrev attributes
+		const hasNext = page < totalPages;
+		const hasPrev = page > 1 && page <= totalPages
+
+		return {
+			totalPages,
+			reports,
+			currentPage: page,
+			hasNext,
+			hasPrev
+		}
 	} catch (error) {
 		console.error("Error fetching checkout reports:", error);
-		return [];
+		return {
+			totalPages: 0,
+			reports: [],
+			currentPage: 0,
+			hasNext: false,
+			hasPrev: false,
+		};
 	}
 }
 

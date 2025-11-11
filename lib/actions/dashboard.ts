@@ -2,87 +2,6 @@
 
 import { prisma } from "@/lib/prisma"
 
-export async function getDashboardData() {
-    // Get all units with their current bookings to determine status
-    const units = await prisma.unit.findMany({
-        include: {
-            property: true,
-            bookings: {
-                where: {
-                    status: "confirmed",
-                    checkOutDate: {
-                        gte: new Date(),
-                    },
-                },
-                include: {
-                    guest: true,
-                },
-                take: 1,
-                orderBy: {
-                    checkOutDate: "asc",
-                },
-            },
-        },
-        take: 6,
-    });
-
-    // Get recent bookings
-    const recentBookings = await prisma.booking.findMany({
-        include: {
-            guest: true,
-            property: true,
-            unit: true,
-        },
-        orderBy: {
-            createdAt: "desc",
-        },
-        take: 6,
-    });
-
-    // Get inventory items
-    const inventoryItems = await prisma.inventoryItem.findMany({
-        include: {
-            assignments: {
-                where: {
-                    isActive: true,
-                },
-            },
-        },
-        orderBy: {
-            itemName: "asc",
-        },
-        take: 6,
-    });
-
-    // Calculate monthly revenue from current month bookings
-    const currentMonth = new Date();
-    currentMonth.setDate(1);
-    currentMonth.setHours(0, 0, 0, 0);
-
-    const nextMonth = new Date(currentMonth);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-
-    const monthlyBookings = await prisma.booking.findMany({
-        where: {
-            createdAt: {
-                gte: currentMonth,
-                lt: nextMonth,
-            },
-        },
-    });
-
-    const monthlyRevenue = monthlyBookings.reduce(
-        (sum, booking) => sum + booking.totalAmount,
-        0
-    );
-
-    return {
-        units,
-        recentBookings,
-        inventoryItems,
-        monthlyRevenue,
-    };
-}
 
 export async function getDashboardStats() {
     // count all units in the DB
@@ -116,4 +35,119 @@ export async function getDashboardStats() {
         available: availableUnits,
         maintenance: maintenanceUnits
     };
+}
+
+export async function getUnits(page: number = 1) {
+    // Define the limit for each Unit Page
+    const LIMIT = 6;
+
+    // Get all units with their current bookings to determine status
+    const units = await prisma.unit.findMany({
+        include: {
+            property: true,
+            bookings: {
+                where: {
+                    status: "confirmed",
+                    checkOutDate: {
+                        gte: new Date(),
+                    },
+                },
+                include: {
+                    guest: true,
+                },
+                take: 1,
+                orderBy: {
+                    checkOutDate: "asc",
+                },
+            },
+        },
+        take: LIMIT,
+        skip: (page - 1) * LIMIT
+    });
+
+    // count how many units there in the DB
+    const totalUnits = await prisma.unit.count();
+    const totlaPages = Math.ceil(totalUnits / LIMIT);
+
+    // Determine whether there are previous and next pages
+    const hasNext = page < totlaPages;
+    const hasPrev = page > 1 && page <= totlaPages
+
+    return {
+        totlaPages,
+        units,
+        currentPage: page,
+        hasNext,
+        hasPrev
+    }
+}
+
+export async function getRecentBookings(page: number = 1) {
+    // Define the limit for each Bokkings Page
+    const LIMIT = 6;
+
+    // Get recent bookings
+    const recentBookings = await prisma.booking.findMany({
+        include: {
+            guest: true,
+            property: true,
+            unit: true,
+        },
+        orderBy: {
+            createdAt: "desc",
+        },
+        take: LIMIT,
+        skip: (page - 1) * LIMIT
+    });
+
+    // Calculate the total pages for booking.
+    const totalBookings = await prisma.booking.count();
+    const totalPages = Math.ceil(totalBookings / LIMIT)
+
+    // Get hasNext and hasPrev attributes
+    const hasNext = page < totalPages;
+    const hasPrev = page > 1 && page <= totalPages;
+
+    return {
+        totalPages,
+        recentBookings,
+        hasPrev,
+        hasNext
+    }
+}
+
+export async function getInventoryItems(page: number = 1) {
+    // Define the limit for each Unit Page
+    const LIMIT = 6;
+
+    // Get inventory items
+    const inventoryItems = await prisma.inventoryItem.findMany({
+        include: {
+            assignments: {
+                where: {
+                    isActive: true,
+                },
+            },
+        },
+        orderBy: {
+            itemName: "asc",
+        },
+        take: LIMIT,
+        skip: (page - 1) * LIMIT
+    });
+
+    // Count items and get the number of pages
+    const totalItems = await prisma.inventoryItem.count();
+    const totalPages = Math.ceil(totalItems / LIMIT);
+
+    // Get hasNext and hasPrev attributes
+    const hasNext = page < totalPages;
+    const hasPrev = page > 1 && page <= totalPages;
+
+    return {
+        totalPages,
+        inventoryItems,
+        hasPrev,
+        hasNext
+    }
 }

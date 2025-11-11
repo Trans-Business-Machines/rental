@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { auth } from "../auth";
 
-export async function getProperties() {
+export async function getProperties(page: number = 1) {
 	try {
+		const LIMIT = 6;
 		const properties = await prisma.property.findMany({
 			where: {
 				deletedAt: null,
@@ -18,12 +19,28 @@ export async function getProperties() {
 			orderBy: {
 				createdAt: "desc",
 			},
-			take: 6
+			take: LIMIT,
+			skip: (page - 1) * LIMIT
 		});
-		return properties;
+
+		// count properties and get total number of pages
+		const totalProperties = await prisma.property.count({
+			where: {
+				deletedAt: null,
+			}
+		});
+		const totalPages = Math.ceil(totalProperties / LIMIT);
+
+		// Evaluate the hasNext and hasPrev attributes
+		const hasNext = page < totalPages;
+		const hasPrev = page > 1 && page <= totalPages;
+
+
+		return { totalPages, properties, hasNext, hasPrev };
 	} catch (error) {
 		console.error("Error fetching properties:", error);
-		throw new Error("Failed to fetch properties");
+		return { totalPages: 0, properties: [], hasNext: false, hasPrev: false };
+
 	}
 }
 
@@ -43,6 +60,20 @@ export async function getPropertyById(id: number) {
 	} catch (error) {
 		console.error("Error fetching property:", error);
 		throw new Error("Failed to fetch property");
+	}
+}
+
+export async function getPropertyNames() {
+	try {
+		const propertyNames = await prisma.property.findMany({
+			select: { name: true, id: true }
+		})
+
+		return propertyNames
+
+	} catch (error) {
+		console.error("An Error occured while getting property names: ", error)
+		return [];
 	}
 }
 
@@ -142,40 +173,6 @@ export async function softDeleteProperty(id: number) {
 	} catch (error) {
 		console.error("Error soft deleting property:", error);
 		throw new Error("Failed to delete property");
-	}
-}
-
-export async function searchProperties(query: string) {
-	try {
-		const properties = await prisma.property.findMany({
-			where: {
-				deletedAt: null,
-				OR: [
-					{
-						name: {
-							contains: query,
-						},
-					},
-					{
-						address: {
-							contains: query,
-						},
-					},
-				],
-			},
-			include: {
-				tenants: true,
-				amenities: true,
-				units: true,
-			},
-			orderBy: {
-				createdAt: "desc",
-			},
-		});
-		return properties;
-	} catch (error) {
-		console.error("Error searching properties:", error);
-		throw new Error("Failed to search properties");
 	}
 }
 

@@ -3,8 +3,11 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-export async function getBookings() {
+export async function getBookings(page: number = 1) {
 	try {
+		// Define the Limit used for pagination
+		const LIMIT = 2;
+
 		const bookings = await prisma.booking.findMany({
 			include: {
 				guest: true,
@@ -14,12 +17,33 @@ export async function getBookings() {
 			orderBy: {
 				createdAt: "desc",
 			},
-			take: 6
+			take: LIMIT,
+			skip: (page - 1) * LIMIT
 		});
-		return bookings;
+
+		// Count bookings and find the totalPages
+		const totalBookings = await prisma.booking.count()
+		const totalPages = Math.ceil(totalBookings / LIMIT);
+
+		// Get hasNext and hasPrev attributes
+		const hasNext = page < totalPages;
+		const hasPrev = page > 1 && page <= totalPages;
+
+		return {
+			totalPages,
+			bookings,
+			hasPrev,
+			hasNext
+		}
+
 	} catch (error) {
 		console.error("Error fetching bookings:", error);
-		return [];
+		return {
+			totalPages: 0,
+			bookings: [],
+			hasPrev: false,
+			hasNext: false,
+		};
 	}
 }
 

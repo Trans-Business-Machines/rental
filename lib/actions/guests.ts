@@ -3,11 +3,32 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-export async function getGuests() {
-	return prisma.guest.findMany({
+export async function getGuests(page: number = 1) {
+	// Define the limit
+	const LIMIT = 2;
+
+	const guests = await prisma.guest.findMany({
 		orderBy: { createdAt: "desc" },
-		take: 6
+		take: LIMIT,
+		skip: (page - 1) * LIMIT
 	});
+
+	// Count all guests and get the number of pages
+	const totalGuests = await prisma.guest.count();
+	const totalPages = Math.ceil(totalGuests / LIMIT);
+
+	// Get hasNext and hasPrev attributes
+	const hasNext = page < totalPages;
+	const hasPrev = page > 1 && page <= totalPages
+
+	return {
+		totalPages,
+		guests,
+		currentPage: page,
+		hasNext,
+		hasPrev
+	}
+
 }
 
 export async function getGuestById(id: number) {

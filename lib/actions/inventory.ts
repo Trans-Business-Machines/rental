@@ -3,8 +3,12 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-export async function getInventoryItems() {
+export async function getInventoryItems(page: number = 1) {
 	try {
+
+		const LIMIT = 6;
+
+
 		const items = await prisma.inventoryItem.findMany({
 			include: {
 				assignments: {
@@ -21,7 +25,8 @@ export async function getInventoryItems() {
 			orderBy: {
 				createdAt: "desc",
 			},
-			take: 6
+			take: LIMIT,
+			skip: (page - 1) * LIMIT
 		});
 
 		// Add availability info to each item
@@ -32,10 +37,30 @@ export async function getInventoryItems() {
 			isAvailable: item.quantity > 0, // Can be assigned if quantity > 0
 		}));
 
-		return itemsWithAvailability;
+		// count items and calculate the total number of pages
+		const totalItems = await prisma.inventoryItem.count();
+		const totalPages = Math.ceil(totalItems / LIMIT);
+
+		// Find the hasNext and hasPrev attributes
+		const hasNext = page < totalPages;
+		const hasPrev = page > 1 && page <= totalPages;
+
+		return {
+			totalPages,
+			items: itemsWithAvailability,
+			currentPage: page,
+			hasNext,
+			hasPrev
+		};
 	} catch (error) {
 		console.error("Error fetching inventory items:", error);
-		throw new Error("Failed to fetch inventory items");
+		return {
+			totalPages: 0,
+			items: [],
+			currentPage: 0,
+			hasNext: false,
+			hasPrev: false,
+		}
 	}
 }
 
@@ -459,15 +484,10 @@ export async function returnInventoryAssignment(
 	}
 }
 
-export async function getInventoryAssignments(filters?: {
-	unitId?: number;
-	propertyId?: number;
-	isActive?: boolean;
-	inventoryItemId?: number;
-}) {
+export async function getInventoryAssignments(page: number = 1) {
 	try {
+		const LIMIT = 6;
 		const assignments = await prisma.inventoryAssignment.findMany({
-			where: filters,
 			include: {
 				inventoryItem: true,
 				unit: true,
@@ -476,12 +496,30 @@ export async function getInventoryAssignments(filters?: {
 			orderBy: {
 				createdAt: "desc",
 			},
-			take: 6
+			take: LIMIT,
+			skip: (page - 1) * LIMIT
 		});
-		return assignments;
+
+		// count the  assignments and calcualte the totalPages
+		const totalAssignments = await prisma.inventoryAssignment.count();
+		const totalPages = Math.ceil(totalAssignments / LIMIT);
+
+		// Evaluate hasNext and hasPrev attributes
+		const hasNext = page < totalPages;
+		const hasPrev = page > 1 && page <= totalPages;
+
+
+		return { totalPages, totalAssignments, assignments, currentPage: page, hasNext, hasPrev };
 	} catch (error) {
 		console.error("Error fetching inventory assignments:", error);
-		throw new Error("Failed to fetch inventory assignments");
+		return {
+			totalPages: 0,
+			totalAssignments: 0,
+			assignments: [],
+			currentPage: 0,
+			hasNext: false,
+			hasPrev: false
+		}
 	}
 }
 
