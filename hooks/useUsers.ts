@@ -2,31 +2,33 @@ import { authClient } from "@/lib/auth-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getUserStats } from "@/lib/actions/user-stats"
 import { toast } from "sonner";
-import type { BanUserData, CreateUserData, User } from "@/lib/types/types"
+import type { BanUserData, CreateUserData, UsersResponse, User } from "@/lib/types/types"
 
 // Query keys
 export const userKeys = {
 	all: ["users"] as const,
-	lists: () => [...userKeys.all, "list"] as const,
-	list: (filters: { search?: string }) =>
-		[...userKeys.lists(), filters] as const,
+	lists: (page: number) => [...userKeys.all, "list", page] as const,
+	list: () => [...userKeys.all, "list"] as const,
 	details: () => [...userKeys.all, "detail"] as const,
 	detail: (id: string) => [...userKeys.details(), id] as const,
 	stats: () => [...userKeys.all, "stats"] as const
 };
 
 // Fetch users
-export const useUsers = (searchQuery?: string) => {
+export const useUsers = ({ page }: { page: number }) => {
 	return useQuery({
-		queryKey: userKeys.list({ search: searchQuery }),
-		queryFn: async (): Promise<User[]> => {
+		queryKey: userKeys.lists(page),
+		queryFn: async (): Promise<UsersResponse> => {
+			// Define the limit
+			const LIMIT = 4
+
+			// calculate the offset
+			const OFFSET = (page - 1) * LIMIT;
+
 			const { data: response, error } = await authClient.admin.listUsers({
 				query: {
-					limit: 6,
-					offset: 0,
-					searchField: searchQuery ? "email" : undefined,
-					searchOperator: searchQuery ? "contains" : undefined,
-					searchValue: searchQuery || undefined,
+					limit: LIMIT,
+					offset: OFFSET,
 					sortBy: "createdAt",
 					sortDirection: "desc",
 				},
@@ -36,9 +38,22 @@ export const useUsers = (searchQuery?: string) => {
 				throw new Error("Failed to load users");
 			}
 
-			return (response?.users as User[]) || [];
+			// Get total users and calculate total pages
+			const totalUsers = response?.total || 0
+			const totalPages = Math.ceil(totalUsers / LIMIT);
+
+			// Evaluate hasNext and hasPrev attributes
+			const hasNext = page < totalPages;
+			const hasPrev = page > 1 && page <= totalPages;
+
+			return {
+				totalPages,
+				currentPage: page,
+				users: (response?.users as User[]) || [],
+				hasNext,
+				hasPrev
+			}
 		},
-		staleTime: 30 * 1000, // 30 seconds
 	});
 };
 
@@ -67,7 +82,7 @@ export const useCreateUser = () => {
 		},
 		onSuccess: () => {
 			toast.success("User created successfully");
-			queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+			queryClient.invalidateQueries({ queryKey: userKeys.list() });
 		},
 		onError: (error) => {
 			toast.error("Failed to create user");
@@ -91,7 +106,7 @@ export const useBanUser = () => {
 		},
 		onSuccess: () => {
 			toast.success("User banned successfully");
-			queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+			queryClient.invalidateQueries({ queryKey: userKeys.list() });
 		},
 		onError: (error) => {
 			toast.error("Failed to ban user");
@@ -111,7 +126,7 @@ export const useUnbanUser = () => {
 		},
 		onSuccess: () => {
 			toast.success("User unbanned successfully");
-			queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+			queryClient.invalidateQueries({ queryKey: userKeys.list() });
 		},
 		onError: (error) => {
 			toast.error("Failed to unban user");
@@ -131,7 +146,7 @@ export const useDeleteUser = () => {
 		},
 		onSuccess: () => {
 			toast.success("User deleted successfully");
-			queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+			queryClient.invalidateQueries({ queryKey: userKeys.list() });
 		},
 		onError: (error) => {
 			toast.error("Failed to delete user");
@@ -157,7 +172,7 @@ export const useSetUserRole = () => {
 		},
 		onSuccess: () => {
 			toast.success("User role updated successfully");
-			queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+			queryClient.invalidateQueries({ queryKey: userKeys.list() });
 		},
 		onError: (error) => {
 			toast.error("Failed to update user role");

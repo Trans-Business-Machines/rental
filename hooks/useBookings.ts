@@ -62,8 +62,8 @@ export const useBookings = () => {
 	return useQuery({
 		queryKey: bookingKeys.list(),
 		queryFn: async (): Promise<Booking[]> => {
-			const bookings = await getBookings();
-			return bookings;
+			const bookingsData = await getBookings();
+			return bookingsData.bookings;
 		},
 		staleTime: 30 * 1000, // 30 seconds
 	});

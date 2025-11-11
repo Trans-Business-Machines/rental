@@ -1,27 +1,25 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { Invitation } from "@/lib/types/types";
-
-interface InvitationsResponse {
-    invitations: Invitation[];
-}
+import type { InvitationResponse } from "@/lib/types/types";
 
 
-export function useInvitations() {
+
+export function useInvitations({ currentPage }: { currentPage: number }) {
     const {
         data,
         error: invitationsError,
         isPending: invitationsPending,
-    } = useQuery<InvitationsResponse>({
-        queryKey: ["invitations", "list"],
+    } = useQuery({
+        queryKey: ["invitations", "list", currentPage],
         queryFn: async () => {
-            const res = await fetch("/api/invitations/list");
+            const res = await fetch(`/api/invitations/list?page=${currentPage}`);
             if (!res.ok) throw new Error("Failed to fetch invitations");
-            return res.json();
+            const data = await res.json() as InvitationResponse;
+            return data;
         },
     });
 
-    return { invitations: data?.invitations, invitationsError, invitationsPending };
+    return { invitationsData: data, invitationsError, invitationsPending };
 }
 
 export function useResendInvite() {

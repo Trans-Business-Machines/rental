@@ -1,42 +1,27 @@
-import { createGuest, getGuests, searchGuests, getGuestStats } from "@/lib/actions/guests";
+import { createGuest, getGuests, getGuestStats } from "@/lib/actions/guests";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { Guest, CreateGuestData } from "@/lib/types/types"
+import type { Guest, CreateGuestData, GuestsResponse } from "@/lib/types/types"
 
 // Query keys
 export const guestKeys = {
 	all: ["guests"] as const,
-	lists: () => [...guestKeys.all, "list"] as const,
-	list: (filters: {
-		search?: string;
-		nationality?: string;
-		verification?: string;
-	}) => [...guestKeys.lists(), filters] as const,
+	lists: (page: number) => [...guestKeys.all, "list", page] as const,
+	list: () => [...guestKeys.all, "list"] as const,
 	details: () => [...guestKeys.all, "detail"] as const,
 	detail: (id: number) => [...guestKeys.details(), id] as const,
 	stats: () => [...guestKeys.all, "stats"] as const
 };
 
 // Fetch guests with search
-export const useGuests = (
-	searchQuery?: string,
-	nationality?: string,
-	verification?: string
-) => {
+export const useGuests = (page: number = 1) => {
 	return useQuery({
-		queryKey: guestKeys.list({
-			search: searchQuery,
-			nationality,
-			verification,
-		}),
-		queryFn: async (): Promise<Guest[]> => {
-			if (searchQuery) {
-				return await searchGuests(searchQuery);
-			}
-			const guests = await getGuests();
+		queryKey: guestKeys.lists(page),
+		queryFn: async (): Promise<GuestsResponse> => {
+
+			const guests = await getGuests(page);
 			return guests;
 		},
-		staleTime: 30 * 1000, // 30 seconds
 	});
 };
 
@@ -52,10 +37,11 @@ export const useCreateGuest = () => {
 		onSuccess: (newGuest) => {
 			toast.success("Guest created successfully");
 			// Invalidate and refetch guests list
-			queryClient.invalidateQueries({ queryKey: guestKeys.lists() });
+			queryClient.invalidateQueries({ queryKey: guestKeys.list() });
+
 			// Optionally update the cache with the new guest
 			queryClient.setQueryData(
-				guestKeys.list({}),
+				guestKeys.list(),
 				(oldData: Guest[] | undefined) => {
 					if (oldData) {
 						return [newGuest, ...oldData];
