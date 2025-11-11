@@ -26,6 +26,8 @@ import { UnitViewDialog } from "./unit-view-dialog";
 import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
+import { useSearchParams, useRouter } from "next/navigation";
+//import { useCallback } from "react";
 import Pagination from "@/components/Pagination";
 
 interface Unit {
@@ -40,6 +42,9 @@ interface Unit {
 
 interface UnitAvailabilityTableProps {
   units: Unit[];
+  totalPages: string | number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
 function getStatusBadge(status: string) {
@@ -85,14 +90,24 @@ function getStatusBadge(status: string) {
   }
 }
 
-export function UnitAvailabilityTable({ units }: UnitAvailabilityTableProps) {
+export function UnitAvailabilityTable({
+  units,
+  hasNext,
+  hasPrev,
+  totalPages,
+}: UnitAvailabilityTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const router = useRouter();
 
   const filteredUnits = useFilter<Unit>({
     items: units,
     searchTerm,
     searchFields: ["id", "property", "guest"],
   });
+
+  const searchParams = useSearchParams();
+
+  const currentPage = searchParams.get("unitsPage") || 1;
 
   if (!units || units.length == 0) {
     return (
@@ -103,6 +118,16 @@ export function UnitAvailabilityTable({ units }: UnitAvailabilityTableProps) {
       />
     );
   }
+
+  // function handle page change
+  const handlePageChange = (page: number) => {
+    // create a new params object using the exisitng searchParams
+    // this helps to reserve other existing params
+    const params = new URLSearchParams(searchParams);
+
+    params.set("unitsPage", page.toString());
+    router.push(`?${params.toString()}`);
+  };
 
   return (
     <Card>
@@ -202,7 +227,13 @@ export function UnitAvailabilityTable({ units }: UnitAvailabilityTableProps) {
         </CardContent>
       )}
       <CardFooter>
-        <Pagination />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          handlePageChange={handlePageChange}
+          hasNext={hasNext}
+          hasPrev={hasPrev}
+        />
       </CardFooter>
     </Card>
   );

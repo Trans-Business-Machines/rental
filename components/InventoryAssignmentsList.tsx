@@ -20,19 +20,20 @@ import { ArrowLeft, Calendar, MapPin, Package } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { SearchNotFound } from "./SearchNotFound";
-import Pagination from "./Pagination";
 import type { Assignment } from "@/lib/types/types";
 
 interface InventoryAssignmentsListProps {
   assignments: Assignment[];
   onUpdate?: () => void;
   showReturnButton?: boolean;
+  totalAssignments: number;
 }
 
 export function InventoryAssignmentsList({
   assignments,
   onUpdate,
   showReturnButton = true,
+  totalAssignments,
 }: InventoryAssignmentsListProps) {
   const [returningIds, setReturningIds] = useState<Set<number>>(new Set());
 
@@ -69,8 +70,10 @@ export function InventoryAssignmentsList({
             Inventory Assignments
           </CardTitle>
           <CardDescription>
-            {assignments.length} assignment{assignments.length !== 1 ? "s" : ""}{" "}
-            found
+            {totalAssignments === 1
+              ? `${totalAssignments} assignment`
+              : `${totalAssignments} assignments`}
+            &nbsp;found
           </CardDescription>
         </CardHeader>
         {assignments.length === 0 ? (
@@ -176,9 +179,6 @@ export function InventoryAssignmentsList({
           </CardContent>
         )}
       </Card>
-
-      {/* Pagination */}
-      <Pagination />
     </div>
   );
 }

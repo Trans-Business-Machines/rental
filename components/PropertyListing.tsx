@@ -11,9 +11,13 @@ import Pagination from "./Pagination";
 import { ItemsNotFound } from "./ItemsNotFound";
 import { SearchNotFound } from "./SearchNotFound";
 import type { Property } from "@/lib/types/types";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface PropertyListingProps {
   properties: Property[];
+  totalPages: string | number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
 const getStatusColor = (status: string) => {
@@ -34,9 +38,18 @@ const getOccupancyRate = (occupied: number, total: number | null) => {
   return Math.round((occupied / total) * 100);
 };
 
-function PropertyListing({ properties }: PropertyListingProps) {
+function PropertyListing({
+  properties,
+  hasNext,
+  hasPrev,
+  totalPages,
+}: PropertyListingProps) {
   // Define state to track the search term
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Get search params and router objects
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const filteredProperties = useFilter<Property>({
     items: properties,
@@ -53,6 +66,19 @@ function PropertyListing({ properties }: PropertyListingProps) {
       />
     );
   }
+
+  // Get the current page from search params
+  const currentPage = Number(searchParams.get("page")) || 1;
+
+  // function handle page change
+  const handlePageChange = (page: number) => {
+    // create a new params object using the exisitng searchParams
+    // this helps to reserve other existing params
+    const params = new URLSearchParams(searchParams);
+
+    params.set("page", page.toString());
+    router.push(`?${params.toString()}`);
+  };
 
   return (
     <>
@@ -150,8 +176,14 @@ function PropertyListing({ properties }: PropertyListingProps) {
         )}
       </div>
 
-      <footer>
-        <Pagination />
+      <footer className="my-2">
+        <Pagination
+          currentPage={currentPage}
+          handlePageChange={handlePageChange}
+          hasNext={hasNext}
+          hasPrev={hasPrev}
+          totalPages={totalPages}
+        />
       </footer>
     </>
   );

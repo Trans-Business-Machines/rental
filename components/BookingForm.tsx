@@ -44,7 +44,6 @@ export function BookingForm({
   preselectedPropertyId,
   preselectedUnitId,
 }: BookingFormProps) {
-  
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
 
   // Get today's date in YYYY-MM-DD format for auto-selection
@@ -61,7 +60,7 @@ export function BookingForm({
   });
 
   // React Query hooks
-  const { data: guests = [], isLoading: guestsLoading } = useGuests();
+  const { data: guestsData, isLoading: guestsLoading } = useGuests();
   const { data: properties = [], isLoading: propertiesLoading } =
     usePropertiesWithUnits();
   const { data: allBookings = [] } = useBookings();
@@ -179,7 +178,7 @@ export function BookingForm({
                   <SelectValue placeholder="Select guest" className="truncate">
                     {formData.guestId &&
                       (() => {
-                        const selectedGuest = guests.find(
+                        const selectedGuest = guestsData?.guests.find(
                           (g) => g.id.toString() === formData.guestId
                         );
                         return selectedGuest
@@ -189,7 +188,7 @@ export function BookingForm({
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {guests.map((guest) => (
+                  {guestsData?.guests.map((guest) => (
                     <SelectItem key={guest.id} value={guest.id.toString()}>
                       <div className="flex flex-col">
                         <span className="font-medium">

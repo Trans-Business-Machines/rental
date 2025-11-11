@@ -18,13 +18,17 @@ import { Input } from "./ui/input";
 import { useFilter } from "@/hooks/useFilter";
 import { useSort } from "@/hooks/useSort";
 import { format } from "date-fns";
-import Pagination from "./Pagination";
 import { ItemsNotFound } from "./ItemsNotFound";
 import { SearchNotFound } from "./SearchNotFound";
+import { useSearchParams, useRouter } from "next/navigation";
+import Pagination from "./Pagination";
 import type { CheckoutReport, sortTypes } from "@/lib/types/types";
 
 interface InventortyCheckoutReportsProps {
   reports: CheckoutReport[];
+  totalPages: string | number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
 const formatCurrency = (amount: number) => {
@@ -36,12 +40,22 @@ const formatCurrency = (amount: number) => {
 
 function InventortyCheckoutReports({
   reports,
+  hasNext,
+  hasPrev,
+  totalPages,
 }: InventortyCheckoutReportsProps) {
   // State for sorting reports by date and time
   const [order, setOrder] = useState<sortTypes>("none");
 
   // State to filter reports by guest name
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Get the search params and the router object
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Get the current page from URL search  params
+  const currentPage = Number(searchParams.get("reportsPage")) || 1;
 
   const filteredReports = useFilter<CheckoutReport>({
     items: reports,
@@ -64,6 +78,16 @@ function InventortyCheckoutReports({
       />
     );
   }
+
+  // function handle page change
+  const handlePageChange = (page: number) => {
+    // create a new params object using the exisitng searchParams
+    // this helps to reserve other existing params
+    const params = new URLSearchParams(searchParams);
+
+    params.set("reportsPage", page.toString());
+    router.push(`?${params.toString()}`);
+  };
 
   return (
     <section className="space-y-1">
@@ -220,7 +244,13 @@ function InventortyCheckoutReports({
 
       {/* Pagination */}
       <footer className="mt-4 mb-2">
-        <Pagination />
+        <Pagination
+          currentPage={currentPage}
+          handlePageChange={handlePageChange}
+          hasNext={hasNext}
+          hasPrev={hasPrev}
+          totalPages={totalPages}
+        />
       </footer>
     </section>
   );

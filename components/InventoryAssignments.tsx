@@ -12,17 +12,27 @@ import {
 import { useFilter } from "@/hooks/useFilter";
 import { Input } from "@/components/ui/input";
 import { Search, CircleX } from "lucide-react";
-import type { Assignment, PropertyWithUnits } from "@/lib/types/types";
 import { ItemsNotFound } from "./ItemsNotFound";
+import { useSearchParams, useRouter } from "next/navigation";
+import Pagination from "./Pagination";
+import type { Assignment, PropertyNames } from "@/lib/types/types";
 
 interface InventoryAssignmentsProps {
   assignments: Assignment[];
-  properties: PropertyWithUnits[];
+  properties: PropertyNames;
+  totalPages: string | number;
+  hasNext: boolean;
+  hasPrev: boolean;
+  totalAssignments: number;
 }
 
 function InventoryAssignments({
   assignments,
   properties,
+  hasNext,
+  hasPrev,
+  totalPages,
+  totalAssignments,
 }: InventoryAssignmentsProps) {
   // Define state to hold the search term
   const [searchTerm, setSearchTerm] = useState("");
@@ -32,6 +42,13 @@ function InventoryAssignments({
     property: "all",
     status: "all",
   });
+
+  // Get search params and router object
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Get the current page from search params
+  const currentPage = Number(searchParams.get("assignmentsPage")) || 1;
 
   const filteredAssignments = useFilter({
     items: assignments,
@@ -52,6 +69,16 @@ function InventoryAssignments({
       />
     );
   }
+
+  // function handle page change
+  const handlePageChange = (page: number) => {
+    // create a new params object using the exisitng searchParams
+    // this helps to reserve other existing params
+    const params = new URLSearchParams(searchParams);
+
+    params.set("assignmentsPage", page.toString());
+    router.push(`?${params.toString()}`);
+  };
 
   return (
     <div>
@@ -112,7 +139,21 @@ function InventoryAssignments({
       </div>
 
       {/* Assignments List */}
-      <InventoryAssignmentsList assignments={filteredAssignments} />
+      <InventoryAssignmentsList
+        assignments={filteredAssignments}
+        totalAssignments={totalAssignments}
+      />
+
+      {/* Pagination */}
+      <footer>
+        <Pagination
+          currentPage={currentPage}
+          handlePageChange={handlePageChange}
+          hasNext={hasNext}
+          hasPrev={hasPrev}
+          totalPages={totalPages}
+        />
+      </footer>
     </div>
   );
 }

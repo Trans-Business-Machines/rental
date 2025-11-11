@@ -16,17 +16,33 @@ import { Package, Search } from "lucide-react";
 import { useTableMode } from "@/hooks/useTableMode";
 import { useFilter } from "@/hooks/useFilter";
 import { ItemsNotFound } from "./ItemsNotFound";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SearchNotFound } from "./SearchNotFound";
 import Pagination from "./Pagination";
-import type { InvetoryItem } from "@/lib/types/types";
+import type { InventoryItem } from "@/lib/types/types";
 
 interface InventoryItemsProps {
-  items: InvetoryItem[];
+  items: InventoryItem[];
+  totalPages: string | number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
-function InventoryItems({ items }: InventoryItemsProps) {
+function InventoryItems({
+  items,
+  hasNext,
+  hasPrev,
+  totalPages,
+}: InventoryItemsProps) {
   // Get table mode context from useTableMode Hook
   const { tableMode, setTableMode } = useTableMode();
+
+  // Get the search params and the router object
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Get the current page form URL search params
+  const currentPage = Number(searchParams.get("itemsPage")) || 1;
 
   // Define state for search term
   const [searchTerm, setSearchTerm] = useState("");
@@ -38,7 +54,7 @@ function InventoryItems({ items }: InventoryItemsProps) {
   });
 
   // Filter the inventory items
-  const filteredItems = useFilter<InvetoryItem>({
+  const filteredItems = useFilter<InventoryItem>({
     items,
     searchTerm,
     searchFields: ["itemName"],
@@ -54,6 +70,16 @@ function InventoryItems({ items }: InventoryItemsProps) {
       />
     );
   }
+
+  // function handle page change
+  const handlePageChange = (page: number) => {
+    // create a new params object using the exisitng searchParams
+    // this helps to reserve other existing params
+    const params = new URLSearchParams(searchParams);
+
+    params.set("itemsPage", page.toString());
+    router.push(`?${params.toString()}`);
+  };
 
   return (
     <div>
@@ -134,7 +160,13 @@ function InventoryItems({ items }: InventoryItemsProps) {
       )}
 
       <div className="mt-6">
-        <Pagination />
+        <Pagination
+          currentPage={currentPage}
+          handlePageChange={handlePageChange}
+          hasNext={hasNext}
+          hasPrev={hasPrev}
+          totalPages={totalPages}
+        />
       </div>
     </div>
   );

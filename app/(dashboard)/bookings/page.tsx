@@ -1,39 +1,53 @@
 import { BookingDialog } from "@/components/BookingDialog";
 import { getBookings, getBookingStats } from "@/lib/actions/bookings";
-import { getAllPropertiesWithUnits as getProperties } from "@/lib/actions/properties";
+import { getPropertyNames } from "@/lib/actions/properties";
 import { Calendar, CheckCircle, Clock, Users } from "lucide-react";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { Bookings } from "@/components/Bookings";
-import Pagination from "@/components/Pagination";
 
-export default async function BookingsPage() {
+interface BookingsPageProps {
+  searchParams: Promise<{ page: string }>;
+}
+
+export default async function BookingsPage({
+  searchParams,
+}: BookingsPageProps) {
+  const { page } = await searchParams;
+
   // Fetch real data from database
-  const bookings = await getBookings();
-  const bookingsStats = await getBookingStats();
-  const properties = await getProperties();
+  const bookingsPromise = getBookings(Number(page) || 1);
+  const propertiesPromise = getPropertyNames();
+  const bookingsStatsPromise = getBookingStats();
+
+  const [bookingsResponse, propertiesResponse, bookingStatsResponse] =
+    await Promise.all([
+      bookingsPromise,
+      propertiesPromise,
+      bookingsStatsPromise,
+    ]);
 
   const stats: StatCardsProps[] = [
     {
       title: "Total Bookings",
-      value: bookingsStats.total,
+      value: bookingStatsResponse.total,
       icon: Calendar,
       color: "blue",
     },
     {
       title: "Confirmed",
-      value: bookingsStats.confirmed,
+      value: bookingStatsResponse.confirmed,
       icon: CheckCircle,
       color: "green",
     },
     {
       title: "Pending",
-      value: bookingsStats.pending,
+      value: bookingStatsResponse.pending,
       icon: Clock,
       color: "orange",
     },
     {
       title: "Completed",
-      value: bookingsStats.completed,
+      value: bookingStatsResponse.completed,
       icon: Users,
       color: "",
     },
@@ -58,12 +72,13 @@ export default async function BookingsPage() {
       <StatCards stats={stats} />
 
       {/* Bookings cards and table*/}
-      <Bookings bookings={bookings} properties={properties} />
-
-      {/* Pagination */}
-      <footer className="flex items-center justify-between pt-4 w-full">
-        <Pagination />
-      </footer>
+      <Bookings
+        bookings={bookingsResponse.bookings}
+        properties={propertiesResponse}
+        totalPages={bookingsResponse.totalPages}
+        hasNext={bookingsResponse.hasNext}
+        hasPrev={bookingsResponse.hasPrev}
+      />
     </section>
   );
 }

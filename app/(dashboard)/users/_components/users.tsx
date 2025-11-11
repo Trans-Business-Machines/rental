@@ -33,9 +33,21 @@ import { SearchNotFound } from "@/components/SearchNotFound";
 
 interface UsersProps {
   users: User[];
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+  currentPage: number;
+  handleUsersPageChange: (page: number) => void;
 }
 
-function Users({ users }: UsersProps) {
+function Users({
+  users,
+  currentPage,
+  hasNext,
+  hasPrev,
+  totalPages,
+  handleUsersPageChange,
+}: UsersProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -65,7 +77,7 @@ function Users({ users }: UsersProps) {
     selectFilters: { role: selectFilters.role, banned: selectFilters.status },
   });
 
-  if (users.length === 1) {
+  if (!users || users.length === 0) {
     return (
       <ItemsNotFound
         title="No users found!"
@@ -189,8 +201,15 @@ function Users({ users }: UsersProps) {
           userRoleMutationPending={setUserRoleMutation.isPending}
         />
       )}
+
       <footer className="my-4">
-        <Pagination />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          hasNext={hasNext}
+          hasPrev={hasPrev}
+          handlePageChange={handleUsersPageChange}
+        />
       </footer>
 
       {/* Ban User Dialog */}

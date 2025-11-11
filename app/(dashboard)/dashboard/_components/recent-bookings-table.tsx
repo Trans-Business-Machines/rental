@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,19 +22,29 @@ import { Input } from "@/components/ui/input";
 import { Edit, Eye, Search, Calendar } from "lucide-react";
 import { BookingEditDialog } from "./booking-edit-dialog";
 import { BookingViewDialog } from "./booking-view-dialog";
-import { useState } from "react";
 import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
 import Pagination from "@/components/Pagination";
+import { useSearchParams, useRouter } from "next/navigation";
 import type { Booking } from "@/lib/types/types";
 
 interface RecentBookingsTableProps {
   bookings: Booking[];
+  totalPages: string | number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
-export function RecentBookingsTable({ bookings }: RecentBookingsTableProps) {
+export function RecentBookingsTable({
+  bookings,
+  totalPages,
+  hasNext,
+  hasPrev,
+}: RecentBookingsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const filteredBookings = useFilter<Booking>({
     items: bookings,
@@ -48,6 +59,18 @@ export function RecentBookingsTable({ bookings }: RecentBookingsTableProps) {
       icon={Calendar}
     />;
   }
+
+  // Get the current page from URL search params
+  const currentPage = searchParams.get("recentBookingsPage") || 1;
+
+  const handlePageChange = (page: number) => {
+    // create a new params object using the exisitng searchParams
+    // this helps to reserve other existing params
+    const params = new URLSearchParams(searchParams);
+
+    params.set("recentBookingsPage", page.toString());
+    router.push(`?${params.toString()}`);
+  };
 
   return (
     <Card>
@@ -142,7 +165,13 @@ export function RecentBookingsTable({ bookings }: RecentBookingsTableProps) {
         </CardContent>
       )}
       <CardFooter>
-        <Pagination />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          handlePageChange={handlePageChange}
+          hasNext={hasNext}
+          hasPrev={hasPrev}
+        />
       </CardFooter>
     </Card>
   );

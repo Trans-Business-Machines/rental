@@ -10,22 +10,37 @@ import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { useTableMode } from "@/hooks/useTableMode";
 import { useFilter } from "@/hooks/useFilter";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
+import { useSearchParams, useRouter } from "next/navigation";
 import GuestListings from "@/components/GuestListings";
 import Pagination from "@/components/Pagination";
 import type { Guest } from "@/lib/types/types";
 
 export default function GuestsPage() {
+  // Define the search term
   const [searchTerm, setSearchTerm] = useState("");
 
   // Get table mode context from useTableMode Hook
   const { tableMode, setTableMode } = useTableMode();
 
+  // Get URL search params and router object
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   // Get guests and guests stats
   const { guestStats } = useGuestStats();
-  const { data: guests = [], isLoading, error } = useGuests();
+
+  const currentPage = Number(searchParams.get("page")) || 1;
+
+  const {
+    data: guestsResponse,
+    isLoading,
+    error,
+  } = useGuests(Number(currentPage));
+
+  console.log(guestsResponse?.guests);
 
   const filteredGuests = useFilter<Guest>({
-    items: guests,
+    items: guestsResponse?.guests ?? [],
     searchTerm,
     searchFields: ["firstName", "lastName"],
   });
@@ -80,7 +95,7 @@ export default function GuestsPage() {
     );
   }
 
-  if (!isLoading && guests.length === 0) {
+  if (!isLoading && guestsResponse?.guests.length === 0) {
     return (
       <div className="space-y-6">
         <header className="flex items-center justify-between">
@@ -101,6 +116,16 @@ export default function GuestsPage() {
       </div>
     );
   }
+
+  // function handle page change
+  const handlePageChange = (page: number) => {
+    // create a new params object using the exisitng searchParams
+    // this helps to reserve other existing params
+    const params = new URLSearchParams(searchParams);
+
+    params.set("page", page.toString());
+    router.push(`?${params.toString()}`);
+  };
 
   return (
     <section className="space-y-6">
@@ -142,7 +167,7 @@ export default function GuestsPage() {
       </div>
 
       {/* Loading State */}
-      {isLoading && (
+      {isLoading && !guestsResponse && (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="text-muted-foreground mt-2">Loading guests...</p>
@@ -156,7 +181,13 @@ export default function GuestsPage() {
 
       {/* Pagination */}
       <footer className="flex items-center justify-between pt-4 w-full">
-        <Pagination />
+        <Pagination
+          currentPage={currentPage}
+          handlePageChange={handlePageChange}
+          hasNext={guestsResponse?.hasNext || false}
+          hasPrev={guestsResponse?.hasPrev || false}
+          totalPages={guestsResponse?.totalPages || 1}
+        />
       </footer>
     </section>
   );

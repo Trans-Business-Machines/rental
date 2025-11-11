@@ -14,15 +14,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useFilter } from "@/hooks/useFilter";
-import type { Invitation } from "@/lib/types/types";
 import { SearchNotFound } from "@/components/SearchNotFound";
+import Pagination from "@/components/Pagination";
+import type { Invitation } from "@/lib/types/types";
 
 interface InvitationsProps {
   invitations: Invitation[];
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+  currentPage: number;
+  handleInvitationPageChange: (page: number) => void;
   handleResendInvite: (email: string) => void;
 }
 
-function Invitations({ invitations, handleResendInvite }: InvitationsProps) {
+function Invitations({
+  invitations,
+  hasNext,
+  hasPrev,
+  totalPages,
+  currentPage,
+  handleResendInvite,
+  handleInvitationPageChange,
+}: InvitationsProps) {
   // get the table mode context from useTableMode Hook
   const { tableMode, setTableMode } = useTableMode();
   const [searchQuery, setSearchQuery] = useState("");
@@ -90,8 +104,6 @@ function Invitations({ invitations, handleResendInvite }: InvitationsProps) {
         </div>
       </div>
 
-      {/* Invitation cards and table goes here */}
-
       {filteredInvitations.length === 0 ? (
         <SearchNotFound
           icon={Inbox}
@@ -109,6 +121,16 @@ function Invitations({ invitations, handleResendInvite }: InvitationsProps) {
           handleResendInvite={handleResendInvite}
         />
       )}
+
+      <footer className="mt-4">
+        <Pagination
+          totalPages={totalPages}
+          currentPage={currentPage}
+          hasNext={hasNext}
+          hasPrev={hasPrev}
+          handlePageChange={handleInvitationPageChange}
+        />
+      </footer>
     </section>
   );
 }

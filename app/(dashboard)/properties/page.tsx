@@ -5,7 +5,7 @@ import { PropertyListing } from "@/components/PropertyListing";
 import Link from "next/link";
 
 export default async function PropertiesPage() {
-  const properties = await getProperties();
+  const propertiesData = await getProperties();
 
   return (
     <section className="space-y-6">
@@ -24,7 +24,12 @@ export default async function PropertiesPage() {
         </Link>
       </div>
 
-      <PropertyListing properties={properties} />
+      <PropertyListing
+        properties={propertiesData.properties}
+        hasNext={propertiesData.hasNext}
+        hasPrev={propertiesData.hasPrev}
+        totalPages={propertiesData.totalPages}
+      />
     </section>
   );
 }

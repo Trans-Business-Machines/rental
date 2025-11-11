@@ -19,14 +19,25 @@ import { Search } from "lucide-react";
 import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "./SearchNotFound";
 import { ItemsNotFound } from "./ItemsNotFound";
-import type { Booking, PropertyWithUnits } from "@/lib/types/types";
+import { useSearchParams, useRouter } from "next/navigation";
+import Pagination from "./Pagination";
+import type { Booking, PropertyNames } from "@/lib/types/types";
 
 interface BookingsProps {
   bookings: Booking[];
-  properties: PropertyWithUnits[];
+  properties: PropertyNames;
+  totalPages: string | number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
-function Bookings({ bookings, properties }: BookingsProps) {
+function Bookings({
+  bookings,
+  properties,
+  hasNext,
+  hasPrev,
+  totalPages,
+}: BookingsProps) {
   // Get table mode context from useTableMode Hook
   const { tableMode, setTableMode } = useTableMode();
 
@@ -38,6 +49,10 @@ function Bookings({ bookings, properties }: BookingsProps) {
 
   // Define state to hold the search term
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Get searchParams and the router objects
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   // State to manage select filters
   const [selectFilters, setSelectFilter] = useState({
@@ -56,6 +71,9 @@ function Bookings({ bookings, properties }: BookingsProps) {
     },
   });
 
+  // Get the current page from URL search params
+  const currentPage = searchParams.get("page") || 1;
+
   if (bookings.length === 0 || !bookings) {
     return (
       <ItemsNotFound
@@ -65,6 +83,16 @@ function Bookings({ bookings, properties }: BookingsProps) {
       />
     );
   }
+
+  // define the handle page change function
+  const handlePageChange = (page: number) => {
+    // create a new params object using the exisitng searchParams
+    // this helps to reserve other existing params
+    const params = new URLSearchParams(searchParams);
+
+    params.set("page", page.toString());
+    router.push(`?${params.toString()}`);
+  };
 
   return (
     <>
@@ -150,6 +178,17 @@ function Bookings({ bookings, properties }: BookingsProps) {
           />
         )}
       </div>
+
+      {/* Pagination */}
+      <footer className="flex items-center justify-between pt-4 w-full">
+        <Pagination
+          currentPage={currentPage}
+          handlePageChange={handlePageChange}
+          totalPages={totalPages}
+          hasNext={hasNext}
+          hasPrev={hasPrev}
+        />
+      </footer>
 
       {isDialogOpen && editBooking && (
         <BookingEditDialog

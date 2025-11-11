@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { InventoryDialog } from "@/components/InventoryDialog";
 import { InventoryEditDialog } from "@/components/InventoryEditDialog";
 import { Badge } from "@/components/ui/badge";
@@ -22,15 +23,18 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Edit, Plus, Search, Package } from "lucide-react";
-import { useState } from "react";
 import Pagination from "@/components/Pagination";
 import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
+import { useSearchParams, useRouter } from "next/navigation";
 import type { InvetoryItem } from "@/lib/types/types";
 
 interface InventoryTableProps {
   items: InvetoryItem[];
+  totalPages: string | number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
 function getInventoryStatus(item: InvetoryItem) {
@@ -70,14 +74,23 @@ function getInventoryBadge(status: string) {
   }
 }
 
-export function InventoryTable({ items }: InventoryTableProps) {
+export function InventoryTable({
+  items,
+  hasNext,
+  hasPrev,
+  totalPages,
+}: InventoryTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const filteredItems = useFilter({
     items,
     searchTerm,
     searchFields: ["itemName"],
   });
+
+  const currentPage = searchParams.get("itemsPage") || 1;
 
   if (!items || items.length === 0) {
     return (
@@ -88,6 +101,15 @@ export function InventoryTable({ items }: InventoryTableProps) {
       />
     );
   }
+
+  const handlePageChange = (page: number) => {
+    // create a new params object using the exisitng searchParams
+    // this helps to reserve other existing params
+    const params = new URLSearchParams(searchParams);
+
+    params.set("itemsPage", page.toString());
+    router.push(`?${params.toString()}`);
+  };
 
   return (
     <Card>
@@ -182,7 +204,13 @@ export function InventoryTable({ items }: InventoryTableProps) {
         </CardContent>
       )}
       <CardFooter>
-        <Pagination />
+        <Pagination
+          currentPage={currentPage}
+          handlePageChange={handlePageChange}
+          totalPages={totalPages}
+          hasPrev={hasPrev}
+          hasNext={hasNext}
+        />
       </CardFooter>
     </Card>
   );

@@ -4,7 +4,7 @@ import {
   getInventoryItems,
   getInventoryStats,
 } from "@/lib/actions/inventory";
-import { getAllPropertiesWithUnits as getProperties } from "@/lib/actions/properties";
+import { getPropertyNames } from "@/lib/actions/properties";
 import { CheckoutDialog } from "@/components/CheckoutDialog";
 import { InventoryDialog } from "@/components/InventoryDialog";
 import { InventoryAssignments } from "@/components/InventoryAssignments";
@@ -14,42 +14,70 @@ import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { InventoryItems } from "@/components/InventoryItems";
 import { InventortyCheckoutReports } from "@/components/InventortyCheckoutReports";
 
-export default async function InventoryPage() {
+interface InventoryPageSearchParams {
+  searchParams: Promise<{
+    itemsPage: string;
+    assignmentsPage: string;
+    reportsPage: string;
+  }>;
+}
+
+export default async function InventoryPage({
+  searchParams,
+}: InventoryPageSearchParams) {
+  const { itemsPage, reportsPage, assignmentsPage } = await searchParams;
+
   // Fetch real data from database
-  const inventoryStats = await getInventoryStats();
-  const inventoryItems = await getInventoryItems();
-  const properties = await getProperties();
-  const checkoutReports = await getCheckoutReports();
-  const assignments = await getInventoryAssignments();
+  const inventoryItemsPromise = getInventoryItems(Number(itemsPage) || 1);
+  const checkoutReportsPromise = getCheckoutReports(Number(reportsPage) || 1);
+  const assignmentsPromise = getInventoryAssignments(
+    Number(assignmentsPage) || 1
+  );
+  const propertiesPromise = getPropertyNames();
+  const inventoryStatsPromise = getInventoryStats();
+
+  const [
+    inventoryItemsResponse,
+    checkoutReportsResponse,
+    assignmentsResponse,
+    propertiesResponse,
+    inventoryStatsResponse,
+  ] = await Promise.all([
+    inventoryItemsPromise,
+    checkoutReportsPromise,
+    assignmentsPromise,
+    propertiesPromise,
+    inventoryStatsPromise,
+  ]);
 
   const stats: StatCardsProps[] = [
     {
       title: "Total Items",
-      value: inventoryStats.total,
+      value: inventoryStatsResponse.total,
       icon: Package,
       color: "blue",
     },
     {
       title: "Available",
-      value: inventoryStats.available,
+      value: inventoryStatsResponse.available,
       icon: CheckCircle,
       color: "green",
     },
     {
       title: "Assigned",
-      value: inventoryStats.assigned,
+      value: inventoryStatsResponse.assigned,
       icon: Package,
       color: "",
     },
     {
       title: "Active",
-      value: inventoryStats.active,
+      value: inventoryStatsResponse.active,
       icon: CheckCircle,
       color: "green",
     },
     {
       title: "Discontinued",
-      value: inventoryStats.discontinued,
+      value: inventoryStatsResponse.discontinued,
       icon: XCircle,
       color: "red",
     },
@@ -90,18 +118,32 @@ export default async function InventoryPage() {
         </TabsList>
 
         <TabsContent value="inventory" className="space-y-4">
-          <InventoryItems items={inventoryItems} />
+          <InventoryItems
+            items={inventoryItemsResponse.items}
+            totalPages={inventoryItemsResponse.totalPages}
+            hasNext={inventoryItemsResponse.hasNext}
+            hasPrev={inventoryItemsResponse.hasPrev}
+          />
         </TabsContent>
 
         <TabsContent value="assignments" className="space-y-4">
           <InventoryAssignments
-            assignments={assignments}
-            properties={properties}
+            assignments={assignmentsResponse.assignments}
+            properties={propertiesResponse}
+            hasNext={assignmentsResponse.hasNext}
+            hasPrev={assignmentsResponse.hasPrev}
+            totalAssignments={assignmentsResponse.totalAssignments}
+            totalPages={assignmentsResponse.totalPages}
           />
         </TabsContent>
 
         <TabsContent value="checkout" className="space-y-4">
-          <InventortyCheckoutReports reports={checkoutReports} />
+          <InventortyCheckoutReports
+            reports={checkoutReportsResponse.reports}
+            hasNext={checkoutReportsResponse.hasNext}
+            hasPrev={checkoutReportsResponse.hasPrev}
+            totalPages={checkoutReportsResponse.totalPages}
+          />
         </TabsContent>
       </Tabs>
     </div>
