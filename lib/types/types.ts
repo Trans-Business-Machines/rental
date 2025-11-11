@@ -1,16 +1,26 @@
-import { getBookings } from "@/lib/actions/bookings";
+import { getBookingById } from "@/lib/actions/bookings";
 import { getInventoryItems, getInventoryAssignments } from "@/lib/actions/inventory"
-import { getCheckoutReports } from "@/lib/actions/checkout";
-import { getProperties, getAllPropertiesWithUnits } from "@/lib/actions/properties";
+import { getCheckoutReportById } from "@/lib/actions/checkout";
+import { getProperties, getPropertyNames } from "@/lib/actions/properties";
+import { getGuests } from "@/lib/actions/guests";
 
 /* ---------------- Type Definitions ---------------- */
-export type Booking = Awaited<ReturnType<typeof getBookings>>[number]
-export type InvetoryItem = Awaited<ReturnType<typeof getInventoryItems>>[number]
-export type CheckoutReport = Awaited<ReturnType<typeof getCheckoutReports>>[number]
-export type Property = Awaited<ReturnType<typeof getProperties>>[number]
-export type PropertyWithUnits = Awaited<ReturnType<typeof getAllPropertiesWithUnits>>[number]
-export type Assignment = Awaited<ReturnType<typeof getInventoryAssignments>>[number]
+export type Booking = NonNullable<Awaited<ReturnType<typeof getBookingById>>>
+export type CheckoutReport = NonNullable<Awaited<ReturnType<typeof getCheckoutReportById>>>
+
+export type PropertyNames = Awaited<ReturnType<typeof getPropertyNames>>
+export type GuestsResponse = Awaited<ReturnType<typeof getGuests>>
 export type sortTypes = "none" | "asc" | "desc"
+
+type PropertyResponse = Awaited<ReturnType<typeof getProperties>>
+export type Property = PropertyResponse["properties"][number]
+
+type AssignmentResponse = Awaited<ReturnType<typeof getInventoryAssignments>>
+export type Assignment = AssignmentResponse["assignments"][number]
+
+type InvetoryItemResponse = Awaited<ReturnType<typeof getInventoryItems>>
+export type InventoryItem = InvetoryItemResponse["items"][number]
+
 
 /* ---------------- Interface Definitions ---------------- */
 export interface BookingsTableAndCardsProps {
@@ -29,6 +39,14 @@ export interface User {
     banExpires?: string;
     createdAt: string;
     emailVerified: boolean;
+}
+
+export interface UsersResponse {
+    totalPages: number,
+    currentPage: number,
+    users: User[],
+    hasNext: boolean,
+    hasPrev: boolean,
 }
 
 export interface UsersTableAndCardsProps {
@@ -104,14 +122,16 @@ export interface CreateGuestData {
 export interface Invitation {
     name: string;
     email: string;
+    role: "user" | "admin",
     acceptedAt: string | null;
 }
 
-export interface Invitation {
-    name: string;
-    email: string;
-    role: "user" | "admin",
-    acceptedAt: string | null;
+export interface InvitationResponse {
+    totalPages: number,
+    currentPage: number,
+    invitations: Invitation[],
+    hasNext: boolean,
+    hasPrev: boolean
 }
 
 export interface InvitationCardAndTableProps {
