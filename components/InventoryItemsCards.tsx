@@ -3,10 +3,10 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { InventoryActions } from "./InventoryActions";
-import type { InvetoryItem } from "@/lib/types/types";
+import type { InventoryItem } from "@/lib/types/types";
 
 interface InventoryItemsProps {
-  items: InvetoryItem[];
+  items: InventoryItem[];
 }
 
 function InventoryItemsCards({ items }: InventoryItemsProps) {

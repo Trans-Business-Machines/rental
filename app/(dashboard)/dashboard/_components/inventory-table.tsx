@@ -28,16 +28,16 @@ import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
 import { useSearchParams, useRouter } from "next/navigation";
-import type { InvetoryItem } from "@/lib/types/types";
+import type { InventoryItem } from "@/lib/types/types";
 
 interface InventoryTableProps {
-  items: InvetoryItem[];
+  items: InventoryItem[];
   totalPages: string | number;
   hasNext: boolean;
   hasPrev: boolean;
 }
 
-function getInventoryStatus(item: InvetoryItem) {
+function getInventoryStatus(item: InventoryItem) {
   const assignedQuantity = item.assignments.length;
   const availableQuantity = item.quantity - assignedQuantity;
 

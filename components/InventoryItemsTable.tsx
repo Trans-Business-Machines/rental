@@ -1,3 +1,5 @@
+import { Badge } from "./ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableHeader,
@@ -6,14 +8,11 @@ import {
   TableBody,
   TableCell,
 } from "./ui/table";
-
-import { Badge } from "./ui/badge";
-import { cn } from "@/lib/utils";
-import type { InvetoryItem } from "@/lib/types/types";
 import { InventoryActions } from "./InventoryActions";
+import type { InventoryItem } from "@/lib/types/types";
 
 interface InventoryItemsTableProps {
-  items: InvetoryItem[];
+  items: InventoryItem[];
 }
 
 function InventoryItemsTable({ items }: InventoryItemsTableProps) {

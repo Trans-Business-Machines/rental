@@ -12,10 +12,10 @@ import {
 import { Edit, Eye, MoreVertical, Move } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import type { InvetoryItem } from "@/lib/types/types";
+import type { InventoryItem } from "@/lib/types/types";
 
 interface InventoryActionsProps {
-  item: InvetoryItem;
+  item: InventoryItem;
 }
 
 export function InventoryActions({ item }: InventoryActionsProps) {

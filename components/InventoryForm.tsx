@@ -17,10 +17,10 @@ import {
 } from "@/lib/actions/inventory";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { InvetoryItem } from "@/lib/types/types";
+import type { InventoryItem } from "@/lib/types/types";
 
 interface InventoryFormProps {
-  item?: InvetoryItem;
+  item?: InventoryItem;
   onSuccess?: () => void;
   onCancel?: () => void;
 }

@@ -15,6 +15,11 @@ export default async function UnitsPage({ params }: UnitsPageProps) {
   // TODO: use this params.id (propertyId) to get property units info from db
   console.log(`property id: ${id}`);
 
+  // TODO: function to handle page change
+  function handlePageChange(page: number) {
+    console.log(page);
+  }
+
   return (
     <section className="px-6 space-y-2">
       {/* Header */}
@@ -44,7 +49,13 @@ export default async function UnitsPage({ params }: UnitsPageProps) {
 
       {/* Pagination */}
       <footer className="flex items-center justify-between pt-4">
-        <Pagination />
+        <Pagination
+          currentPage={1}
+          totalPages={1}
+          hasNext={false}
+          hasPrev={false}
+          handlePageChange={handlePageChange}
+        />
       </footer>
     </section>
   );
