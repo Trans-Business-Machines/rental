@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BookingEditDialog } from "@/app/(dashboard)/dashboard/_components/booking-edit-dialog";
+import { BookingEditDialog } from "@/components/booking-edit-dialog";
 import { useTableMode } from "@/hooks/useTableMode";
 import { Search } from "lucide-react";
 import { useFilter } from "@/hooks/useFilter";

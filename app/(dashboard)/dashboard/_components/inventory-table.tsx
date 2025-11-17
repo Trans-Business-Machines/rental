@@ -184,12 +184,20 @@ export function InventoryTable({
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <InventoryDialog>
-                            <Button variant="ghost" size="icon">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="cursor-pointer"
+                            >
                               <Plus className="h-4 w-4" />
                             </Button>
                           </InventoryDialog>
                           <InventoryEditDialog item={item}>
-                            <Button variant="ghost" size="icon">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="cursor-pointer"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                           </InventoryEditDialog>

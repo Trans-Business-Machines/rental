@@ -196,7 +196,6 @@ export function InventoryForm({
               <Input
                 id="purchase-price"
                 type="number"
-                min="1"
                 value={formData.purchasePrice}
                 onChange={(e) =>
                   handleInputChange(
@@ -213,7 +212,6 @@ export function InventoryForm({
               <Input
                 id="current-value"
                 type="number"
-                min="1"
                 value={formData.currentValue}
                 onChange={(e) =>
                   handleInputChange(

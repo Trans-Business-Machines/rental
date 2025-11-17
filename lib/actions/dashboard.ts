@@ -1,6 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
+import { revalidatePath } from "next/cache"
 
 
 export async function getDashboardStats() {
@@ -130,7 +131,7 @@ export async function getInventoryItems(page: number = 1) {
             },
         },
         orderBy: {
-            itemName: "asc",
+            createdAt: "desc"
         },
         take: LIMIT,
         skip: (page - 1) * LIMIT
@@ -150,4 +151,30 @@ export async function getInventoryItems(page: number = 1) {
         hasPrev,
         hasNext
     }
+}
+
+export async function updateUnitStatus(
+    unitId: number, data: { status: string, rent: number }
+) {
+    try {
+
+        const result = await prisma.unit.update({
+            where: {
+                id: unitId
+            },
+            data
+        })
+
+        if (!result) {
+            throw new Error("Could not update unit with id " + unitId)
+        }
+
+        revalidatePath("/dashboard");
+        return result
+
+    } catch (error) {
+        console.error("Error updating unit rent and status: ", error);
+        return null;
+    }
+
 }

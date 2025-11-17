@@ -43,7 +43,8 @@ export default async function DashboardPage({
     const isOccupied = currentBooking && unit.status !== "maintenance";
 
     return {
-      id: unit.name,
+      id: unit.id,
+      name: unit.name,
       property: unit.property.name,
       type: unit.type,
       status: isOccupied ? "occupied" : unit.status,

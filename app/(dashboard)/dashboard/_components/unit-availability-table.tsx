@@ -27,11 +27,11 @@ import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
 import { useSearchParams, useRouter } from "next/navigation";
-//import { useCallback } from "react";
 import Pagination from "@/components/Pagination";
 
-interface Unit {
-  id: string;
+export interface Unit {
+  id: number;
+  name: string;
   property: string;
   type: string;
   status: string;
@@ -192,7 +192,7 @@ export function UnitAvailabilityTable({
               <TableBody>
                 {filteredUnits.map((unit) => (
                   <TableRow key={unit.id}>
-                    <TableCell className="font-medium">{unit.id}</TableCell>
+                    <TableCell className="font-medium">{unit.name}</TableCell>
                     <TableCell>{unit.property}</TableCell>
                     <TableCell className="capitalize">{unit.type}</TableCell>
                     <TableCell>{getStatusBadge(unit.status)}</TableCell>

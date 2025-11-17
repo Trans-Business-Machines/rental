@@ -18,16 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState } from "react";
-
-interface Unit {
-  id: string;
-  property: string;
-  type: string;
-  status: string;
-  guest: string | null;
-  checkOut: string | null;
-  rent: number;
-}
+import { updateUnitStatus } from "@/lib/actions/dashboard";
+import type { Unit } from "./unit-availability-table";
+import { toast } from "sonner";
 
 interface UnitEditDialogProps {
   unit: Unit;
@@ -39,9 +32,22 @@ export function UnitEditDialog({ unit, children }: UnitEditDialogProps) {
   const [status, setStatus] = useState(unit.status);
   const [rent, setRent] = useState(unit.rent.toString());
 
-  const handleSave = () => {
-    // TODO: Implement save functionality
-    console.log("Saving unit:", { status, rent });
+  const handleSave = async () => {
+    const sanitizedValues = {
+      status,
+      rent: Number(rent),
+    };
+
+    const unitId = unit.id;
+
+    const result = await updateUnitStatus(unitId, sanitizedValues);
+
+    if (result) {
+      toast.success(`${unit.name} updated successfully.`);
+    } else {
+      toast.error(`Update failed, try again!`);
+    }
+
     setOpen(false);
   };
 
@@ -50,13 +56,13 @@ export function UnitEditDialog({ unit, children }: UnitEditDialogProps) {
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Unit - {unit.id}</DialogTitle>
+          <DialogTitle>Edit Unit - {unit.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-sm font-medium">Unit ID</Label>
-              <Input value={unit.id} disabled className="bg-muted" />
+              <Input value={unit.name} disabled className="bg-muted" />
             </div>
             <div>
               <Label className="text-sm font-medium">Type</Label>
@@ -74,7 +80,7 @@ export function UnitEditDialog({ unit, children }: UnitEditDialogProps) {
               <Label className="text-sm font-medium">Status</Label>
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  <SelectValue  />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="available">Available</SelectItem>

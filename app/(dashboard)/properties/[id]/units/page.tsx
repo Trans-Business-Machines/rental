@@ -16,7 +16,8 @@ export default async function UnitsPage({ params }: UnitsPageProps) {
   console.log(`property id: ${id}`);
 
   // TODO: function to handle page change
-  function handlePageChange(page: number) {
+  async function handlePageChange(page: number) {
+    "use server"
     console.log(page);
   }
 

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, SquarePen } from "lucide-react";
 import Link from "next/link";
-import { BookingEditDialog } from "../../dashboard/_components/booking-edit-dialog";
+import { BookingEditDialog } from "@/components/booking-edit-dialog";
 import type { Booking } from "@/lib/types/types";
 
 function Header({ booking }: { booking: Booking }) {
