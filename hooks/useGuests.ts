@@ -1,7 +1,8 @@
 import { createGuest, getGuests, getGuestStats } from "@/lib/actions/guests";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { Guest, CreateGuestData, GuestsResponse } from "@/lib/types/types"
+import { updateGuest } from "@/lib/actions/guests";
+import type { Guest, CreateGuestData, GuestsResponse, GuestUpdateFormData } from "@/lib/types/types"
 
 // Query keys
 export const guestKeys = {
@@ -12,6 +13,8 @@ export const guestKeys = {
 	detail: (id: number) => [...guestKeys.details(), id] as const,
 	stats: () => [...guestKeys.all, "stats"] as const
 };
+
+
 
 // Fetch guests with search
 export const useGuests = (page: number = 1) => {
@@ -69,4 +72,45 @@ export const useGuestStats = () => {
 	})
 
 	return { guestStats: data }
+}
+
+
+// Update a guest details
+export const useUpdateGuest = ({
+	setOpen
+}: { setOpen: (open: boolean) => void }) => {
+	// Get the query client 
+	const queryClient = useQueryClient();
+
+	const guestUpdateMutation = useMutation({
+		mutationFn: async (
+			{ guestId, values, }:
+				{ guestId: number, values: GuestUpdateFormData }) => {
+
+			// call updateGuest mutation		
+			return await updateGuest(guestId, values)
+		},
+		onSuccess: () => {
+			// Invalidate the guests result in the cache
+			queryClient.invalidateQueries({
+				queryKey: guestKeys.list()
+			})
+
+			// show success message on success
+			toast.success("Guest updated successfuly")
+
+			// close the dialog box
+			setOpen(false)
+
+		},
+		onError: () => {
+			// show toast message
+			toast.error("Guest Update failed, try again!")
+		}
+
+
+	})
+
+	return guestUpdateMutation
+
 }

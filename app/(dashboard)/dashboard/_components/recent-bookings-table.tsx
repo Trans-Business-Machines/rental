@@ -27,6 +27,7 @@ import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
 import Pagination from "@/components/Pagination";
 import { useSearchParams, useRouter } from "next/navigation";
+import { format } from "date-fns";
 import type { Booking } from "@/lib/types/types";
 
 interface RecentBookingsTableProps {
@@ -137,10 +138,10 @@ export function RecentBookingsTable({
                     <TableCell>{booking.property.name}</TableCell>
                     <TableCell>{booking.unit.name}</TableCell>
                     <TableCell>
-                      {new Date(booking.checkInDate).toLocaleDateString()}
+                      {format(new Date(booking.checkInDate), "dd/MM/yyyy")}
                     </TableCell>
                     <TableCell>
-                      {new Date(booking.checkOutDate).toLocaleDateString()}
+                      {format(new Date(booking.checkOutDate), "dd/MM/yyyy")}
                     </TableCell>
                     <TableCell>${booking.totalAmount}</TableCell>
                     <TableCell>

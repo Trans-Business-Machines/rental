@@ -127,6 +127,8 @@ export async function updateBooking(
 		numberOfGuests?: number;
 		totalAmount?: number;
 		status?: string;
+		paymentMethod?: string;
+		source?: string;
 		purpose?: string;
 		specialRequests?: string;
 	}

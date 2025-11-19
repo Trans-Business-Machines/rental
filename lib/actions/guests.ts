@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import type { GuestUpdateFormData } from "@/lib/types/types"
 
 export async function getGuests(page: number = 1) {
 	// Define the limit
@@ -41,7 +42,7 @@ export async function createGuest(data: any) {
 	return guest;
 }
 
-export async function updateGuest(id: number, data: any) {
+export async function updateGuest(id: number, data: GuestUpdateFormData) {
 	const guest = await prisma.guest.update({ where: { id }, data });
 	revalidatePath("/guests");
 	return guest;

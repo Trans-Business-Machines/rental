@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +13,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -21,10 +21,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Edit } from "lucide-react";
+import { updateBooking } from "@/lib/actions/bookings";
+import { toast } from "sonner";
 import type { Booking } from "@/lib/types/types";
 
 interface BookingEditDialogProps {
-  booking: Booking
+  booking: Booking;
   children?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -48,8 +50,8 @@ export function BookingEditDialog({
   const setOpen = isControlled ? controlledOnOpenChange : setInternalOpen;
 
   const [formData, setFormData] = useState({
-    checkInDate: booking.checkInDate,
-    checkOutDate: booking.checkOutDate,
+    checkInDate: new Date(booking.checkInDate).toISOString().split("T")[0],
+    checkOutDate: new Date(booking.checkOutDate).toISOString().split("T")[0],
     numberOfGuests: booking.numberOfGuests,
     totalAmount: booking.totalAmount,
     source: booking.source,
@@ -81,6 +83,23 @@ export function BookingEditDialog({
 
     // TODO: Implement update booking action
     console.log("Updating booking:", formData);
+
+    const data = {
+      ...formData,
+      checkInDate: new Date(formData.checkInDate),
+      checkOutDate: new Date(formData.checkOutDate),
+    };
+
+    try {
+      await updateBooking(booking.id, data);
+
+      toast.success("Booking successfully updated.");
+      setOpen(false);
+    } catch (error) {
+      console.error(`An error occured when updating booking: ${error}`);
+      toast.error("Update failed, try again!");
+    }
+
     setOpen(false);
   };
 
@@ -117,9 +136,7 @@ export function BookingEditDialog({
                   id="checkInDate"
                   name="checkInDate"
                   type="date"
-                  value={
-                    new Date(booking.checkInDate).toISOString().split("T")[0]
-                  }
+                  value={formData.checkInDate}
                   onChange={handleChange}
                   required
                 />
@@ -130,9 +147,7 @@ export function BookingEditDialog({
                   id="checkOutDate"
                   name="checkOutDate"
                   type="date"
-                  value={
-                    new Date(booking.checkOutDate).toISOString().split("T")[0]
-                  }
+                  value={formData.checkOutDate}
                   onChange={handleChange}
                   required
                 />

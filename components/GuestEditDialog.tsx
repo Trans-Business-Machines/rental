@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useUpdateGuest } from "@/hooks/useGuests";
 import type { Guest } from "@/lib/types/types";
 
 interface GuestEditDialogProps {
@@ -68,6 +69,11 @@ export function GuestEditDialog({
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? controlledSetOpen : setInternalOpen;
 
+  // Get the mutatation trigger and loadin state
+  const { mutate, isPending } = useUpdateGuest({
+    setOpen,
+  });
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -92,9 +98,8 @@ export function GuestEditDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // TODO: Implement update guest action
-    console.log("Updating guest:", formData);
-    setOpen(false);
+    // Update the guest
+    mutate({ guestId: guest.id, values: formData });
   };
 
   return (
@@ -407,9 +412,10 @@ export function GuestEditDialog({
             </Button>
             <Button
               type="submit"
+              disabled={isPending}
               className="bg-chart-1 hover:bg-chart-1/90 cursor-pointer"
             >
-              Save Changes
+              {isPending ? "Saving..." : " Save Changes"}
             </Button>
           </article>
         </form>

@@ -138,3 +138,25 @@ export interface InvitationCardAndTableProps {
     invitations: Invitation[],
     handleResendInvite: (email: string) => void
 }
+
+export interface GuestUpdateFormData {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    idNumber?: string;
+    passportNumber?: string;
+    notes?: string;
+    nationality?: string;
+    idType?: string;
+    dateOfBirth?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    occupation?: string;
+    employer?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    emergencyContactRelation?: string;
+    verificationStatus: string;
+}
