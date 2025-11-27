@@ -154,7 +154,7 @@ export async function getInventoryItems(page: number = 1) {
 }
 
 export async function updateUnitStatus(
-    unitId: number, data: { status: string, rent: number }
+    unitId: number, data: { rent: number }
 ) {
     try {
 

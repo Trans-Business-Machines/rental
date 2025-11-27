@@ -69,7 +69,7 @@ export function GuestEditDialog({
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? controlledSetOpen : setInternalOpen;
 
-  // Get the mutatation trigger and loadin state
+  // Get the mutatation trigger and loading state
   const { mutate, isPending } = useUpdateGuest({
     setOpen,
   });
@@ -83,12 +83,10 @@ export function GuestEditDialog({
 
   const handleSelectChange = (name: string, value: string) => {
     if (name === "idType") {
-      if (value === "Passport") {
+      if (value === "passport") {
         setFormData((prev) => ({ ...prev, [name]: value, idNumber: "" }));
-      } else if (value === "National ID") {
+      } else if (value === "national_id") {
         setFormData((prev) => ({ ...prev, [name]: value, passportNumber: "" }));
-      } else {
-        setFormData((prev) => ({ ...prev, [name]: value }));
       }
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
@@ -122,52 +120,40 @@ export function GuestEditDialog({
             </h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="firstName">
-                  First Name<span className="text-chart-5">*</span>
-                </Label>
+                <Label htmlFor="firstName">First Name</Label>
                 <Input
                   id="firstName"
                   name="firstName"
                   value={formData.firstName}
-                  onChange={handleChange}
-                  required
+                  disabled
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">
-                  Last Name<span className="text-chart-5">*</span>
-                </Label>
+                <Label htmlFor="lastName">Last Name</Label>
                 <Input
                   id="lastName"
                   name="lastName"
                   value={formData.lastName}
-                  onChange={handleChange}
-                  required
+                  disabled
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">
-                  Email<span className="text-chart-5">*</span>
-                </Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   name="email"
                   type="email"
                   value={formData.email}
-                  onChange={handleChange}
-                  required
+                  disabled
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">
-                  Phone<span className="text-chart-5">*</span>
-                </Label>
+                <Label htmlFor="phone">Phone</Label>
                 <Input
                   id="phone"
                   name="phone"
                   value={formData.phone}
-                  onChange={handleChange}
-                  required
+                  disabled
                 />
               </div>
               <div className="space-y-2">
@@ -177,7 +163,7 @@ export function GuestEditDialog({
                   name="dateOfBirth"
                   type="date"
                   value={formData.dateOfBirth}
-                  onChange={handleChange}
+                  disabled
                 />
               </div>
               <div className="space-y-2">
@@ -186,9 +172,57 @@ export function GuestEditDialog({
                   id="nationality"
                   name="nationality"
                   value={formData.nationality}
-                  onChange={handleChange}
+                  disabled
                 />
               </div>
+            </div>
+          </article>
+
+          {/* Identification */}
+          <article className="space-y-4">
+            <h3 className="font-semibold text-foreground">Identification</h3>
+
+            <div className="space-y-3">
+              <Label>ID Type</Label>
+              <RadioGroup value={formData.idType} disabled>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="national_id" id="national-id" />
+                  <Label htmlFor="national-id" className="font-normal">
+                    National ID
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="passport" id="passport" />
+                  <Label htmlFor="passport" className="font-normal">
+                    Passport
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div>
+              {formData.idType === "national_id" && (
+                <div className="space-y-2 w-full">
+                  <Label htmlFor="idNumber">National ID Number</Label>
+                  <Input
+                    id="idNumber"
+                    type="text"
+                    value={formData.idNumber}
+                    disabled
+                  />
+                </div>
+              )}
+              {formData.idType === "passport" && (
+                <div className="space-y-2">
+                  <Label htmlFor="passportNumber">Passport Number</Label>
+                  <Input
+                    id="passportNumber"
+                    type="text"
+                    value={formData.passportNumber}
+                    disabled
+                  />
+                </div>
+              )}
             </div>
           </article>
 
@@ -228,65 +262,6 @@ export function GuestEditDialog({
                   onChange={handleChange}
                 />
               </div>
-            </div>
-          </article>
-
-          {/* Identification */}
-          <article className="space-y-4">
-            <h3 className="font-semibold text-foreground">Identification</h3>
-
-            <div className="space-y-3">
-              <Label>
-                ID Type<span className="text-chart-5">*</span>
-              </Label>
-              <RadioGroup
-                value={formData.idType}
-                onValueChange={(value) => handleSelectChange("idType", value)}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="National ID" id="national-id" />
-                  <Label
-                    htmlFor="national-id"
-                    className="font-normal cursor-pointer"
-                  >
-                    National ID
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Passport" id="passport" />
-                  <Label
-                    htmlFor="passport"
-                    className="font-normal cursor-pointer"
-                  >
-                    Passport
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            <div>
-              {formData.idType === "National ID" && (
-                <div className="space-y-2 w-full">
-                  <Label htmlFor="idNumber">National ID Number</Label>
-                  <Input
-                    id="idNumber"
-                    name="idNumber"
-                    value={formData.idNumber}
-                    onChange={handleChange}
-                  />
-                </div>
-              )}
-              {formData.idType === "Passport" && (
-                <div className="space-y-2">
-                  <Label htmlFor="passportNumber">Passport Number</Label>
-                  <Input
-                    id="passportNumber"
-                    name="passportNumber"
-                    value={formData.passportNumber}
-                    onChange={handleChange}
-                  />
-                </div>
-              )}
             </div>
           </article>
 

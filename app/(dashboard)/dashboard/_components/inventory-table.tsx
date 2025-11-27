@@ -27,6 +27,7 @@ import Pagination from "@/components/Pagination";
 import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
+//import { StockMetricSlider } from "@/components/StockMetricSlider";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { InventoryItem } from "@/lib/types/types";
 
@@ -39,11 +40,12 @@ interface InventoryTableProps {
 
 function getInventoryStatus(item: InventoryItem) {
   const assignedQuantity = item.assignments.length;
-  const availableQuantity = item.quantity - assignedQuantity;
+  const totalStock = assignedQuantity + item.quantity;
+  const availableQuantity = item.quantity;
 
   if (availableQuantity <= 0) {
     return { status: "critical", label: "Critical" };
-  } else if (availableQuantity < item.quantity) {
+  } else if (availableQuantity <= Math.round(totalStock * 0.25)) {
     return { status: "low", label: "Low Stock" };
   } else {
     return { status: "good", label: "Good" };
@@ -114,7 +116,7 @@ export function InventoryTable({
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col gap-4 md:gap-0 md:flex-row  md:items-center md:justify-between">
+        <div className="flex flex-col gap-4 md:gap-0 md:flex-row  md:items-start md:justify-between">
           <div>
             <CardTitle>Inventory Management</CardTitle>
             <CardDescription>
@@ -148,7 +150,7 @@ export function InventoryTable({
                     Item
                   </TableHead>
                   <TableHead className="font-semibold text-foreground">
-                    Total Stock
+                    Total stock
                   </TableHead>
                   <TableHead className="font-semibold text-foreground">
                     Available
@@ -167,7 +169,6 @@ export function InventoryTable({
               <TableBody>
                 {filteredItems.map((item) => {
                   const assignedQuantity = item.assignments.length;
-                  const availableQuantity = item.quantity - assignedQuantity;
                   const inventoryStatus = getInventoryStatus(item);
 
                   return (
@@ -175,8 +176,8 @@ export function InventoryTable({
                       <TableCell className="font-medium capitalize">
                         {item.itemName}
                       </TableCell>
+                      <TableCell>{item.quantity + assignedQuantity}</TableCell>
                       <TableCell>{item.quantity}</TableCell>
-                      <TableCell>{availableQuantity}</TableCell>
                       <TableCell>{assignedQuantity}</TableCell>
                       <TableCell>
                         {getInventoryBadge(inventoryStatus.status)}

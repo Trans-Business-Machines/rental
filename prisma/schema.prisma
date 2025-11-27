@@ -151,18 +151,23 @@ model Amenity {
   @@map("amenities")
 }
 
+enum IdType {
+  national_id
+  passport
+}
+
 model Guest {
   id                       Int       @id @default(autoincrement())
   firstName                String
   lastName                 String
   email                    String
   phone                    String
+  dateOfBirth              String
+  nationality              String
+  idType                   IdType    @default(national_id)
   idNumber                 String?
   passportNumber           String?
   notes                    String?
-  nationality              String?
-  idType                   String? // National ID, Passport
-  dateOfBirth              String?
   address                  String?
   city                     String?
   country                  String?

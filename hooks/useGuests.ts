@@ -2,7 +2,7 @@ import { createGuest, getGuests, getGuestStats } from "@/lib/actions/guests";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { updateGuest } from "@/lib/actions/guests";
-import type { Guest, CreateGuestData, GuestsResponse, GuestUpdateFormData } from "@/lib/types/types"
+import type { Guest, CreateNewGuest, GuestsResponse, GuestUpdateFormData } from "@/lib/types/types"
 
 // Query keys
 export const guestKeys = {
@@ -28,17 +28,19 @@ export const useGuests = (page: number = 1) => {
 	});
 };
 
-// Create guest
+// Create guest mutation hook
 export const useCreateGuest = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async (guestData: CreateGuestData) => {
+		mutationFn: async (guestData: CreateNewGuest) => {
 			const guest = await createGuest(guestData);
 			return guest;
 		},
 		onSuccess: (newGuest) => {
+			// Show toast message
 			toast.success("Guest created successfully");
+
 			// Invalidate and refetch guests list
 			queryClient.invalidateQueries({ queryKey: guestKeys.list() });
 

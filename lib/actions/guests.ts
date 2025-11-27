@@ -2,11 +2,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import type { GuestUpdateFormData } from "@/lib/types/types"
+import type { GuestUpdateFormData, CreateNewGuest } from "@/lib/types/types"
 
 export async function getGuests(page: number = 1) {
 	// Define the limit
-	const LIMIT = 2;
+	const LIMIT = 6;
 
 	const guests = await prisma.guest.findMany({
 		orderBy: { createdAt: "desc" },
@@ -36,7 +36,7 @@ export async function getGuestById(id: number) {
 	return prisma.guest.findUnique({ where: { id } });
 }
 
-export async function createGuest(data: any) {
+export async function createGuest(data: CreateNewGuest) {
 	const guest = await prisma.guest.create({ data });
 	revalidatePath("/guests");
 	return guest;

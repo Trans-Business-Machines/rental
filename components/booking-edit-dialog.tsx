@@ -259,7 +259,7 @@ export function BookingEditDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="reserved">Reserved</SelectItem>
                   <SelectItem value="checked-in">Checked In</SelectItem>
                   <SelectItem value="checked-out">Checked Out</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>

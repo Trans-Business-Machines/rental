@@ -142,6 +142,7 @@ function InventoryAssignments({
       <InventoryAssignmentsList
         assignments={filteredAssignments}
         totalAssignments={totalAssignments}
+        
       />
 
       {/* Pagination */}

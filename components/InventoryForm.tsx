@@ -23,12 +23,14 @@ interface InventoryFormProps {
   item?: InventoryItem;
   onSuccess?: () => void;
   onCancel?: () => void;
+  isEditing?: boolean;
 }
 
 export function InventoryForm({
   item,
   onSuccess,
   onCancel,
+  isEditing = false,
 }: InventoryFormProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -63,7 +65,7 @@ export function InventoryForm({
         status: item?.status || "active",
       };
 
-      if (item) {
+      if (item && isEditing) {
         // Update existing item
         await updateInventoryItem(item.id, submitData);
         toast.success("Inventory item updated successfully");
@@ -97,7 +99,8 @@ export function InventoryForm({
             id="item-name"
             value={formData.itemName}
             onChange={(e) => handleInputChange("itemName", e.target.value)}
-            placeholder="e.g., Plates, Laptops, Chairs"
+            placeholder="e.g., Plates, Laptops, Sofas"
+            disabled={isEditing}
             required
           />
         </div>
@@ -107,6 +110,7 @@ export function InventoryForm({
           <Select
             value={formData.category}
             onValueChange={(value) => handleInputChange("category", value)}
+            disabled={isEditing}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select category" />
@@ -135,6 +139,7 @@ export function InventoryForm({
             value={formData.description}
             onChange={(e) => handleInputChange("description", e.target.value)}
             placeholder="Detailed description of the item"
+            disabled={isEditing}
           />
         </div>
 
@@ -149,6 +154,7 @@ export function InventoryForm({
               handleInputChange("quantity", parseInt(e.target.value) || 0)
             }
             placeholder="Available quantity"
+            disabled={isEditing}
             required
           />
         </div>
@@ -161,6 +167,7 @@ export function InventoryForm({
               onCheckedChange={(checked) =>
                 handleInputChange("assignableOnBooking", checked)
               }
+              disabled={isEditing}
             />
             <div className="space-y-1">
               <Label
@@ -179,7 +186,7 @@ export function InventoryForm({
         </div>
 
         {/* Show these fields only when editing */}
-        {item && (
+        {item && isEditing && (
           <>
             <div className="space-y-2">
               <Label htmlFor="supplier">Supplier (optional)</Label>
@@ -238,17 +245,17 @@ export function InventoryForm({
         )}
       </div>
 
-      <div className="flex flex-row-reverse gap-2 pt-3">
+      <div className="flex flex-row justify-end gap-2 pt-3">
         <Button
           type="submit"
-          className="flex-1 cursor-pointer"
+          className="cursor-pointer w-1/3"
           disabled={loading}
         >
           {loading ? "Saving..." : item ? "Update Item" : "Add Item"}
         </Button>
         <Button
           type="button"
-          className="flex-1 bg-chart-5 hover:bg-chart-5 cursor-pointer"
+          className="w-1/4 bg-chart-5 hover:bg-chart-5 cursor-pointer"
           onClick={onCancel}
         >
           Cancel

@@ -360,7 +360,7 @@ export async function createInventoryAssignment(data: {
 			});
 
 			return assignment;
-		});
+		},  { timeout: 10000, maxWait: 5000, isolationLevel: "ReadCommitted" });
 
 		revalidatePath("/inventory");
 		revalidatePath("/assignments");
@@ -470,7 +470,7 @@ export async function returnInventoryAssignment(
 			});
 
 			return updatedAssignment;
-		});
+		}, { timeout: 10000, maxWait: 5000, isolationLevel: "ReadCommitted" });
 
 		revalidatePath("/inventory");
 		revalidatePath("/assignments");

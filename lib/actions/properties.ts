@@ -66,7 +66,10 @@ export async function getPropertyById(id: number) {
 export async function getPropertyNames() {
 	try {
 		const propertyNames = await prisma.property.findMany({
-			select: { name: true, id: true }
+			select: { name: true, id: true },
+			where: {
+				deletedAt: null
+			}
 		})
 
 		return propertyNames

@@ -10,13 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useState } from "react";
 import { updateUnitStatus } from "@/lib/actions/dashboard";
 import type { Unit } from "./unit-availability-table";
@@ -29,12 +22,10 @@ interface UnitEditDialogProps {
 
 export function UnitEditDialog({ unit, children }: UnitEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const [status, setStatus] = useState(unit.status);
   const [rent, setRent] = useState(unit.rent.toString());
 
   const handleSave = async () => {
     const sanitizedValues = {
-      status,
       rent: Number(rent),
     };
 
@@ -78,17 +69,7 @@ export function UnitEditDialog({ unit, children }: UnitEditDialogProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-sm font-medium">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="w-full">
-                  <SelectValue  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="occupied">Occupied</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="reserved">Reserved</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input value={unit.status} disabled className="bg-muted" />
             </div>
             <div>
               <Label className="text-sm font-medium">Monthly Rent ($)</Label>

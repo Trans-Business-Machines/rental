@@ -41,6 +41,7 @@ export function InventoryEditDialog({
         </DialogHeader>
         <InventoryForm
           item={item}
+          isEditing={true}
           onSuccess={() => setDialogOpen(false)}
           onCancel={() => setDialogOpen(false)}
         />

@@ -10,6 +10,7 @@ export type CheckoutReport = NonNullable<Awaited<ReturnType<typeof getCheckoutRe
 
 export type PropertyNames = Awaited<ReturnType<typeof getPropertyNames>>
 export type GuestsResponse = Awaited<ReturnType<typeof getGuests>>
+export type Guest = GuestsResponse["guests"][number]
 export type sortTypes = "none" | "asc" | "desc"
 
 type PropertyResponse = Awaited<ReturnType<typeof getProperties>>
@@ -20,6 +21,31 @@ export type Assignment = AssignmentResponse["assignments"][number]
 
 type InvetoryItemResponse = Awaited<ReturnType<typeof getInventoryItems>>
 export type InventoryItem = InvetoryItemResponse["items"][number]
+
+
+export type CreateNewGuest = {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    dateOfBirth: string;
+    idNumber: string;
+    nationality: string;
+    idType: "national_id";
+    passportNumber?: string | undefined;
+    notes?: string | undefined;
+} | {
+    idType: "passport";
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    dateOfBirth: string;
+    nationality: string;
+    passportNumber: string;
+    idNumber?: string | undefined;
+    notes?: string | undefined;
+}
 
 
 /* ---------------- Interface Definitions ---------------- */
@@ -78,45 +104,26 @@ export interface BanUserData {
     expiresIn: number;
 }
 
-export interface Guest {
-    id: number;
+export interface GuestUpdateFormData {
     firstName: string;
     lastName: string;
     email: string;
     phone: string;
-    nationality?: string | null;
-    idType?: string | null;
-    idNumber?: string | null;
-    passportNumber?: string | null;
-    dateOfBirth?: string | null;
-    address?: string | null;
-    city?: string | null;
-    country?: string | null;
-    occupation?: string | null;
-    employer?: string | null;
-    emergencyContactName?: string | null;
-    emergencyContactPhone?: string | null;
-    emergencyContactRelation?: string | null;
-    notes?: string | null;
-    verificationStatus?: string | null;
-    blacklisted?: boolean | null;
-    totalStays?: number | null;
-    totalNights?: number | null;
-    totalSpent?: number | null;
-    lastStay?: Date | null;
-    rating?: number | null;
-    createdAt: Date | null;
-    updatedAt: Date | null;
-}
-
-export interface CreateGuestData {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    idNumber?: string;
-    passportNumber?: string;
+    dateOfBirth: string,
+    nationality: string;
+    idType: "national_id" | "passport",
+    idNumber: string | null;
+    passportNumber: string | null;
     notes?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    occupation?: string;
+    employer?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    emergencyContactRelation?: string;
+    verificationStatus: string;
 }
 
 export interface Invitation {
@@ -139,24 +146,3 @@ export interface InvitationCardAndTableProps {
     handleResendInvite: (email: string) => void
 }
 
-export interface GuestUpdateFormData {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    idNumber?: string;
-    passportNumber?: string;
-    notes?: string;
-    nationality?: string;
-    idType?: string;
-    dateOfBirth?: string;
-    address?: string;
-    city?: string;
-    country?: string;
-    occupation?: string;
-    employer?: string;
-    emergencyContactName?: string;
-    emergencyContactPhone?: string;
-    emergencyContactRelation?: string;
-    verificationStatus: string;
-}

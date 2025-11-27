@@ -15,51 +15,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { returnInventoryAssignment } from "@/lib/actions/inventory";
-import { ArrowLeft, Calendar, MapPin, Package } from "lucide-react";
+import { ArrowRight, MapPin, Package } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 import { SearchNotFound } from "./SearchNotFound";
+import { ReturnNoteDialog } from "./ReturnNoteDialog";
+import { format } from "date-fns";
 import type { Assignment } from "@/lib/types/types";
 
 interface InventoryAssignmentsListProps {
   assignments: Assignment[];
-  onUpdate?: () => void;
   showReturnButton?: boolean;
   totalAssignments: number;
 }
 
 export function InventoryAssignmentsList({
   assignments,
-  onUpdate,
   showReturnButton = true,
   totalAssignments,
 }: InventoryAssignmentsListProps) {
-  const [returningIds, setReturningIds] = useState<Set<number>>(new Set());
-
-  const handleReturn = async (assignmentId: number) => {
-    setReturningIds((prev) => new Set(prev).add(assignmentId));
-
-    try {
-      await returnInventoryAssignment(
-        assignmentId,
-        "Returned via web interface"
-      );
-      toast.success("Item returned successfully");
-      onUpdate?.();
-    } catch (error) {
-      console.error("Error returning assignment:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to return item"
-      );
-    } finally {
-      setReturningIds((prev) => {
-        const next = new Set(prev);
-        next.delete(assignmentId);
-        return next;
-      });
-    }
-  };
+  // state to handle the dialog open state
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="space-y-2">
@@ -142,29 +117,31 @@ export function InventoryAssignmentsList({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        {new Date(assignment.assignedAt).toLocaleDateString()}
+                        {format(new Date(assignment.assignedAt), "dd/MM/yyyy")}
                       </div>
                       {assignment.returnedAt && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                          <ArrowLeft className="h-4 w-4" />
-                          {new Date(assignment.returnedAt).toLocaleDateString()}
+                          <ArrowRight className="size-4" />
+                          {format(
+                            new Date(assignment.returnedAt),
+                            "dd/MM/yyyy"
+                          )}
                         </div>
                       )}
                     </TableCell>
+
                     {showReturnButton && (
                       <TableCell>
                         {assignment.isActive ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleReturn(assignment.id)}
-                            disabled={returningIds.has(assignment.id)}
+                          <ReturnNoteDialog
+                            assignmentId={assignment.id}
+                            open={open}
+                            setOpen={setOpen}
                           >
-                            {returningIds.has(assignment.id)
-                              ? "Returning..."
-                              : "Return"}
-                          </Button>
+                            <Button variant="outline" size="sm">
+                              Return
+                            </Button>
+                          </ReturnNoteDialog>
                         ) : (
                           <span className="text-muted-foreground text-sm">
                             —
