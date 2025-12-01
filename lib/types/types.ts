@@ -15,6 +15,7 @@ export type sortTypes = "none" | "asc" | "desc"
 
 type PropertyResponse = Awaited<ReturnType<typeof getProperties>>
 export type Property = PropertyResponse["properties"][number]
+export type Media = Property["media"][number]
 
 type AssignmentResponse = Awaited<ReturnType<typeof getInventoryAssignments>>
 export type Assignment = AssignmentResponse["assignments"][number]
@@ -47,12 +48,43 @@ export type CreateNewGuest = {
     notes?: string | undefined;
 }
 
-
 /* ---------------- Interface Definitions ---------------- */
 export interface BookingsTableAndCardsProps {
     bookings: Booking[];
     setEditBooking: (booking: Booking) => void;
     setIsDialogOpen: (open: boolean) => void;
+}
+
+export interface Unit {
+    name: string;
+    id: number;
+    createdAt: Date;
+    updatedAt: Date;
+    propertyId: number;
+    type: string;
+    status: string;
+    rent: number;
+    bedrooms: number;
+    bathrooms: number | null
+    maxGuests: number | null;
+    property: {
+        name: string;
+        id: number;
+        image: string;
+        createdAt: Date;
+        updatedAt: Date;
+        type: string;
+        status: string;
+        rent: number;
+        address: string;
+        totalUnits: number | null;
+        occupied: number;
+        description: string;
+        deletedAt: Date | null;
+        maxBedrooms: number | null;
+        maxBathrooms: number | null;
+    },
+    media: Media[]
 }
 
 export interface User {
@@ -146,3 +178,57 @@ export interface InvitationCardAndTableProps {
     handleResendInvite: (email: string) => void
 }
 
+export type UnitDetailsResponse = {
+    id: number;
+    name: string;
+    type: string;
+    bedrooms: number;
+    bathrooms: number;
+    maxGuests: number;
+    rent: number;
+    status: string;
+    propertyId: number;
+    createdAt: Date;
+    updatedAt: Date;
+    property: {
+        id: number;
+        name: string;
+    };
+    media: Array<{
+        id: string;
+        filename: string;
+        filePath: string;
+        originalName: string;
+    }>;
+    assignments: Array<{
+        id: number;
+        isActive: boolean;
+        assignedAt: Date;
+        returnedAt: Date | null;
+        inventoryItem: {
+            id: number;
+            itemName: string;
+            category: string;
+        };
+    }>;
+    bookings: Array<{
+        id: number;
+        checkInDate: Date;
+        checkOutDate: Date;
+        status: string;
+        guest: {
+            firstName: string;
+            lastName: string;
+            email: string;
+            phone: string;
+        };
+    }>;
+};
+
+export type UnitProperty = UnitDetailsResponse["property"];
+
+export type UnitMedia = UnitDetailsResponse["media"][number];
+
+export type UnitAssignment = UnitDetailsResponse["assignments"][number];
+
+export type UnitBooking = UnitDetailsResponse["bookings"][number];
