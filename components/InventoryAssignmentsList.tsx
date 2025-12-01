@@ -115,13 +115,13 @@ export function InventoryAssignmentsList({
                         {assignment.isActive ? "Active" : "Returned"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <TableCell className="flex">
+                      <div className="flex items-center text-sm text-muted-foreground">
                         {format(new Date(assignment.assignedAt), "dd/MM/yyyy")}
                       </div>
                       {assignment.returnedAt && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                          <ArrowRight className="size-4" />
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <ArrowRight className="size-4 mx-1" />
                           {format(
                             new Date(assignment.returnedAt),
                             "dd/MM/yyyy"

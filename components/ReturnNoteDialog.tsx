@@ -56,8 +56,7 @@ function ReturnNoteDialog({
     } catch (error) {
       console.error("Error returning assignment:", error);
 
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to return item";
+      const errorMessage = "Failed to return item, try again.";
 
       toast.error(errorMessage);
     } finally {
@@ -86,7 +85,7 @@ function ReturnNoteDialog({
             </label>
             <Textarea
               id="notes"
-              placeholder="Type your assignment notes here..."
+              placeholder="Type your return notes here..."
               className={cn(errors.notes && "border border-red-400")}
               {...register("notes")}
             />

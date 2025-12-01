@@ -1,167 +1,73 @@
-/* 'use client'
-
-import { BookingDialog } from "@/components/BookingDialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, DollarSign, Users } from "lucide-react";
-import Link from "next/link";
-
-interface Booking {
-	id: number;
-	guest: {
-		id: number;
-		firstName: string;
-		lastName: string;
-		email: string;
-	};
-	checkInDate: Date;
-	checkOutDate: Date;
-	numberOfGuests: number;
-	totalAmount: number;
-	status: string;
-	source: string;
-	purpose: string;
-	createdAt: Date;
-}
-
-interface UnitBookingsProps {
-	unit: {
-		id: number;
-		name: string;
-		propertyId: number;
-	};
-	bookings: Booking[];
-}
-
-export function UnitBookings({ unit, bookings }: UnitBookingsProps) {
-	const getStatusColor = (status: string) => {
-		switch (status) {
-			case "confirmed":
-				return "default";
-			case "checked-in":
-				return "secondary";
-			case "checked-out":
-				return "outline";
-			case "cancelled":
-				return "destructive";
-			case "pending":
-				return "outline";
-			default:
-				return "default";
-		}
-	};
-
-	const formatDate = (date: Date) => {
-		return new Date(date).toLocaleDateString();
-	};
-
-	return (
-		<Card>
-			<CardHeader>
-				<div className="flex items-center justify-between">
-					<CardTitle className="text-lg">Recent Bookings</CardTitle>
-					<div className="flex items-center space-x-2">
-						<Badge variant="outline">{bookings.length} bookings</Badge>
-						<BookingDialog 
-							preselectedPropertyId={unit.propertyId}
-							preselectedUnitId={unit.id}
-						/>
-					</div>
-				</div>
-			</CardHeader>
-			<CardContent>
-				{bookings.length === 0 ? (
-					<div className="text-center py-8">
-						<Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-						<p className="text-sm text-muted-foreground">No bookings yet</p>
-						<p className="text-xs text-muted-foreground mt-1">
-							Create a booking to get started
-						</p>
-					</div>
-				) : (
-					<div className="space-y-3">
-						{bookings.slice(0, 5).map((booking) => (
-							<Card key={booking.id} className="p-4">
-								<div className="flex items-start justify-between">
-									<div className="space-y-1 flex-1">
-										<div className="flex items-center space-x-2">
-											<h3 className="font-medium">
-												{booking.guest.firstName} {booking.guest.lastName}
-											</h3>
-											<Badge variant={getStatusColor(booking.status)}>
-												{booking.status}
-											</Badge>
-										</div>
-										<p className="text-sm text-muted-foreground">
-											{booking.guest.email}
-										</p>
-										<div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
-											<div className="flex items-center">
-												<Calendar className="h-3 w-3 mr-1" />
-												<span>
-													{formatDate(booking.checkInDate)} - {formatDate(booking.checkOutDate)}
-												</span>
-											</div>
-											<div className="flex items-center">
-												<Users className="h-3 w-3 mr-1" />
-												<span>{booking.numberOfGuests} guest{booking.numberOfGuests !== 1 ? 's' : ''}</span>
-											</div>
-											<div className="flex items-center">
-												<DollarSign className="h-3 w-3 mr-1" />
-												<span>${booking.totalAmount}</span>
-											</div>
-											<div>
-												<span className="capitalize">{booking.source}</span>
-											</div>
-										</div>
-									</div>
-								</div>
-							</Card>
-						))}
-						{bookings.length > 5 && (
-							<div className="text-center pt-2">
-								<Link href="/bookings">
-									<Button variant="outline" size="sm">
-										View All Bookings
-									</Button>
-								</Link>
-							</div>
-						)}
-					</div>
-				)}
-			</CardContent>
-		</Card>
-	);
-}  */
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Plus } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { BookingDialog } from "@/components/BookingDialog";
+import type { UnitBooking } from "@/lib/types/types";
 
-export default function UnitBookings() {
-  // Mock data - replace with actual data fetching
-  const bookings = [];
+interface UnitBookings {
+  bookings: UnitBooking[];
+  context: {
+    unitId: number;
+    propertyId: number;
+  };
+}
 
+const getStatusColor = (status: string): string => {
+  switch (status) {
+    case "confirmed":
+      return "bg-chart-4/10 text-chart-4 border-chart-2/20";
+    case "checked-in":
+      return "bg-chart-1/10 text-chart-1 border-chart-3/20";
+    case "completed":
+      return "bg-chart-2/10 text-chart-2 border-chart-4/20";
+    case "cancelled":
+      return "bg-destructive/10 text-destructive border-destructive/20";
+    case "checked-out":
+      return "bg-chart-3/10 text-chart-3 border-destructive/20";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+};
+
+export default function UnitBookings({ bookings, context }: UnitBookings) {
   return (
     <Card className="border-border shadow-sm bg-card rounded-xl">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
           <div>
             <CardTitle className="text-xl font-bold text-foreground">
               Recent Bookings
             </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              {bookings.length} bookings
-            </p>
+            {bookings.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-1">
+                The table below shows the latest {bookings.length}{" "}
+                {bookings.length === 1 ? " booking" : " bookings"}
+              </p>
+            )}
           </div>
-          <Button
-            size="sm"
-            className="gap-2 cursor-pointer bg-chart-1 hover:bg-chart-1/90"
+
+          <BookingDialog
+            preselectedUnitId={context.unitId}
+            preselectedPropertyId={context.propertyId}
           >
-            <Plus className="h-4 w-4" />
-            New Booking
-          </Button>
+            <Button
+              size="sm"
+              className="gap-2 cursor-pointer bg-chart-1 hover:bg-chart-1/90"
+            >
+              <Plus className="h-4 w-4" />
+              New Booking
+            </Button>
+          </BookingDialog>
         </div>
       </CardHeader>
       <CardContent>
@@ -178,7 +84,48 @@ export default function UnitBookings() {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">{/* Bookings list will go here */}</div>
+          <div className="space-y-2">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Guest Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Check In</TableHead>
+                  <TableHead>Check Out</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {bookings.map((booking) => (
+                  <TableRow key={booking.id}>
+                    <TableCell>
+                      {booking.guest.firstName} {booking.guest.lastName}
+                    </TableCell>
+                    <TableCell>{booking.guest.email}</TableCell>
+                    <TableCell>{booking.guest.phone}</TableCell>
+                    <TableCell>
+                      {format(new Date(booking.checkInDate), "dd/MM/yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      {booking.checkOutDate
+                        ? format(new Date(booking.checkOutDate), "dd/MM/yyyy")
+                        : "-"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={`${getStatusColor(booking.status)} capitalize`}
+                      >
+                        {booking.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

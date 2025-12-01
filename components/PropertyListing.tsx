@@ -6,12 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PropertyCardActions } from "@/components/PropertyCardActions";
 import { Input } from "@/components/ui/input";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "./ui/carousel";
 import { Building2, Home, MapPin, Users, Banknote, Search } from "lucide-react";
 import Pagination from "./Pagination";
 import { ItemsNotFound } from "./ItemsNotFound";
 import { SearchNotFound } from "./SearchNotFound";
-import type { Property } from "@/lib/types/types";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
+import type { Property } from "@/lib/types/types";
 
 interface PropertyListingProps {
   properties: Property[];
@@ -105,15 +113,42 @@ function PropertyListing({
           filteredProperties.map((property) => (
             <Card
               key={property.id}
-              className="hover:shadow-lg transition-shadow p-0 pb-4"
+              className="hover:shadow-lg transition-shadow p-0 pb-4 gap-2"
             >
-              <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
-                <img
-                  src={property.image}
-                  alt={property.name}
-                  className="object-cover w-full h-full"
-                />
-              </div>
+              {property.media.length === 0 ? (
+                <div className="relative h-60 w-full overflow-hidden rounded-t-lg">
+                  <img
+                    src={property.image}
+                    alt={property.name}
+                    className="object-cover w-full h-full"
+                  />
+                </div>
+              ) : (
+                <Carousel
+                  opts={{ loop: true }}
+                  className="rounded-t-md w-full relative overflow-hidden group"
+                >
+                  <CarouselContent>
+                    {property.media.map((image) => (
+                      <CarouselItem key={image.id}>
+                        <div className="w-full h-60 relative">
+                          <Image
+                            src={image.filePath}
+                            alt={`${property.name}  image ${image.originalName}`}
+                            fill
+                            className="object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 " />
+                        </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+
+                  <CarouselPrevious className="left-4 opacity-0 group-hover:opacity-100 cursor-pointer bg-background/80" />
+                  <CarouselNext className="right-4 opacity-0 group-hover:opacity-100 cursor-pointer  bg-background/80" />
+                </Carousel>
+              )}
+
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">

@@ -1,7 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import type { Property } from "../lib/data/properties";
 
-export function PropertyAmenities({ property }: { property: Property }) {
+interface Amenity {
+  icon: React.ComponentType<{ className: string }>;
+  label: string;
+}
+
+export function PropertyAmenities({ amenities }: { amenities: Amenity[] }) {
   return (
     <Card className="flex-1 border-0 shadow-sm bg-card">
       <CardHeader>
@@ -14,7 +18,7 @@ export function PropertyAmenities({ property }: { property: Property }) {
       </CardHeader>
       <CardContent>
         <div className="grid gap-3">
-          {property.amenities.map((amenity) => {
+          {amenities.map((amenity) => {
             const Icon = amenity.icon;
             return (
               <div

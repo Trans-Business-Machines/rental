@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import {
   Carousel,
   CarouselContent,
@@ -7,10 +8,10 @@ import {
   CarouselPrevious,
   CarouselNext,
 } from "@/components/ui/carousel";
-import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
+import type { UnitMedia } from "@/lib/types/types";
 
-function UnitGallery({ images }: { images: string[] }) {
+function UnitGallery({ images }: { images: UnitMedia[] }) {
   return (
     <div className="grid gap-3 lg:grid-cols-4 mb-6">
       {/* Main Carousel */}
@@ -24,7 +25,7 @@ function UnitGallery({ images }: { images: string[] }) {
               <CarouselItem key={index}>
                 <div className="aspect-[4/3] relative">
                   <Image
-                    src={image}
+                    src={image.filePath}
                     alt={`Unit Image ${index + 1}`}
                     fill
                     className="object-cover overflow-hidden rounded-l-2xl"
@@ -59,8 +60,8 @@ function UnitGallery({ images }: { images: string[] }) {
             className={`w-full relative group ${index % 2 !== 0 && "overflow-hidden rounded-r-xl"} `}
           >
             <Image
-              src={image}
-              alt={`Property image ${index + 1}`}
+              src={image.filePath}
+              alt={`Unit image ${index + 1}`}
               fill
               className="object-cover transition-transform duration-200 group-hover:scale-105"
             />

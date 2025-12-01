@@ -1,38 +1,38 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bath, Users, Bed, Building, House } from "lucide-react";
-import type { Unit } from "@/lib/data/properties";
+import type { UnitDetailsResponse } from "@/lib/types/types";
 
 interface UnitInfoProps {
-  unit: Unit;
+  unit: UnitDetailsResponse;
 }
 
-export default function UnitInfo({ unit }: UnitInfoProps) {
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "available":
-        return (
-          <Badge className="bg-chart-2 text-white hover:bg-chart-2/90 border-0 text-base px-4 py-1">
-            Available
-          </Badge>
-        );
-      case "occupied":
-        return (
-          <Badge className="bg-destructive text-white hover:bg-destructive/90 border-0 text-base px-4 py-1">
-            Occupied
-          </Badge>
-        );
-      case "maintenance":
-        return (
-          <Badge className="bg-chart-1 text-white hover:bg-chart-1/90 border-0 text-base px-4 py-1">
-            Maintenance
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case "available":
+      return (
+        <Badge className="bg-chart-2 text-white hover:bg-chart-2/90 border-0 text-base px-4 py-1">
+          Available
+        </Badge>
+      );
+    case "occupied":
+      return (
+        <Badge className="bg-destructive text-white hover:bg-destructive/90 border-0 text-base px-4 py-1">
+          Occupied
+        </Badge>
+      );
+    case "maintenance":
+      return (
+        <Badge className="bg-chart-1 text-white hover:bg-chart-1/90 border-0 text-base px-4 py-1">
+          Maintenance
+        </Badge>
+      );
+    default:
+      return null;
+  }
+};
 
+export default function UnitInfo({ unit }: UnitInfoProps) {
   return (
     <Card className="border-border py-4 shadow-sm bg-card rounded-xl">
       <CardContent className="p-6">
@@ -44,13 +44,13 @@ export default function UnitInfo({ unit }: UnitInfoProps) {
             <div className="flex items-center gap-2 text-base text-muted-foreground">
               <Building className="size-4 " />
 
-              <span>The Nordic loft</span>
+              <span>{unit.property.name}</span>
             </div>
 
             <div className="flex items-center gap-2 text-base text-muted-foreground">
               <House className="size-4 " />
 
-              <span>{unit.type}</span>
+              <span className="capitalize">{unit.type}</span>
             </div>
           </div>
           {getStatusBadge(unit.status)}

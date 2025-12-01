@@ -2,10 +2,12 @@ import { Card, CardHeader, CardContent, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Home, Users, Bed, Bath, Eye } from "lucide-react";
-import type { Property } from "@/lib/data/properties";
+import type { Property } from "@/lib/types/types";
 import Link from "next/link";
 
 function PropertyDetails({ property }: { property: Property }) {
+  const maxGuests = property?.maxBedrooms ? property.maxBedrooms * 2 : 1;
+
   return (
     <Card className="flex-2 gap-4 border-0 bg-card shadow-sm">
       <CardHeader>
@@ -40,9 +42,9 @@ function PropertyDetails({ property }: { property: Property }) {
               <Home className="h-5 w-5 text-chart-1" />
             </div>
             <div>
-              <p className="font-semibold text-foreground">{property.type}</p>
+              <p className="font-semibold text-foreground capitalize">{property.type}</p>
               <p className="text-sm text-muted-foreground">
-                {property.units} units
+                {property.totalUnits || 0} units
               </p>
             </div>
           </div>
@@ -53,7 +55,7 @@ function PropertyDetails({ property }: { property: Property }) {
             </div>
             <div>
               <p className="font-semibold text-foreground">
-                {property.maxGuests > 1 ? `1 - ${property.maxGuests}` : "1"}
+                {maxGuests > 1 ? `1 - ${maxGuests}` : "1"}
               </p>
               <p className="text-sm text-muted-foreground">Guests</p>
             </div>
@@ -65,13 +67,13 @@ function PropertyDetails({ property }: { property: Property }) {
           <div className="flex bg-muted/80 border border-gray-400/80 p-3 rounded-xl items-center gap-3">
             <Bath className="size-4 text-muted-foreground" />
             <span className="text-foreground text-sm">
-              {property.bathrooms} Bathroom
+              {property.maxBathrooms} Bathroom
             </span>
           </div>
           <div className="flex bg-muted/80 border border-gray-400/80 p-3 rounded-xl items-center gap-3">
             <Bed className="size-4 text-muted-foreground" />
             <span className="text-foreground text-sm">
-              {property.bedrooms} Bedrooms
+              {property.maxBedrooms} Bedrooms
             </span>
           </div>
         </div>

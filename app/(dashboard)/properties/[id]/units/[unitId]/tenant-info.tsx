@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+/* import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Phone, Mail, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import type { Unit } from "@/lib/data/properties";
@@ -58,3 +58,4 @@ export default function TenantInfo({ tenant }: TenantInfoProps) {
     </Card>
   );
 }
+ */

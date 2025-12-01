@@ -24,10 +24,11 @@ import { useFilter } from "@/hooks/useFilter";
 import { useSort } from "@/hooks/useSort";
 import { ItemsNotFound } from "./ItemsNotFound";
 import { SearchNotFound } from "./SearchNotFound";
+import { useQueryClient } from "@tanstack/react-query";
+import { prefetchUnitDetails } from "@/hooks/useUnitDetails";
 import Link from "next/link";
 import Image from "next/image";
-import type { Unit } from "@/lib/data/properties";
-import type { sortTypes } from "@/lib/types/types";
+import type { sortTypes, Unit } from "@/lib/types/types";
 
 interface UnitListingProps {
   units: Unit[];
@@ -65,7 +66,10 @@ export function UnitListing({ units }: UnitListingProps) {
     type: "all",
     status: "all",
   });
+
   const [sortOrder, setSortOrder] = useState<sortTypes>("none");
+
+  const queryClient = useQueryClient();
 
   const filteredUnits = useFilter({
     items: units,
@@ -80,6 +84,10 @@ export function UnitListing({ units }: UnitListingProps) {
     sortKey: "rent",
   });
 
+  const handleUnitHover = (unitId: number, propertyId: number) => {
+    prefetchUnitDetails(queryClient, unitId.toString(), propertyId.toString());
+  };
+
   if (units.length === 0 || !units) {
     return (
       <ItemsNotFound
@@ -93,15 +101,15 @@ export function UnitListing({ units }: UnitListingProps) {
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="font-semibold text-lg md:text-2xl text-muted-foreground">
-          View and manage Luxcity apartment units
+        <h2 className="font-semibold text-base md:text-2xl text-muted-foreground">
+          View and manage {units[0].property.name} units
         </h2>
       </div>
 
       {/* Units Search & Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         {/* Search Bar  */}
-        <div className="relative flex-1 w-2/3 lg:max-w-md">
+        <div className="relative flex-1 w-full lg:max-w-md">
           <Search className="absolute left-3 top-2  size-4  text-muted-foreground" />
           <Input
             placeholder="seach by name or type ..."
@@ -140,8 +148,8 @@ export function UnitListing({ units }: UnitListingProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All types</SelectItem>
-            <SelectItem value="Villa">Villa</SelectItem>
-            <SelectItem value="condo">Condo</SelectItem>
+            <SelectItem value="apartment">Apartment</SelectItem>
+            <SelectItem value="studio">Studio</SelectItem>
           </SelectContent>
         </Select>
 
@@ -156,7 +164,7 @@ export function UnitListing({ units }: UnitListingProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All types</SelectItem>
+            <SelectItem value="all">All status</SelectItem>
             <SelectItem value="available">Available</SelectItem>
             <SelectItem value="occupied">Occupied</SelectItem>
             <SelectItem value="reserved">Reserved</SelectItem>
@@ -165,7 +173,7 @@ export function UnitListing({ units }: UnitListingProps) {
       </div>
 
       {/* Unit listing grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid pt-2 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {sortedUnits.length === 0 ? (
           <SearchNotFound
             icon={House}
@@ -177,18 +185,21 @@ export function UnitListing({ units }: UnitListingProps) {
             <Card
               key={unit.id}
               className="border-0 shadow-sm hover:shadow-md group pt-0 pb-4 bg-card"
+              onMouseEnter={() =>
+                handleUnitHover(unit.id, Number(unit.propertyId))
+              }
             >
               <Carousel
                 opts={{ loop: true }}
                 className="rounded-t-md w-full relative overflow-hidden group"
               >
                 <CarouselContent>
-                  {unit.images.map((image, index) => (
+                  {unit.media.map((image, index) => (
                     <CarouselItem key={index}>
                       <div className="w-full h-56 relative">
                         <Image
-                          src={image}
-                          alt={`Unit ${unit.id} image ${index + 1}`}
+                          src={image.filePath}
+                          alt={`Unit ${unit.name}  image ${index} + 1`}
                           fill
                           className="object-cover"
                         />
@@ -207,21 +218,21 @@ export function UnitListing({ units }: UnitListingProps) {
               <CardContent>
                 <div className="flex items-start justify-between">
                   <div>
-                    <h4 className="font-semibold text-lg lg:text-xl text-foreground">
+                    <h4 className="font-semibold text-lg text-foreground">
                       {unit.name}
                     </h4>
                     <p className="text-sm text-muted-foreground">{unit.type}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-lg lg:text-xl text-foreground">
+                    <p className="font-bold text-lg  text-foreground">
                       ${unit.rent}
                     </p>
-                    <p className="text-xs text-muted-foreground">/ month</p>
+                    <p className="text-xs text-muted-foreground">per month</p>
                   </div>
                 </div>
 
-                <div className="flex items-center my-3 gap-4">
-                  <div className="shrink-0 flex items-center gap-2 px-3 border border-accent-foreground/30 py-2 rounded-lg bg-muted/50">
+                <div className="flex flex-wrap items-center my-3 gap-2">
+                  <div className="shrink-0 flex items-center gap-2 px-3  border border-accent-foreground/30 py-2 rounded-lg bg-muted/50">
                     <Bath className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">
                       {unit.bathrooms}
@@ -262,9 +273,12 @@ export function UnitListing({ units }: UnitListingProps) {
                     size="sm"
                     asChild
                   >
-                    <Link href={`/properties/${unit.propertyId}/units/1/edit`}>
+                    <Link
+                      href={`/properties/${unit.propertyId}/units/${unit.id}/edit`}
+                      className="flex items-center gap-2"
+                    >
                       <Edit className="size-4" />
-                      Edit
+                      <span> Edit</span>
                     </Link>
                   </Button>
                 </div>

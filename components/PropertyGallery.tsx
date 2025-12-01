@@ -9,9 +9,10 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import type { Media } from "@/lib/types/types";
 
 interface PropertyGalleryProps {
-  propertyImages: string[];
+  propertyImages: Media[];
   propertyImagesLength: number;
 }
 
@@ -19,6 +20,17 @@ export function PropertyGallery({
   propertyImages,
   propertyImagesLength,
 }: PropertyGalleryProps) {
+  
+  if (propertyImagesLength === 0) {
+    return (
+      <section className="p-6">
+        <h2 className="text-lg text-muted-foreground">
+          This property does not have media images.
+        </h2>
+      </section>
+    );
+  }
+
   return (
     <div className="grid gap-3 lg:grid-cols-4 mb-6">
       {/* Main Carousel */}
@@ -32,7 +44,7 @@ export function PropertyGallery({
               <CarouselItem key={index}>
                 <div className="aspect-[4/3] relative">
                   <Image
-                    src={image}
+                    src={image.filePath}
                     alt={`Property Image ${index + 1}`}
                     fill
                     className="object-cover overflow-hidden rounded-l-2xl"
@@ -67,7 +79,7 @@ export function PropertyGallery({
             className={`w-full relative group ${index % 2 !== 0 && "overflow-hidden rounded-r-xl"} `}
           >
             <Image
-              src={image}
+              src={image.filePath}
               alt={`Property image ${index + 1}`}
               fill
               className="object-cover transition-transform duration-200 group-hover:scale-105"

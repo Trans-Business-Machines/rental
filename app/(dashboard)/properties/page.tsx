@@ -4,8 +4,18 @@ import { Plus } from "lucide-react";
 import { PropertyListing } from "@/components/PropertyListing";
 import Link from "next/link";
 
-export default async function PropertiesPage() {
-  const propertiesData = await getProperties();
+interface PropertiesPageParams {
+  searchParams: Promise<{ page: string }>;
+}
+
+export default async function PropertiesPage({
+  searchParams,
+}: PropertiesPageParams) {
+  const { page } = await searchParams;
+
+  const currentPage = Number(page) || 1;
+
+  const propertiesData = await getProperties(currentPage);
 
   return (
     <section className="space-y-6">
