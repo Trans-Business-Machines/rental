@@ -4,10 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { auth } from "../auth";
+import { unstable_cache } from "next/cache";
 
 export async function getProperties(page: number = 1) {
 	try {
 		const LIMIT = 6;
+
 		const properties = await prisma.property.findMany({
 			where: {
 				deletedAt: null,
@@ -15,6 +17,7 @@ export async function getProperties(page: number = 1) {
 			include: {
 				tenants: true,
 				amenities: true,
+				media: true
 			},
 			orderBy: {
 				createdAt: "desc",
@@ -54,6 +57,8 @@ export async function getPropertyById(id: number) {
 			include: {
 				tenants: true,
 				amenities: true,
+				media: true
+
 			},
 		});
 		return property;
@@ -62,6 +67,25 @@ export async function getPropertyById(id: number) {
 		throw new Error("Failed to fetch property");
 	}
 }
+
+export const getCachedProperty = unstable_cache(
+	async (propertyId: number) => {
+		return await prisma.property.findUnique({
+			where: { id: propertyId, deletedAt: null, },
+			include: {
+				tenants: true,
+				amenities: true,
+				media: true
+
+			},
+		});
+	},
+	["property"],
+	{
+		revalidate: 3600,
+		tags: ["property"],
+	}
+)
 
 export async function getPropertyNames() {
 	try {
@@ -77,66 +101,6 @@ export async function getPropertyNames() {
 	} catch (error) {
 		console.error("An Error occured while getting property names: ", error)
 		return [];
-	}
-}
-
-export async function createProperty(data: {
-	name: string;
-	address: string;
-	type: string;
-	totalUnits?: number | null;
-	rent: number;
-	description: string;
-	image: string;
-}) {
-	try {
-		const property = await prisma.property.create({
-			data: {
-				...data,
-				occupied: 0,
-				status: "active",
-			},
-			include: {
-				tenants: true,
-				amenities: true,
-				units: true,
-			},
-		});
-		revalidatePath("/properties");
-		return property;
-	} catch (error) {
-		console.error("Error creating property:", error);
-		throw new Error("Failed to create property");
-	}
-}
-
-export async function updateProperty(
-	id: number,
-	data: {
-		name: string;
-		address: string;
-		type: string;
-		totalUnits?: number | null;
-		rent: number;
-		description: string;
-		image: string;
-	}
-) {
-	try {
-		const property = await prisma.property.update({
-			where: { id },
-			data,
-			include: {
-				tenants: true,
-				amenities: true,
-				units: true,
-			},
-		});
-		revalidatePath("/properties");
-		return property;
-	} catch (error) {
-		console.error("Error updating property:", error);
-		throw new Error("Failed to update property");
 	}
 }
 

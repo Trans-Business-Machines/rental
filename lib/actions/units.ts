@@ -2,6 +2,10 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { notFound } from "next/navigation";
+import { cache } from "react"
+import { unstable_cache } from "next/cache";
+import type { UnitDetailsResponse } from "@/lib/types/types"
 
 export async function getUnits() {
 	return prisma.unit.findMany({
@@ -11,28 +15,6 @@ export async function getUnits() {
 	});
 }
 
-export async function getUnitsByProperty(propertyId: number) {
-	return prisma.unit.findMany({
-		where: { propertyId },
-		include: { property: true },
-		orderBy: { createdAt: "desc" },
-	});
-}
-
-export async function getUnitById(id: number) {
-	return prisma.unit.findUnique({
-		where: { id },
-		include: { property: true },
-	});
-}
-
-export async function createUnit(data: any) {
-	const unit = await prisma.unit.create({ data });
-	revalidatePath("/properties");
-	revalidatePath("/dashboard");
-	return unit;
-}
-
 export async function updateUnit(id: number, data: any) {
 	const unit = await prisma.unit.update({ where: { id }, data });
 	revalidatePath("/properties");
@@ -40,93 +22,110 @@ export async function updateUnit(id: number, data: any) {
 	return unit;
 }
 
-export async function deleteUnit(id: number) {
-	await prisma.unit.delete({ where: { id } });
-	revalidatePath("/properties");
-	revalidatePath("/dashboard");
-}
-
-export async function getUnitAvailability() {
+export const getUnitDetails = cache(async (unitId: string, propertyId: string) => {
 	try {
-		// Get all units with their properties and current bookings
-		const units = await prisma.unit.findMany({
+		// validate the inputs
+		const parsedUnitId = Number(unitId);
+		const parsedPropertyId = Number(propertyId);
+
+		if (isNaN(parsedPropertyId) || isNaN(parsedUnitId)) {
+			notFound()
+		}
+
+		// Fetch the unit details and the necessary data
+		const unit = await prisma.unit.findUnique({
+			where: {
+				id: parsedUnitId,
+				propertyId: parsedPropertyId
+			},
 			include: {
 				property: {
-					select: { id: true, name: true, deletedAt: true },
+					select: {
+						id: true,
+						name: true
+					}
 				},
-				bookings: {
+				media: {
+					select: {
+						id: true,
+						filename: true,
+						filePath: true,
+						originalName: true
+					}
+				},
+				assignments: {
 					where: {
-						AND: [
-							{
-								status: {
-									in: ["confirmed", "checked_in"],
-								},
-							},
-							{
-								checkOutDate: {
-									gte: new Date(), // Not yet checked out
-								},
-							},
-						],
+						isActive: true,
+					},
+					take: 5,
+					orderBy: {
+						assignedAt: "desc"
 					},
 					select: {
 						id: true,
+						isActive: true,
+						assignedAt: true,
+						returnedAt: true,
+						inventoryItem: {
+							select: {
+								id: true,
+								itemName: true,
+								category: true
+							}
+						}
+					}
+
+				},
+				bookings: {
+					take: 5,
+					orderBy: {
+						checkInDate: "desc"
+					},
+					select: {
+						id: true,
+						checkInDate: true,
 						checkOutDate: true,
 						status: true,
 						guest: {
 							select: {
 								firstName: true,
 								lastName: true,
-							},
-						},
-					},
-					orderBy: {
-						checkOutDate: "asc", // Get the earliest checkout date first
-					},
-				},
-			},
-			where: {
-				property: {
-					deletedAt: null, // Only active properties
-				},
-			},
-			orderBy: [{ property: { name: "asc" } }, { name: "asc" }],
-		});
-
-		// Categorize units by availability
-		const available: typeof units = [];
-		const occupied: typeof units = [];
-		const maintenance: typeof units = [];
-
-		units.forEach((unit) => {
-			if (unit.status === "maintenance") {
-				maintenance.push(unit);
-			} else if (unit.bookings.length > 0) {
-				occupied.push(unit);
-			} else {
-				available.push(unit);
+								email: true,
+								phone: true,
+							}
+						}
+					}
+				}
 			}
-		});
+		})
 
-		return {
-			total: units.length,
-			available: available.length,
-			occupied: occupied.length,
-			maintenance: maintenance.length,
-			availableUnits: available,
-			occupiedUnits: occupied,
-			maintenanceUnits: maintenance,
-		};
+		if (!unit) {
+			notFound()
+		}
+
+		return unit as UnitDetailsResponse
 	} catch (error) {
-		console.error("Error fetching unit availability:", error);
-		return {
-			total: 0,
-			available: 0,
-			occupied: 0,
-			maintenance: 0,
-			availableUnits: [],
-			occupiedUnits: [],
-			maintenanceUnits: [],
-		};
+		console.error("An error occurred fetching unit details: ", error);
+		throw error
 	}
-}
+
+})
+
+export const getCachedUnitById = unstable_cache(
+	async (unitId: number, propertyId: number) => {
+		return await prisma.unit.findUnique({
+			where: {
+				id: unitId,
+				propertyId
+			},
+			include: {
+				property: true,
+				media: true,
+			}
+		})
+
+	}, ["unit"],
+	{
+		revalidate: 3600,
+		tags: ["unit"],
+	})

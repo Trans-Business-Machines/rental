@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+/* import { prisma } from "@/lib/prisma";
 import { StorageService } from "@/lib/storage/storage";
 
 const storage = new StorageService();
@@ -48,3 +48,4 @@ export async function getMediaByEntity(entityType: string, entityId: number) {
 		orderBy: { createdAt: "desc" },
 	});
 }
+ */
