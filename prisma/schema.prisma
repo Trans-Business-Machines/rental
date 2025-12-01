@@ -76,25 +76,28 @@ model Verification {
 }
 
 model Property {
-  id          Int       @id @default(autoincrement())
-  name        String
-  address     String
-  type        String
-  totalUnits  Int?
-  occupied    Int       @default(0)
-  rent        Int
-  status      String    @default("active")
-  description String
-  image       String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  id           Int       @id @default(autoincrement())
+  name         String
+  address      String
+  type         String
+  totalUnits   Int?
+  occupied     Int       @default(0)
+  rent         Int
+  status       String    @default("active")
+  description  String
+  image        String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+  maxBedrooms  Int?
+  maxBathrooms Int?
 
   tenants     Tenant[]
   amenities   Amenity[]
   bookings    Booking[]
   units       Unit[]
   assignments InventoryAssignment[]
+  media       Media[]
 
   @@map("properties")
 }
@@ -110,11 +113,14 @@ model Unit {
   bedrooms   Int      @default(1)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  bathrooms  Int?
+  maxGuests  Int?
 
   bookings      Booking[]
   fromMovements InventoryMovement[]   @relation("FromUnit")
   toMovements   InventoryMovement[]   @relation("ToUnit")
   assignments   InventoryAssignment[]
+  media         Media[]
 
   @@map("units")
 }
@@ -327,15 +333,21 @@ model Invitation {
 }
 
 model Media {
-  id         String   @id @default(uuid())
-  url        String
-  key        String // S3 object key
-  type       String // image/jpeg, image/png, etc.
-  size       Int
-  entityType String // e.g., "Property", "Unit"
-  entityId   Int // ID of the associated entity
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String    @id @default(cuid())
+  filename     String    @unique
+  originalName String
+  fileSize     Int
+  mimeType     String
+  propertyId   Int?
+  property     Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unitId       Int?
+  unit         Unit?     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  filePath     String
+  uploadedAt   DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now())
 
+  @@index([propertyId])
+  @@index([unitId])
   @@map("media")
 }
