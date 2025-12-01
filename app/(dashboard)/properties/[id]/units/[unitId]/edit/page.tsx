@@ -6,7 +6,7 @@ interface EditUnitPageParams {
   params: Promise<{ id: string; unitId: string }>;
 }
 
-export async function EditUnitPage({ params }: EditUnitPageParams) {
+async function EditUnitPage({ params }: EditUnitPageParams) {
   const { id: propertyId, unitId } = await params;
 
   const parsedPropertyId = Number(propertyId);
