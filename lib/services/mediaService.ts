@@ -1,6 +1,9 @@
 import { promises as fs } from "fs"
 import path from "path"
 import crypto from "crypto"
+import { createClient } from "@supabase/supabase-js"
+
+
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "media");
 const ALLOWED_MIMETYPES = [
@@ -11,6 +14,13 @@ const ALLOWED_MIMETYPES = [
     "images/avif",
 ];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+// Initialize supabase
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
 
 export class MediaService {
     static async ensureUploadDirExists() {
@@ -23,7 +33,8 @@ export class MediaService {
         }
     }
 
-    static generateUniqueFilename(originalFilename: string, entityId: number, entityType: "property" | "unit"): string {
+    static generateUniqueFilename(
+        originalFilename: string, entityId: number, entityType: "property" | "unit"): string {
 
         const ext = path.extname(originalFilename).toLowerCase()
         const timestamp = Date.now()
@@ -34,16 +45,41 @@ export class MediaService {
     }
 
 
-    static async saveFile(buffer: Buffer, filename: string): Promise<string> {
-
+    static async saveFile(file: File, filename: string): Promise<string> {
         try {
-            await this.ensureUploadDirExists()
+            const useSupabase = process.env.USE_SUPABASE_STORAGE || process.env.NODE_ENV === "production"
+            const buffer = Buffer.from(await file.arrayBuffer());
 
-            const filePath = path.join(UPLOAD_DIR, filename)
+            if (useSupabase) {
+                // if the environment is production use supabase for image storage
+                const { error } = await supabase.storage.from("media").upload(filename, buffer, {
+                    contentType: file.type,
+                    cacheControl: "3600",
+                    upsert: false
+                })
 
-            await fs.writeFile(filePath, buffer)
+                if (error) {
+                    console.error("Supabase upload error: ", error)
+                    throw new Error(`Failed to upload to supabase: ${error.message}`)
 
-            return `/uploads/media/${filename}`
+                }
+
+                // Get the public URL
+                const { data: urlData } = supabase.storage.from("media").getPublicUrl(filename)
+
+                return urlData.publicUrl
+
+            } else {
+                // if env is development use local disk for storage
+                await this.ensureUploadDirExists();
+
+                const filePath = path.join(UPLOAD_DIR, filename);
+
+                await fs.writeFile(filePath, buffer);
+
+                return `/uploads/media/${filename}`
+
+            }
 
         } catch (error) {
             console.error("Failed to save file: ", error)
@@ -55,10 +91,21 @@ export class MediaService {
 
     static async deleteFile(filename: string): Promise<void> {
         try {
+            const useSupabase = process.env.USE_SUPABASE_STORAGE || process.env.NODE_ENV === "production"
+            // If the environment is the production use supabase
+            if (useSupabase) {
+                const { error } = await supabase.storage.from("media").remove([filename])
 
-            const filePath = path.join(UPLOAD_DIR, filename)
-            await fs.unlink(filePath)
+                if (error) {
+                    console.error('Supabase delete error:', error);
+                }
+                return;
 
+            } else {
+                // If the environment is development use the file system
+                const filePath = path.join(UPLOAD_DIR, filename)
+                await fs.unlink(filePath)
+            }
         } catch (error) {
             console.error("Failed to delete file: ", error)
         }
