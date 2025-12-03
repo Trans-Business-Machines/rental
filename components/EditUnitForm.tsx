@@ -21,6 +21,7 @@ import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { unitKeys } from "@/hooks/useUnitDetails";
 import type { Unit } from "@/lib/types/types";
+import Image from "next/image";
 import z from "zod";
 
 // Define file schema
@@ -406,14 +407,14 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                   {existingImages.filter((img) => !img.markedForDelete).length})
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {existingImages.map((img) => (
+                  {existingImages.map((img, index) => (
                     <div
                       key={img.id}
                       className={`relative group ${img.markedForDelete ? "opacity-50" : ""}`}
                     >
-                      <img
+                      <Image
                         src={img.filePath}
-                        alt={img.originalName}
+                        alt={`${img.originalName} - ${index}`}
                         className="w-full h-32 object-cover rounded-lg"
                       />
                       <button
@@ -483,7 +484,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {newImages.map((file, index) => (
                     <div key={index} className="relative group">
-                      <img
+                      <Image
                         src={URL.createObjectURL(file)}
                         alt={`Preview ${index}`}
                         className="w-full h-32 object-cover rounded-lg"

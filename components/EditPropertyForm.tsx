@@ -18,9 +18,10 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import z from "zod";
 import { X } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
+import z from "zod";
 
 const FileSchema = z
   .instanceof(File)
@@ -401,7 +402,6 @@ export function EditPropertyForm({
             <CardTitle className="text-lg">Property Images</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            
             {/* Existing Images */}
             {existingImages.length > 0 && (
               <div>
@@ -410,14 +410,14 @@ export function EditPropertyForm({
                   {existingImages.filter((img) => !img.markedForDelete).length})
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {existingImages.map((img) => (
+                  {existingImages.map((img, index) => (
                     <div
                       key={img.id}
                       className={`relative group ${img.markedForDelete ? "opacity-50" : ""}`}
                     >
-                      <img
+                      <Image
                         src={img.filePath}
-                        alt={img.originalName}
+                        alt={`${img.originalName} - ${index}`}
                         className="w-full h-32 object-cover rounded-lg"
                       />
                       <button
@@ -492,7 +492,7 @@ export function EditPropertyForm({
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {newImages.map((file, index) => (
                     <div key={index} className="relative group">
-                      <img
+                      <Image
                         src={URL.createObjectURL(file)}
                         alt={`Preview ${index}`}
                         className="w-full h-32 object-cover rounded-lg"
