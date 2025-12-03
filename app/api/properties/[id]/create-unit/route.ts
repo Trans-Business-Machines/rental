@@ -75,11 +75,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
                         }
 
                         // convert image file to a buffer and get a unique file name
-                        const buffer = await file.arrayBuffer();
+                       
                         const uniqueFileName = MediaService.generateUniqueFilename(file.name, unit.id, "unit")
 
                         // save file to disk
-                        const filePath = await MediaService.saveFile(Buffer.from(buffer), uniqueFileName)
+                        const filePath = await MediaService.saveFile(file, uniqueFileName)
 
                         // create media record
                         const media = await tx.media.create({

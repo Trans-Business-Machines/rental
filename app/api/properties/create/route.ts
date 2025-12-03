@@ -8,7 +8,7 @@ const propertySchema = z.object({
     name: z.string().min(1),
     address: z.string().min(1),
     type: z.string().min(1),
-    rent: z.coerce.number().positive(), 
+    rent: z.coerce.number().positive(),
     maxBedrooms: z.coerce.number().positive(),
     maxBathrooms: z.coerce.number().positive(),
     description: z.string().min(1).max(1000),
@@ -59,12 +59,12 @@ export async function POST(request: NextRequest) {
                         throw new Error(`Image validation failed. ${fileValidation.error}`)
                     }
 
-                    // convert image file to a buffer and get a unique file name
-                    const buffer = await file.arrayBuffer()
+                    // get a unique file name
+
                     const uniqueFilename = MediaService.generateUniqueFilename(file.name, property.id, "property")
 
                     // save file to disk the and file path
-                    const filePath = await MediaService.saveFile(Buffer.from(buffer), uniqueFilename)
+                    const filePath = await MediaService.saveFile(file, uniqueFilename)
 
                     // create a media record
                     const media = await tx.media.create({

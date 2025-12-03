@@ -19,6 +19,7 @@ import { useMutation } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 import z from "zod";
 
 // Define file schema
@@ -125,6 +126,7 @@ function NewPropertyForm() {
     },
     onSuccess: (data) => {
       console.log("Property created: ", data);
+      toast.success(`${data.property.name} created successfully.`);
       router.push(`/properties/${data.property.id}`);
     },
     onError: (error) => {

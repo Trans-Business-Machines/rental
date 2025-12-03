@@ -118,11 +118,11 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
                     throw new Error(`Image validation failed: ${fileValidation.error}`);
                 }
 
-                const buffer = await file.arrayBuffer()
+               
                 const uniqueFileName = MediaService.generateUniqueFilename(
                     file.name, propertyId, "property")
 
-                const filePath = await MediaService.saveFile(Buffer.from(buffer), uniqueFileName)
+                const filePath = await MediaService.saveFile(file, uniqueFileName)
 
                 const media = await prisma.media.create({
                     data: {
