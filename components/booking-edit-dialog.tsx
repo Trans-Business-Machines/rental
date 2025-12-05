@@ -81,9 +81,6 @@ export function BookingEditDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // TODO: Implement update booking action
-    console.log("Updating booking:", formData);
-
     const data = {
       ...formData,
       checkInDate: new Date(formData.checkInDate),
@@ -165,6 +162,7 @@ export function BookingEditDialog({
                 name="numberOfGuests"
                 type="number"
                 min="1"
+                max={booking.unit?.maxGuests || 8}
                 value={formData.numberOfGuests}
                 onChange={handleChange}
                 required

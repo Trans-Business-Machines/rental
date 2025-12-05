@@ -16,13 +16,31 @@ interface GuestFormProps {
   onCancel: () => void;
 }
 
+const nameRegex = /^[A-Za-z]+$/;
+const phoneRegex = /^[0-9+\-\s]+$/;
+
 const GuestSchema = z.discriminatedUnion("idType", [
   z.object({
-    firstName: z.string().min(3, "At least 3 characters are required."),
-    lastName: z.string().min(3, "At least 3 characters are required."),
+    firstName: z
+      .string()
+      .min(3, "At least 3 characters are required.")
+      .regex(nameRegex, "Only letters are allowed."),
+    lastName: z
+      .string()
+      .min(3, "At least 3 characters are required.")
+      .regex(nameRegex, "Only letters are allowed"),
     email: z.string().email("Please enter a valid email address."),
-    phone: z.string().min(10, "At least 10 digits."),
-    nationality: z.string().min(1, "Nationality is needed."),
+    phone: z
+      .string()
+      .regex(
+        phoneRegex,
+        "Only digits, plus (+), dash (-), and spaces are allowed."
+      )
+      .min(10, "At least 10 digits."),
+    nationality: z
+      .string()
+      .min(1, "Nationality is needed.")
+      .max(20, "Cannot exceed 20 characters."),
     idType: z.literal("national_id"),
     dateOfBirth: z
       .string()
@@ -30,28 +48,40 @@ const GuestSchema = z.discriminatedUnion("idType", [
         (dateString) => new Date(dateString) < new Date(),
         "Date of birth must be in the past."
       ),
-    idNumber: z
-      .string()
-      .min(1, "National ID is needed.")
-      .max(8, "At most 8 digits allowed."),
+    idNumber: z.string().min(8, "At least 8 characters are required."),
     passportNumber: z.string().optional(),
     notes: z.string().max(1000, "At most 1000 characters allowed.").optional(),
   }),
   z.object({
-    firstName: z.string().min(3, "At least 3 characters are required."),
-    lastName: z.string().min(3, "At least 3 characters are required."),
+    firstName: z
+      .string()
+      .min(3, "At least 3 characters are required.")
+      .regex(nameRegex, "Only letters are allowed."),
+    lastName: z
+      .string()
+      .min(3, "At least 3 characters are required.")
+      .regex(nameRegex, "Only letters are allowed."),
     email: z.string().email("Please enter a valid email address."),
-    phone: z.string().min(10, "Enter atleast 10 digits."),
+    phone: z
+      .string()
+      .regex(
+        phoneRegex,
+        "Only digits, plus (+), dash (-), and spaces are allowed."
+      )
+      .min(10, "Enter atleast 10 digits."),
     dateOfBirth: z
       .string()
       .refine(
         (dateString) => new Date(dateString) < new Date(),
         "Date of birth must be in the past."
       ),
-    nationality: z.string().min(1, "Nationality is needed."),
+    nationality: z
+      .string()
+      .min(1, "Nationality is needed.")
+      .max(20, "Cannot exceed 20 characters."),
     idType: z.literal("passport"),
     idNumber: z.string().optional(),
-    passportNumber: z.string().min(1, "Passport is needed."),
+    passportNumber: z.string().min(8, "At least 8 characters are needed."),
     notes: z.string().max(1000, "At most 1000 characters allowed.").optional(),
   }),
 ]);

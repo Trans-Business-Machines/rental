@@ -80,8 +80,10 @@ export const useCreateBooking = () => {
 		},
 		onSuccess: (newBooking) => {
 			toast.success("Booking created successfully");
+
 			// Invalidate and refetch bookings list
 			queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+
 			// Optionally update the cache with the new booking
 			queryClient.setQueryData(
 				bookingKeys.list(),
@@ -98,7 +100,7 @@ export const useCreateBooking = () => {
 			if (
 				error instanceof Error &&
 				error.message.includes(
-					"A guest is already checked in for this property"
+					"booking already exists"
 				)
 			) {
 				toast.error(error.message);

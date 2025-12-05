@@ -1,13 +1,6 @@
 "use client";
 
-import { GuestForm } from "@/components/GuestForm";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,19 +9,35 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
-import { useBookings, useCreateBooking } from "@/hooks/useBookings";
-import { useGuests } from "@/hooks/useGuests";
-import { usePropertiesWithUnits } from "@/hooks/useProperties";
-import { Plus } from "lucide-react";
+import { useCreateBooking } from "@/hooks/useBookings";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getBookingFormData } from "@/lib/actions/bookings";
+import { cn } from "@/lib/utils";
+import { differenceInDays } from "date-fns";
 
-interface Guest {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
+interface BookingFormData {
+  guestId: number;
+  propertyId: number;
+  unitId: number;
+  checkInDate: Date;
+  checkOutDate: Date;
+  numberOfGuests: number;
+  totalAmount: number;
+  source: string;
+  purpose: string;
+  paymentMethod: string;
+}
+
+interface BookingFormDataErrors {
+  guestId?: string;
+  checkInDate?: string;
+  checkOutDate?: string;
+  numberOfGuests?: string;
+  paymentMethod?: string;
 }
 
 interface BookingFormProps {
@@ -44,44 +53,105 @@ export function BookingForm({
   preselectedPropertyId,
   preselectedUnitId,
 }: BookingFormProps) {
-  const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
-
-  // Get today's date in YYYY-MM-DD format for auto-selection
+  const [errors, setErrors] = useState<BookingFormDataErrors | null>(null);
   const today = new Date().toISOString().split("T")[0];
 
   const [formData, setFormData] = useState({
     guestId: "",
     propertyId: preselectedPropertyId?.toString() || "",
     unitId: preselectedUnitId?.toString() || "",
-    checkInDate: today, // Auto-select today's date
+    checkInDate: today,
     checkOutDate: "",
-    numberOfGuests: "1",
+    numberOfGuests: "",
     paymentMethod: "",
   });
 
-  // React Query hooks
-  const { data: guestsData, isLoading: guestsLoading } = useGuests();
-  const { data: properties = [], isLoading: propertiesLoading } =
-    usePropertiesWithUnits();
-  const { data: allBookings = [] } = useBookings();
+  // Get prefetched data from cache
+  const { data: formDataCache, isLoading } = useQuery({
+    queryKey: ["booking-form-data"],
+    queryFn: () => getBookingFormData(),
+  });
+
   const createBookingMutation = useCreateBooking();
 
-  // Dynamically compute booked properties for the selected check-in date
-  const bookedUnitIds = allBookings
-    .filter((b) => {
-      const checkIn = new Date(b.checkInDate);
-      const selected = new Date(formData.checkInDate);
-      return (
-        b.propertyId.toString() === formData.propertyId &&
-        checkIn.getFullYear() === selected.getFullYear() &&
-        checkIn.getMonth() === selected.getMonth() &&
-        checkIn.getDate() === selected.getDate()
-      );
-    })
-    .map((b) => b.unitId);
+  // Derived property state from form selections
+  const selectedProperty = formDataCache?.properties.find(
+    (p) =>
+      p.id.toString() ===
+      (preselectedPropertyId?.toString() || formData.propertyId)
+  );
 
+  // Derived unit state from property selections
+  const selectedUnit = selectedProperty?.units.find(
+    (u) =>
+      u.id.toString() === (preselectedUnitId?.toString() || formData.unitId)
+  );
+
+  // Validation flags for cascading enables/disables
+  const isPropertySelected = !!formData.propertyId || !!preselectedPropertyId;
+
+  const isUnitSelected = !!formData.unitId || !!preselectedUnitId;
+
+  const isMaxGuestsValid =
+    formData.numberOfGuests !== "" &&
+    parseInt(formData.numberOfGuests) > 0 &&
+    (selectedUnit && selectedUnit.maxGuests
+      ? parseInt(formData.numberOfGuests) <= selectedUnit.maxGuests
+      : false);
+
+  //  Function to validate new booking data
+  const validateData = (data: BookingFormData) => {
+    let valid = true;
+    const newErrors: BookingFormDataErrors = {};
+
+    if (!data.guestId) {
+      valid = false;
+      newErrors.guestId = "Guest is required.";
+    }
+
+    if (!data.checkInDate) {
+      valid = false;
+      newErrors.checkInDate = "Check in date is required.";
+    } else if (data.checkInDate < new Date(today)) {
+      valid = false;
+      newErrors.checkInDate = "Check in date should not be in the past.";
+    }
+
+    if (!data.checkOutDate) {
+      valid = false;
+      newErrors.checkOutDate = "Check out date is required.";
+    } else if (data.checkOutDate < data.checkInDate) {
+      valid = false;
+      newErrors.checkOutDate = "Check out must be greater than check in date.";
+    }
+
+    if (!data.numberOfGuests) {
+      valid = false;
+      newErrors.numberOfGuests = "Number of guests is required.";
+    } else if (
+      selectedUnit &&
+      selectedUnit.maxGuests &&
+      data.numberOfGuests > selectedUnit.maxGuests
+    ) {
+      valid = false;
+      newErrors.numberOfGuests = `Maximum ${selectedUnit.maxGuests} guests allowed for this unit.`;
+    }
+
+    if (!data.paymentMethod) {
+      valid = false;
+      newErrors.paymentMethod = "Payment method is required.";
+    }
+
+    setErrors(newErrors);
+
+    return valid;
+  };
+
+  // Handle new booking from subimission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    //setErrors(null);
 
     const data = {
       guestId: parseInt(formData.guestId),
@@ -93,37 +163,82 @@ export function BookingForm({
       totalAmount: 0,
       source: "direct",
       purpose: "personal",
-      paymentMethod: formData.paymentMethod || undefined,
+      paymentMethod: formData.paymentMethod,
     };
 
-    createBookingMutation.mutate(data, {
+    const isValid = validateData(data);
+
+    if (!isValid) {
+      return;
+    }
+
+    const daysToStay = differenceInDays(data.checkOutDate, data.checkInDate);
+    const charges = selectedUnit ? selectedUnit.rent * daysToStay : 0;
+
+    const newBooking = {
+      ...data,
+      totalAmount: charges,
+    };
+
+    createBookingMutation.mutate(newBooking, {
       onSuccess: () => {
         onSuccess?.();
       },
     });
   };
 
-  const handleGuestCreated = (newGuest?: Guest) => {
-    console.log("Guest created:", newGuest);
-    if (newGuest) {
-      setFormData((prev) => {
-        const newFormData = {
-          ...prev,
-          guestId: newGuest.id.toString(),
-        };
-        console.log("Updated form data:", newFormData);
-        return newFormData;
-      });
-    }
-    setIsGuestModalOpen(false);
+  // Update property on change and reset dependent fields
+  const handlePropertyChange = (value: string) => {
+    setFormData({
+      ...formData,
+      propertyId: value,
+      unitId: "",
+      numberOfGuests: "",
+      checkInDate: today,
+      checkOutDate: "",
+      paymentMethod: "",
+    });
   };
 
-  const selectedProperty = properties.find(
-    (p) => p.id.toString() === formData.propertyId
-  );
-  const availableUnits = selectedProperty?.units || [];
+  // Update unit on change and reset dependent fields
+  const handleUnitChange = (value: string) => {
+    setFormData({
+      ...formData,
+      unitId: value,
+      numberOfGuests: "",
+      checkInDate: today,
+      checkOutDate: "",
+      paymentMethod: "",
+    });
+  };
 
-  if (guestsLoading || propertiesLoading) {
+  // Handle max guest input change
+  const handleMaxGuestsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const numValue = parseInt(value);
+
+    setErrors((prevErrors) => ({ ...prevErrors, numberOfGuests: "" }));
+
+    // Validate against unit's maxGuests
+    if (
+      selectedUnit &&
+      selectedUnit.maxGuests &&
+      numValue > selectedUnit.maxGuests
+    ) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        numberOfGuests: `Maximum ${selectedUnit.maxGuests} guests allowed for this unit.`,
+      }));
+      return;
+    }
+
+    setFormData({
+      ...formData,
+      numberOfGuests: value,
+    });
+  };
+
+  if (isLoading) {
     return (
       <div className="space-y-4">
         <div className="animate-pulse space-y-4">
@@ -135,60 +250,46 @@ export function BookingForm({
             <div className="h-10 bg-gray-200 rounded"></div>
             <div className="h-10 bg-gray-200 rounded"></div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="h-10 bg-gray-200 rounded"></div>
-            <div className="h-10 bg-gray-200 rounded"></div>
-          </div>
-          <div className="h-10 bg-gray-200 rounded"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <>
-      <Dialog open={isGuestModalOpen} onOpenChange={setIsGuestModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Guest</DialogTitle>
-          </DialogHeader>
-          <GuestForm
-            onSuccess={handleGuestCreated}
-            onCancel={() => setIsGuestModalOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
+    <section>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Guest Selection */}
+        <article className="w-full flex gap-4 items-start">
+          <div className="flex-3 space-y-2">
+            <Label htmlFor="guestId">Guest *</Label>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="min-w-0">
-            <Label htmlFor="guestId">Guest</Label>
-            <div className="flex gap-2">
-              <Select
-                key={formData.guestId} // Force re-render when guestId changes
-                value={formData.guestId}
-                onValueChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    guestId: value,
-                  })
-                }
+            <Select
+              value={formData.guestId}
+              onValueChange={(value) => {
+                setErrors((prevErrors) => ({ ...prevErrors, guestId: "" }));
+                setFormData({ ...formData, guestId: value });
+              }}
+            >
+              <SelectTrigger
+                className={cn("w-full", errors?.guestId && "border-red-400")}
               >
-                <SelectTrigger className="flex-1 min-w-0">
-                  <SelectValue placeholder="Select guest" className="truncate">
-                    {formData.guestId &&
-                      (() => {
-                        const selectedGuest = guestsData?.guests.find(
-                          (g) => g.id.toString() === formData.guestId
-                        );
-                        return selectedGuest
-                          ? `${selectedGuest.firstName} ${selectedGuest.lastName}`
-                          : "Select guest";
-                      })()}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {guestsData?.guests.map((guest) => (
+                <SelectValue placeholder="Select guest">
+                  {formData.guestId &&
+                    (() => {
+                      const guest = formDataCache?.guests.find(
+                        (g) => g.id.toString() === formData.guestId
+                      );
+                      return guest
+                        ? `${guest.firstName} ${guest.lastName}`
+                        : "Select guest";
+                    })()}
+                </SelectValue>
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Only verified guests appear.</SelectLabel>
+                  {formDataCache?.guests.map((guest) => (
                     <SelectItem key={guest.id} value={guest.id.toString()}>
                       <div className="flex flex-col">
                         <span className="font-medium">
@@ -200,146 +301,161 @@ export function BookingForm({
                       </div>
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => setIsGuestModalOpen(true)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="min-w-0">
-            <Label htmlFor="propertyId">Property</Label>
-            <Select
-              value={formData.propertyId}
-              onValueChange={(value) =>
-                setFormData({
-                  ...formData,
-                  propertyId: value,
-                  unitId: "", // Reset unit when property changes
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select property" />
-              </SelectTrigger>
-              <SelectContent>
-                {properties.map((property) => (
-                  <SelectItem key={property.id} value={property.id.toString()}>
-                    {property.name}
-                  </SelectItem>
-                ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4">
+            {errors?.guestId && (
+              <p className="text-sm text-red-400 mt-1">{errors.guestId}</p>
+            )}
+          </div>
+        </article>
+
+        {/* Property Selection */}
+        <article className="w-full space-y-2">
+          <Label htmlFor="propertyId">Property *</Label>
+          <Select
+            value={formData.propertyId}
+            onValueChange={handlePropertyChange}
+          >
+            <SelectTrigger className={cn("w-full")}>
+              <SelectValue placeholder="Select property" />
+            </SelectTrigger>
+            <SelectContent>
+              {formDataCache?.properties.map((property) => (
+                <SelectItem key={property.id} value={property.id.toString()}>
+                  {property.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </article>
+
+        {/* Unit Selection - Disabled until property selected */}
+        <article className="grid md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="unitId">Unit</Label>
+            <Label htmlFor="unitId">Unit *</Label>
             <Select
               value={formData.unitId}
-              onValueChange={(value) =>
-                setFormData({
-                  ...formData,
-                  unitId: value,
-                })
-              }
-              disabled={!formData.propertyId}
+              onValueChange={handleUnitChange}
+              disabled={!isPropertySelected}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select unit" />
               </SelectTrigger>
               <SelectContent>
-                {availableUnits.map((unit) => {
-                  const isBooked = bookedUnitIds.includes(unit.id);
-                  return (
-                    <SelectItem
-                      key={unit.id}
-                      value={unit.id.toString()}
-                      disabled={isBooked}
-                    >
-                      {unit.name} {isBooked ? "(Already Booked)" : ""}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="numberOfGuests">Number of Guests</Label>
-            <Select
-              value={formData.numberOfGuests}
-              onValueChange={(value) =>
-                setFormData({
-                  ...formData,
-                  numberOfGuests: value,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select number of guests" />
-              </SelectTrigger>
-              <SelectContent>
-                {[1, 2, 3, 4, 5].map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num} {num === 1 ? "Guest" : "Guests"}
+                {selectedProperty?.units.map((unit) => (
+                  <SelectItem
+                    key={unit.id}
+                    value={unit.id.toString()}
+                    className={cn(
+                      unit.status === "occupied" &&
+                        "cursor-not-allowed opacity-50"
+                    )}
+                  >
+                    {unit.name} {unit.status === "occupied" && "Occupied"}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4">
+          {/* Max Guests Input - Disabled until unit selected */}
           <div>
-            <Label htmlFor="checkInDate">Check-in Date</Label>
+            <Label htmlFor="numberOfGuests">
+              Number of Guests *
+              {selectedUnit && (
+                <span className="text-sm text-muted-foreground ml-2">
+                  (Max: {selectedUnit.maxGuests})
+                </span>
+              )}
+            </Label>
+            <Input
+              id="numberOfGuests"
+              type="number"
+              min="1"
+              max={selectedUnit?.maxGuests || undefined}
+              value={formData.numberOfGuests}
+              onChange={handleMaxGuestsChange}
+              placeholder={
+                selectedUnit
+                  ? `Enter 1-${selectedUnit.maxGuests}`
+                  : "Select unit first"
+              }
+              disabled={!isUnitSelected}
+              required
+              className={cn(errors?.numberOfGuests && "border border-red-400")}
+            />
+            {errors?.numberOfGuests && (
+              <p className="text-sm text-red-400 mt-1">
+                {errors.numberOfGuests}
+              </p>
+            )}
+          </div>
+        </article>
+
+        {/* Check-in/out Dates - Disabled until valid guest count */}
+        <article className="grid md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="checkInDate">Check-in Date *</Label>
             <Input
               id="checkInDate"
               type="date"
               value={formData.checkInDate}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  checkInDate: e.target.value,
-                })
-              }
+              onChange={(e) => {
+                setErrors((prevErrors) => ({ ...prevErrors, checkInDate: "" }));
+                setFormData({ ...formData, checkInDate: e.target.value });
+              }}
+              disabled={!isMaxGuestsValid}
               required
+              className={cn(errors?.checkInDate && "border border-red-400")}
             />
+            {errors?.checkInDate && (
+              <p className="text-sm text-red-400 mt-1">{errors.checkInDate}</p>
+            )}
           </div>
+
           <div>
-            <Label htmlFor="checkOutDate">Check-out Date</Label>
+            <Label htmlFor="checkOutDate">Check-out Date *</Label>
             <Input
               id="checkOutDate"
               type="date"
               value={formData.checkOutDate}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  checkOutDate: e.target.value,
-                })
-              }
+              onChange={(e) => {
+                setErrors((prevErrors) => ({
+                  ...prevErrors,
+                  checkOutDate: "",
+                }));
+                setFormData({ ...formData, checkOutDate: e.target.value });
+              }}
+              disabled={!isMaxGuestsValid}
+              min={formData.checkInDate} // Can't check out before check in
+              className={cn(errors?.checkOutDate && "border border-red-400")}
               required
             />
+            {errors?.checkOutDate && (
+              <p className="text-sm text-red-400 mt-1">{errors.checkOutDate}</p>
+            )}
           </div>
-        </div>
+        </article>
 
-        <div>
-          <Label htmlFor="paymentMethod">Payment Method</Label>
+        {/* Payment Method - Disabled until valid guest count */}
+        <article>
+          <Label htmlFor="paymentMethod">Payment Method *</Label>
           <Select
             value={formData.paymentMethod}
-            onValueChange={(value) =>
-              setFormData({
-                ...formData,
-                paymentMethod: value,
-              })
-            }
+            onValueChange={(value) => {
+              setErrors((prevErrors) => ({ ...prevErrors, paymentMethod: "" }));
+              setFormData({ ...formData, paymentMethod: value });
+            }}
+            disabled={!isMaxGuestsValid}
           >
-            <SelectTrigger>
+            <SelectTrigger
+              className={cn(
+                "w-full",
+                errors?.paymentMethod && "border-red-400"
+              )}
+            >
               <SelectValue placeholder="Select payment method" />
             </SelectTrigger>
             <SelectContent>
@@ -348,7 +464,10 @@ export function BookingForm({
               <SelectItem value="debit_card">Debit Card</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+          {errors?.paymentMethod && (
+            <p className="text-sm text-red-400 mt-1">{errors.paymentMethod}</p>
+          )}
+        </article>
 
         <div className="flex space-x-2">
           <Button
@@ -365,6 +484,6 @@ export function BookingForm({
           )}
         </div>
       </form>
-    </>
+    </section>
   );
 }

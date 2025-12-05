@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -32,7 +32,7 @@ const getVerificationColor = (status: string) => {
     case "verified":
       return "default";
     case "pending":
-      return "secondary";
+      return "outline";
     case "rejected":
       return "destructive";
     default:

@@ -19,7 +19,7 @@ const getVerificationColor = (status: string) => {
     case "verified":
       return "default";
     case "pending":
-      return "secondary";
+      return "outline";
     case "rejected":
       return "destructive";
     default:
