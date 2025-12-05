@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 
 export async function getBookings(page: number = 1) {
 	try {
@@ -81,8 +81,10 @@ export async function createBooking(data: {
 		// Prevent double booking: check if any booking exists for this property with checkInDate on the same day
 		const startOfDay = new Date(data.checkInDate);
 		startOfDay.setHours(0, 0, 0, 0);
+
 		const endOfDay = new Date(data.checkInDate);
 		endOfDay.setHours(23, 59, 59, 999);
+
 		const existingBooking = await prisma.booking.findFirst({
 			where: {
 				propertyId: data.propertyId,
@@ -93,26 +95,43 @@ export async function createBooking(data: {
 				},
 			},
 		});
+
 		if (existingBooking) {
 			throw new Error(
-				"A booking already exists for this property on the selected check-in date. Double booking is not allowed."
+				"A booking already exists for this property on the selected check-in date."
 			);
 		}
 
-		const booking = await prisma.booking.create({
-			data: {
-				...data,
-				status: "confirmed",
-			},
-			include: {
-				guest: true,
-				property: true,
-				unit: true,
-			},
-		});
+		// use a prisma transaction to create booking and then update unit status
+		const result = await prisma.$transaction(async (tx) => {
+			// create booking
+			const booking = await tx.booking.create({
+				data,
+				include: {
+					unit: true,
+				}
+			})
+
+			// update unit status
+			await tx.unit.update({
+				where: {
+					id: booking.unit.id,
+					propertyId: data.propertyId
+				},
+				data: {
+					status: "occupied"
+				}
+
+			})
+
+			return booking
+		})
+
 		revalidatePath("/bookings");
 		revalidatePath("/dashboard");
-		return booking;
+		revalidatePath("/properties");
+
+		return result;
 	} catch (error) {
 		console.error("Error creating booking:", error);
 		throw error;
@@ -331,3 +350,58 @@ export async function getBookingStats() {
 		};
 	}
 }
+
+export const getBookingFormData = unstable_cache(
+	async () => {
+		const [guests, properties] = await Promise.all([
+			prisma.guest.findMany({
+				where: {
+					verificationStatus: "verified"
+				},
+				select: {
+					id: true,
+					firstName: true,
+					lastName: true,
+					email: true,
+				},
+				orderBy: {
+					createdAt: "desc"
+				}
+			}),
+
+			prisma.property.findMany({
+				where: {
+					deletedAt: null
+				},
+				select: {
+					id: true,
+					name: true,
+					units: {
+						select: {
+							id: true,
+							name: true,
+							maxGuests: true,
+							status: true,
+							rent: true,
+						},
+						orderBy: {
+							name: "asc"
+						}
+					}
+				},
+				orderBy: {
+					name: "asc"
+				}
+			})
+		])
+
+		return {
+			properties,
+			guests
+		}
+	},
+	["booking-form-data"], {
+	revalidate: 300,
+	tags: ["booking-form-data"]
+})
+

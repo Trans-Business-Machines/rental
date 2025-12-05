@@ -37,7 +37,9 @@ export async function getGuestById(id: number) {
 }
 
 export async function createGuest(data: CreateNewGuest) {
-	const guest = await prisma.guest.create({ data });
+	const guest = await prisma.guest.create({
+		data
+	});
 	revalidatePath("/guests");
 	return guest;
 }
