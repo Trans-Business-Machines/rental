@@ -189,7 +189,7 @@ model Guest {
   totalSpent               Int?      @default(0)
   rating                   Float?
   blacklisted              Boolean?  @default(false)
-  verificationStatus       String?   @default("verified") // pending, verified, rejected
+  verificationStatus       String?   @default("pending") // pending, verified, rejected
   createdAt                DateTime? @default(now())
   updatedAt                DateTime? @updatedAt
 
@@ -215,7 +215,7 @@ model Booking {
   purpose         String // business, leisure, etc.
   paymentMethod   String? // mpesa_till, credit_card, debit_card
   specialRequests String?
-  status          String   @default("confirmed") // confirmed, checked-in, checked-out, cancelled
+  status          String   @default("completed") // checked-in, checked-out, cancelled
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
