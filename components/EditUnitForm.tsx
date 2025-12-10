@@ -180,8 +180,10 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
       router.push(`/properties/${propertyId}/units/${unitId}`);
     },
     onError: (error) => {
-      console.error("Error updating property: ", error);
-      setUploadError("Failed to update property");
+      const errMsg =
+        error instanceof Error ? error.message : "Failed to update unit";
+      console.error("Error updating unit: ", error.message);
+      setUploadError(errMsg);
     },
   });
 

@@ -164,8 +164,10 @@ export function EditPropertyForm({
       router.push(`/properties/${propertyId}`);
     },
     onError: (error) => {
-      console.error("Error updating property: ", error);
-      setUploadError("Failed to update property");
+      const errMsg =
+        error instanceof Error ? error.message : "Failed to update property";
+      console.error("Error updating property: ", error.message);
+      setUploadError(errMsg);
     },
   });
 
