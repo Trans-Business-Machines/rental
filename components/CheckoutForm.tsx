@@ -61,6 +61,7 @@ export function CheckoutForm({ onSuccess, onCancel }: CheckoutFormProps) {
         notes: "",
         depositDeduction: 0,
     })
+    
     const [checkoutItems, setCheckoutItems] = useState<{
         [key: number]: {
             checked: boolean

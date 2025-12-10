@@ -8,7 +8,7 @@ import { unstable_cache } from "next/cache";
 
 export async function getProperties(page: number = 1) {
 	try {
-		const LIMIT = 6;
+		const LIMIT = 3;
 
 		const properties = await prisma.property.findMany({
 			where: {
@@ -47,7 +47,7 @@ export async function getProperties(page: number = 1) {
 	}
 }
 
-export async function getPropertyById(id: number) {
+/* export async function getPropertyById(id: number) {
 	try {
 		const property = await prisma.property.findUnique({
 			where: {
@@ -66,7 +66,7 @@ export async function getPropertyById(id: number) {
 		console.error("Error fetching property:", error);
 		throw new Error("Failed to fetch property");
 	}
-}
+} */
 
 export const getCachedProperty = unstable_cache(
 	async (propertyId: number) => {
@@ -75,7 +75,12 @@ export const getCachedProperty = unstable_cache(
 			include: {
 				tenants: true,
 				amenities: true,
-				media: true
+				media: true,
+				_count: {
+					select: {
+						units: true
+					}
+				}
 
 			},
 		});
@@ -209,7 +214,9 @@ export async function getUpcomingCheckins(limit: number = 5) {
 					gte: today,
 					lte: nextWeek,
 				},
-				status: "confirmed",
+				status: {
+					in: ["pending", "reserved"]
+				},
 			},
 			include: {
 				guest: true,

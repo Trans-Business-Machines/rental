@@ -1,13 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bath, Users, Bed, Building, House } from "lucide-react";
-import type { UnitDetailsResponse } from "@/lib/types/types";
+import type { UnitDetailsResponse, UnitStatus } from "@/lib/types/types";
 
 interface UnitInfoProps {
   unit: UnitDetailsResponse;
 }
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: UnitStatus) => {
   switch (status) {
     case "available":
       return (
@@ -27,12 +27,25 @@ const getStatusBadge = (status: string) => {
           Maintenance
         </Badge>
       );
+    case "reserved":
+      return (
+        <Badge className="bg-chart-4 text-white hover:bg-chart-4/90 border-0 text-base px-4 py-1">
+          Reserved
+        </Badge>
+      );
+    case "booked":
+      return (
+        <Badge className="bg-chart-3 text-white hover:bg-chart-3/90 border-0 text-base px-4 py-1">
+          Booked
+        </Badge>
+      );
     default:
       return null;
   }
 };
 
 export default function UnitInfo({ unit }: UnitInfoProps) {
+  console.log(unit);
   return (
     <Card className="border-border py-4 shadow-sm bg-card rounded-xl">
       <CardContent className="p-6">

@@ -24,25 +24,28 @@ import {
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import Header from "./Header";
+import type { BookingStatus } from "@/lib/types/types";
 
-interface BookingDetailsPros {
-  params: Promise<{ bookingId: string | number }>;
-}
-
-const getStatusColor = (status: string) => {
+const getStatusColor = (status: BookingStatus): string => {
   switch (status) {
-    case "confirmed":
-      return "bg-chart-2/10 text-chart-2 border-chart-2/20";
-    case "checked-in":
-      return "bg-chart-1/10 text-chart-1 border-chart-1/20";
-    case "checked-out":
-      return "bg-chart-4/10 text-chart-4 border-chart-4/20";
+    case "pending":
+      return "bg-chart-3/10 text-chart-3 border-chart-3";
+    case "reserved":
+      return "bg-chart-4/10 text-chart-4 border-chart-4";
+    case "checked_in":
+      return "bg-chart-2/10 text-chart-2 border-chart-2";
+    case "checked_out":
+      return "bg-chart-5/10 text-chart-5 border-chart-5";
     case "cancelled":
-      return "bg-destructive/10 text-destructive border-destructive/20";
+      return "bg-destructive/10 text-destructive border-destructive";
     default:
       return "bg-muted text-muted-foreground";
   }
 };
+
+interface BookingDetailsPros {
+  params: Promise<{ bookingId: string | number }>;
+}
 
 async function BookingDetails({ params }: BookingDetailsPros) {
   const { bookingId } = await params;
@@ -94,7 +97,9 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                 variant="secondary"
                 className={`${getStatusColor(booking.status)} mt-1 capitalize`}
               >
-                {booking.status}
+                {booking.status.includes("_")
+                  ? booking.status.replace("_", " ")
+                  : booking.status}
               </Badge>
             </div>
           </div>

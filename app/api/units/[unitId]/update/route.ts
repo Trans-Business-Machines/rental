@@ -133,7 +133,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ uni
                     throw new Error(`Image validation failed: ${fileValidation.error}`);
                 }
 
-               
+
                 const uniqueFileName = MediaService.generateUniqueFilename(
                     file.name, parsedUnitId, "unit")
 

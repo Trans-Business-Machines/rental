@@ -93,7 +93,7 @@ export function GuestEditDialog({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     // Update the guest

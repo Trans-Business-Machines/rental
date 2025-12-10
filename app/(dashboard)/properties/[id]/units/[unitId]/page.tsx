@@ -76,7 +76,11 @@ function UnitDetailsPage() {
         <UnitInventory assignments={unit.assignments} />
         <UnitBookings
           bookings={unit.bookings}
-          context={{ propertyId: unit.propertyId, unitId: unit.id }}
+          context={{
+            propertyId: unit.propertyId,
+            unitId: unit.id,
+            unitStatus: unit.status,
+          }}
         />
       </div>
     </section>

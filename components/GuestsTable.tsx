@@ -3,7 +3,7 @@
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { format } from "date-fns";
-import { MoreHorizontal, Eye, Pencil, Mail, Phone } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, Mail, Phone, Trash2 } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -17,9 +17,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
-import type { Guest } from "@/lib/types/types";
 import Link from "next/link";
+import { useDeleteGuest } from "@/hooks/useGuests";
+import { cn } from "@/lib/utils";
+import type { Guest } from "@/lib/types/types";
 
 interface GuestsTableProps {
   guests: Guest[];
@@ -45,6 +48,8 @@ function GuestsTable({
   setEditGuest,
   setIsDialogOpen,
 }: GuestsTableProps) {
+  const deleteMutation = useDeleteGuest();
+
   return (
     <div className="rounded-lg border border-border overflow-hidden pb-6">
       <Table className="px-2">
@@ -151,6 +156,23 @@ function GuestsTable({
                         <span className="text-accent-foreground">
                           Edit guest
                         </span>
+                      </div>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                      disabled={deleteMutation.isPending}
+                      className={cn(
+                        "hover:bg-chart-5/30 focus:bg-chart-5/30 cursor-pointer",
+                        deleteMutation.isPending &&
+                          "cursor-not-allowed opacity-40"
+                      )}
+                      onClick={() => deleteMutation.mutate(guest.id)}
+                    >
+                      <div className="flex gap-2 items-center">
+                        <Trash2 className="size-4 text-red-500" />
+                        <span className="text-red-500">Delete guest</span>
                       </div>
                     </DropdownMenuItem>
                   </DropdownMenuContent>

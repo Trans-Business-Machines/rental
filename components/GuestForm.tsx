@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { NationalityCombobox } from "@/components/NationalityCombobox";
 import { useCreateGuest } from "@/hooks/useGuests";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
 import z from "zod";
@@ -24,11 +25,13 @@ const GuestSchema = z.discriminatedUnion("idType", [
     firstName: z
       .string()
       .min(3, "At least 3 characters are required.")
-      .regex(nameRegex, "Only letters are allowed."),
+      .regex(nameRegex, "Only letters are allowed.")
+      .max(20, "At most 20 characters."),
     lastName: z
       .string()
       .min(3, "At least 3 characters are required.")
-      .regex(nameRegex, "Only letters are allowed"),
+      .regex(nameRegex, "Only letters are allowed")
+      .max(20, "At most 20 characters."),
     email: z.string().email("Please enter a valid email address."),
     phone: z
       .string()
@@ -36,11 +39,9 @@ const GuestSchema = z.discriminatedUnion("idType", [
         phoneRegex,
         "Only digits, plus (+), dash (-), and spaces are allowed."
       )
-      .min(10, "At least 10 digits."),
-    nationality: z
-      .string()
-      .min(1, "Nationality is needed.")
-      .max(20, "Cannot exceed 20 characters."),
+      .min(10, "At least 10 digits.")
+      .max(15, "At most 15 digits."),
+    nationality: z.string().min(1, "Nationality is required."),
     idType: z.literal("national_id"),
     dateOfBirth: z
       .string()
@@ -48,7 +49,10 @@ const GuestSchema = z.discriminatedUnion("idType", [
         (dateString) => new Date(dateString) < new Date(),
         "Date of birth must be in the past."
       ),
-    idNumber: z.string().min(8, "At least 8 characters are required."),
+    idNumber: z
+      .string()
+      .min(8, "At least 8 characters are required.")
+      .max(10, "At most 10 characters"),
     passportNumber: z.string().optional(),
     notes: z.string().max(1000, "At most 1000 characters allowed.").optional(),
   }),
@@ -56,11 +60,13 @@ const GuestSchema = z.discriminatedUnion("idType", [
     firstName: z
       .string()
       .min(3, "At least 3 characters are required.")
-      .regex(nameRegex, "Only letters are allowed."),
+      .regex(nameRegex, "Only letters are allowed.")
+      .max(20, "At most 20 characters."),
     lastName: z
       .string()
       .min(3, "At least 3 characters are required.")
-      .regex(nameRegex, "Only letters are allowed."),
+      .regex(nameRegex, "Only letters are allowed.")
+      .max(20, "At most 20 characters."),
     email: z.string().email("Please enter a valid email address."),
     phone: z
       .string()
@@ -68,20 +74,18 @@ const GuestSchema = z.discriminatedUnion("idType", [
         phoneRegex,
         "Only digits, plus (+), dash (-), and spaces are allowed."
       )
-      .min(10, "Enter atleast 10 digits."),
+      .min(10, "At least 10 digits.")
+      .max(15, "At most 15 digits"),
     dateOfBirth: z
       .string()
       .refine(
         (dateString) => new Date(dateString) < new Date(),
         "Date of birth must be in the past."
       ),
-    nationality: z
-      .string()
-      .min(1, "Nationality is needed.")
-      .max(20, "Cannot exceed 20 characters."),
+    nationality: z.string().min(1, "Nationality is required."),
     idType: z.literal("passport"),
     idNumber: z.string().optional(),
-    passportNumber: z.string().min(8, "At least 8 characters are needed."),
+    passportNumber: z.string().length(9, "Passport should have 9 characters."),
     notes: z.string().max(1000, "At most 1000 characters allowed.").optional(),
   }),
 ]);
@@ -101,6 +105,7 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
     setValue,
     reset,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm({
     mode: "all",
@@ -265,18 +270,17 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="nationality">Nationality</Label>
-          <Input
-            id="nationality"
-            type="text"
-            placeholder="Nationality (e.g Kenyan) . . ."
-            className={cn(errors.nationality && "border border-red-400")}
-            {...register("nationality")}
+          <Controller
+            name="nationality"
+            control={control}
+            render={({ field }) => (
+              <NationalityCombobox
+                value={field.value}
+                onValueChange={field.onChange}
+                error={errors.nationality?.message}
+              />
+            )}
           />
-          {errors.nationality && (
-            <p className="text-sm mt-1 text-red-400">
-              {errors.nationality.message}
-            </p>
-          )}
         </div>
       </article>
 

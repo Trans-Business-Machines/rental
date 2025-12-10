@@ -1,26 +1,26 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+//import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
 import { cache } from "react"
 import { unstable_cache } from "next/cache";
 import type { UnitDetailsResponse } from "@/lib/types/types"
 
-export async function getUnits() {
+/* export async function getUnits() {
 	return prisma.unit.findMany({
 		include: { property: true },
 		orderBy: { createdAt: "desc" },
 		take: 6
 	});
-}
+} */
 
-export async function updateUnit(id: number, data: any) {
+/* export async function updateUnit(id: number, data: any) {
 	const unit = await prisma.unit.update({ where: { id }, data });
 	revalidatePath("/properties");
 	revalidatePath("/dashboard");
 	return unit;
-}
+} */
 
 export const getUnitDetails = cache(async (unitId: string, propertyId: string) => {
 	try {

@@ -200,7 +200,7 @@ export async function createCheckoutReport(data: {
 		await prisma.booking.update({
 			where: { id: data.bookingId },
 			data: {
-				status: "checked-out",
+				status: "checked_out",
 				checkOutDate: new Date(), // Set to today's date when checkout is completed
 			},
 		});
@@ -222,7 +222,7 @@ export async function getBookingsForCheckout() {
 		const bookings = await prisma.booking.findMany({
 			where: {
 				status: {
-					notIn: ["checked-out", "cancelled"],
+					notIn: ["checked_out", "cancelled"],
 				},
 			},
 			include: {

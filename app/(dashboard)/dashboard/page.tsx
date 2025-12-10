@@ -4,6 +4,7 @@ import { InventoryTable } from "./_components/inventory-table";
 import { RecentBookingsTable } from "./_components/recent-bookings-table";
 import { UnitAvailabilityTable } from "./_components/unit-availability-table";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
+import { format } from "date-fns";
 import {
   getDashboardStats,
   getUnits,
@@ -24,36 +25,48 @@ export default async function DashboardPage({
 }: DashboardSearchParamsProps) {
   const { unitsPage, recentBookingsPage, itemsPage } = await searchParams;
 
-  const unitsStats = await getDashboardStats();
-
+  const unitsStatsPromise = getDashboardStats();
   const unitsPromise = getUnits(Number(unitsPage) || 1);
   const bookingsPromise = getRecentBookings(Number(recentBookingsPage) || 1);
   const itemsPromise = getInventoryItems(Number(itemsPage) || 1);
 
-  const [unitsResponse, recentBookingsResponse, inventoryItemsResponse] =
-    await Promise.all([unitsPromise, bookingsPromise, itemsPromise]);
+  const [
+    unitsResponse,
+    recentBookingsResponse,
+    inventoryItemsResponse,
+    unitsStatsResponse,
+  ] = await Promise.all([
+    unitsPromise,
+    bookingsPromise,
+    itemsPromise,
+    unitsStatsPromise,
+  ]);
 
   const occupancyRate = Math.round(
-    (unitsStats.occupied / unitsStats.total) * 100
+    (unitsStatsResponse.occupied / unitsStatsResponse.total) * 100
   );
 
   // Transform units data for the table
   const unitsForTable = unitsResponse.units.map((unit) => {
     const currentBooking = unit.bookings[0];
-    const isOccupied = currentBooking && unit.status !== "maintenance";
+    const checkOutDate =
+      currentBooking &&
+      format(new Date(currentBooking.checkOutDate), "dd/MM/yyyy");
+    const guestName =
+      currentBooking &&
+      currentBooking.guest.firstName + " " + currentBooking.guest.lastName;
+
+    /* const unitStatus = isOccupied ? "occupied" : isBookedOrReserved ? "" */
 
     return {
       id: unit.id,
       name: unit.name,
       property: unit.property.name,
+      propertyId: unit.propertyId,
       type: unit.type,
-      status: isOccupied ? "occupied" : unit.status,
-      guest: currentBooking
-        ? `${currentBooking.guest.firstName} ${currentBooking.guest.lastName}`
-        : null,
-      checkOut: currentBooking
-        ? currentBooking.checkOutDate.toLocaleDateString()
-        : null,
+      status: unit.status,
+      guest: guestName || null,
+      checkOut: checkOutDate || null,
       rent: unit.rent,
     };
   });
@@ -61,14 +74,14 @@ export default async function DashboardPage({
   const stats: StatCardsProps[] = [
     {
       title: "Total units",
-      value: unitsStats.total,
+      value: unitsStatsResponse.total,
       subtitle: `${occupancyRate}% occupancy rate`,
       icon: Home,
       color: "blue",
     },
     {
       title: "Available units",
-      value: unitsStats.available,
+      value: unitsStatsResponse.available,
       subtitle: "Ready for booking",
       icon: Home,
       color: "orange",
@@ -82,7 +95,7 @@ export default async function DashboardPage({
     },
     {
       title: "Maintenance",
-      value: unitsStats.maintenance,
+      value: unitsStatsResponse.maintenance,
       subtitle: "Units under maintenance",
       icon: Wrench,
       color: "red",

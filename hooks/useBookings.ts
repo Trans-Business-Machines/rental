@@ -1,6 +1,7 @@
 import { createBooking, getBookings } from "@/lib/actions/bookings";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { CreateBookingData } from "@/lib/types/types"
 
 interface Booking {
 	id: number;
@@ -35,18 +36,6 @@ interface Booking {
 	};
 }
 
-interface CreateBookingData {
-	guestId: number;
-	propertyId: number;
-	unitId: number;
-	checkInDate: Date;
-	checkOutDate: Date;
-	numberOfGuests: number;
-	totalAmount: number;
-	source: string;
-	purpose: string;
-	paymentMethod?: string;
-}
 
 // Query keys
 export const bookingKeys = {

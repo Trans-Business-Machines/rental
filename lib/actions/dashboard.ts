@@ -48,13 +48,16 @@ export async function getUnits(page: number = 1) {
             property: true,
             bookings: {
                 where: {
-                    status: "confirmed",
+                    status: {
+                        in: ["pending", "reserved", "checked_in"]
+                    },
                     checkOutDate: {
                         gte: new Date(),
                     },
                 },
                 include: {
                     guest: true,
+
                 },
                 take: 1,
                 orderBy: {

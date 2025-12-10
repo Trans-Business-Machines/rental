@@ -28,13 +28,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { prefetchUnitDetails } from "@/hooks/useUnitDetails";
 import Link from "next/link";
 import Image from "next/image";
-import type { sortTypes, Unit } from "@/lib/types/types";
+import type { sortTypes, Unit, UnitStatus } from "@/lib/types/types";
 
 interface UnitListingProps {
   units: Unit[];
 }
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: UnitStatus) => {
   switch (status) {
     case "available":
       return (
@@ -52,6 +52,18 @@ const getStatusBadge = (status: string) => {
       return (
         <Badge className="absolute top-4 left-4 bg-chart-1 text-white hover:bg-chart-1/90 border-0 shadow-md z-10">
           Maintenance
+        </Badge>
+      );
+    case "reserved":
+      return (
+        <Badge className="absolute top-4 left-4 bg-chart-4 text-white hover:bg-chart-4/90 border-0 shadow-md z-10">
+          Reserved
+        </Badge>
+      );
+    case "booked":
+      return (
+        <Badge className="absolute top-4 left-4 bg-chart-3 text-white hover:bg-chart-3/90 border-0 shadow-md z-10">
+          Booked
         </Badge>
       );
     default:

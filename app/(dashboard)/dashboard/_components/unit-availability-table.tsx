@@ -28,13 +28,15 @@ import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
 import { useSearchParams, useRouter } from "next/navigation";
 import Pagination from "@/components/Pagination";
+import type { UnitStatus } from "@/lib/types/types";
 
 export interface Unit {
   id: number;
   name: string;
   property: string;
+  propertyId: number;
   type: string;
-  status: string;
+  status: UnitStatus;
   guest: string | null;
   checkOut: string | null;
   rent: number;
@@ -78,11 +80,14 @@ function getStatusBadge(status: string) {
       );
     case "reserved":
       return (
-        <Badge
-          variant="outline"
-          className="bg-chart-4/20 border border-chart-4 text-chart-4 text-sm"
-        >
+        <Badge className="bg-chart-4/20 border border-chart-4 text-chart-4 text-sm">
           Reserved
+        </Badge>
+      );
+    case "booked":
+      return (
+        <Badge className="bg-chart-3/20 border border-chart-3 text-chart-3 text-sm">
+          Booked
         </Badge>
       );
     default:

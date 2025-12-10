@@ -1,12 +1,14 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { revalidatePath, unstable_cache } from "next/cache";
+import { revalidatePath, unstable_cache, revalidateTag } from "next/cache";
+import { evaluateUnitStatus } from "@/lib/utils"
+import type { BookingStatus, CreateBookingData, } from "@/lib/types/types"
 
 export async function getBookings(page: number = 1) {
 	try {
 		// Define the Limit used for pagination
-		const LIMIT = 2;
+		const LIMIT = 6;
 
 		const bookings = await prisma.booking.findMany({
 			include: {
@@ -64,31 +66,19 @@ export async function getBookingById(id: number) {
 	}
 }
 
-export async function createBooking(data: {
-	guestId: number;
-	propertyId: number;
-	unitId: number;
-	checkInDate: Date;
-	checkOutDate: Date;
-	numberOfGuests: number;
-	totalAmount: number;
-	source: string;
-	purpose: string;
-	paymentMethod?: string;
-	specialRequests?: string;
-}) {
+export async function createBooking(booking: CreateBookingData) {
 	try {
 		// Prevent double booking: check if any booking exists for this property with checkInDate on the same day
-		const startOfDay = new Date(data.checkInDate);
+		const startOfDay = new Date(booking.checkInDate);
 		startOfDay.setHours(0, 0, 0, 0);
 
-		const endOfDay = new Date(data.checkInDate);
+		const endOfDay = new Date(booking.checkInDate);
 		endOfDay.setHours(23, 59, 59, 999);
 
 		const existingBooking = await prisma.booking.findFirst({
 			where: {
-				propertyId: data.propertyId,
-				unitId: data.unitId,
+				propertyId: booking.propertyId,
+				unitId: booking.unitId,
 				checkInDate: {
 					gte: startOfDay,
 					lte: endOfDay,
@@ -102,29 +92,34 @@ export async function createBooking(data: {
 			);
 		}
 
+		// Get the corresponding unit status based on booking status
+		const unitStatus = evaluateUnitStatus(booking.status)
+
 		// use a prisma transaction to create booking and then update unit status
 		const result = await prisma.$transaction(async (tx) => {
+
 			// create booking
-			const booking = await tx.booking.create({
-				data,
+			const newBooking = await tx.booking.create({
+				data: booking,
 				include: {
 					unit: true,
+					guest: true,
 				}
 			})
 
 			// update unit status
 			await tx.unit.update({
 				where: {
-					id: booking.unit.id,
-					propertyId: data.propertyId
+					id: newBooking.unit.id,
+					propertyId: newBooking.propertyId
 				},
 				data: {
-					status: "occupied"
+					status: unitStatus
 				}
 
 			})
 
-			return booking
+			return newBooking
 		})
 
 		revalidatePath("/bookings");
@@ -145,26 +140,54 @@ export async function updateBooking(
 		checkOutDate?: Date;
 		numberOfGuests?: number;
 		totalAmount?: number;
-		status?: string;
 		paymentMethod?: string;
 		source?: string;
 		purpose?: string;
 		specialRequests?: string;
+		status: BookingStatus;
 	}
 ) {
 	try {
-		const booking = await prisma.booking.update({
-			where: { id },
-			data,
-			include: {
-				guest: true,
-				property: true,
-				unit: true,
-			},
-		});
+
+		//  Get the corresponding unit status based on booking status
+		const unitStatus = evaluateUnitStatus(data.status)
+
+		// we use a prisma transaction to ensure atomicity and data consistency
+		const result = await prisma.$transaction(async (tx) => {
+
+			// update booking
+			const booking = await tx.booking.update({
+				where: { id },
+				data,
+				include: {
+					guest: true,
+					property: true,
+					unit: true,
+				},
+			});
+
+			// update unit status
+			const unit = await tx.unit.update({
+				where: {
+					id: booking.unit.id,
+					propertyId: booking.property.id
+				},
+				data: {
+					status: unitStatus
+				}
+			})
+
+			return {
+				booking,
+				unit
+			}
+
+		})
+
+		revalidateTag("unit")
 		revalidatePath("/bookings");
 		revalidatePath("/dashboard");
-		return booking;
+		return result;
 	} catch (error) {
 		console.error("Error updating booking:", error);
 		throw error;
@@ -182,48 +205,6 @@ export async function deleteBooking(id: number) {
 	} catch (error) {
 		console.error("Error deleting booking:", error);
 		throw error;
-	}
-}
-
-export async function searchBookings(query: string) {
-	try {
-		const bookings = await prisma.booking.findMany({
-			where: {
-				OR: [
-					{
-						guest: {
-							OR: [
-								{ firstName: { contains: query } },
-								{ lastName: { contains: query } },
-								{ email: { contains: query } },
-							],
-						},
-					},
-					{
-						property: {
-							name: { contains: query },
-						},
-					},
-					{
-						unit: {
-							name: { contains: query },
-						},
-					},
-				],
-			},
-			include: {
-				guest: true,
-				property: true,
-				unit: true,
-			},
-			orderBy: {
-				createdAt: "desc",
-			},
-		});
-		return bookings;
-	} catch (error) {
-		console.error("Error searching bookings:", error);
-		return [];
 	}
 }
 
@@ -264,26 +245,6 @@ export async function getAllPropertiesWithUnits() {
 	}
 }
 
-export async function getRecentBookings(limit: number = 5) {
-	try {
-		const bookings = await prisma.booking.findMany({
-			include: {
-				guest: true,
-				property: true,
-				unit: true,
-			},
-			orderBy: {
-				createdAt: "desc",
-			},
-			take: limit,
-		});
-		return bookings;
-	} catch (error) {
-		console.error("Error fetching recent bookings:", error);
-		return [];
-	}
-}
-
 export async function getMonthlyRevenue() {
 	try {
 		const currentDate = new Date();
@@ -305,7 +266,7 @@ export async function getMonthlyRevenue() {
 					lte: endOfMonth,
 				},
 				status: {
-					in: ["confirmed", "checked-in", "checked-out"],
+					in: ["checked_in", "checked_out"],
 				},
 			},
 		});
@@ -324,35 +285,36 @@ export async function getMonthlyRevenue() {
 export async function getBookingStats() {
 	try {
 		const totalBookings = await prisma.booking.count();
-		const confirmedBookings = await prisma.booking.count({
-			where: { status: "confirmed" },
-		});
 		const pendingBookings = await prisma.booking.count({
 			where: { status: "pending" },
 		});
-		const completedBookings = await prisma.booking.count({
-			where: { status: "completed" },
+		const checkedInBookings = await prisma.booking.count({
+			where: { status: "checked_in" },
+		});
+		const reservedBookings = await prisma.booking.count({
+			where: { status: "reserved" },
 		});
 
 		return {
 			total: totalBookings,
-			confirmed: confirmedBookings,
+			checkedIn: checkedInBookings,
 			pending: pendingBookings,
-			completed: completedBookings,
+			reserved: reservedBookings,
 		};
 	} catch (error) {
 		console.error("Error fetching booking stats:", error);
 		return {
 			total: 0,
-			confirmed: 0,
+			checkedIn: 0,
 			pending: 0,
-			completed: 0,
+			reserved: 0,
 		};
 	}
 }
 
 export const getBookingFormData = unstable_cache(
 	async () => {
+		// Retrieve guest and property info from the DB all in one go
 		const [guests, properties] = await Promise.all([
 			prisma.guest.findMany({
 				where: {
@@ -363,6 +325,22 @@ export const getBookingFormData = unstable_cache(
 					firstName: true,
 					lastName: true,
 					email: true,
+					bookings: {
+						where: {
+							status: {
+								in: ["checked_in", "pending", "reserved"]
+							},
+							checkOutDate: {
+								gte: new Date()
+							}
+						},
+						select: {
+							id: true,
+							status: true,
+
+						},
+						take: 1
+					}
 				},
 				orderBy: {
 					createdAt: "desc"
@@ -395,13 +373,19 @@ export const getBookingFormData = unstable_cache(
 			})
 		])
 
+		// Add an isCheckedIn field to guests data
+		const processedGuests = guests.map(guest => ({
+			...guest,
+			isCheckedIn: guest.bookings.length > 0
+		}))
+
 		return {
 			properties,
-			guests
+			guests: processedGuests
 		}
 	},
 	["booking-form-data"], {
-	revalidate: 300,
+	revalidate: 60,
 	tags: ["booking-form-data"]
 })
 

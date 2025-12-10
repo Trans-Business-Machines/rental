@@ -2,10 +2,10 @@ import { Card, CardHeader, CardContent, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Home, Users, Bed, Bath, Eye } from "lucide-react";
-import type { Property } from "@/lib/types/types";
+import type { UniqueProperty } from "@/lib/types/types";
 import Link from "next/link";
 
-function PropertyDetails({ property }: { property: Property }) {
+function PropertyDetails({ property }: { property: UniqueProperty }) {
   const maxGuests = property?.maxBedrooms ? property.maxBedrooms * 2 : 1;
 
   return (
@@ -42,9 +42,11 @@ function PropertyDetails({ property }: { property: Property }) {
               <Home className="h-5 w-5 text-chart-1" />
             </div>
             <div>
-              <p className="font-semibold text-foreground capitalize">{property.type}</p>
+              <p className="font-semibold text-foreground capitalize">
+                {property.type}
+              </p>
               <p className="text-sm text-muted-foreground">
-                {property.totalUnits || 0} units
+                {property._count.units || 0} units
               </p>
             </div>
           </div>

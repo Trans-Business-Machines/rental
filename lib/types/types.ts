@@ -1,7 +1,7 @@
 import { getBookingById } from "@/lib/actions/bookings";
 import { getInventoryItems, getInventoryAssignments } from "@/lib/actions/inventory"
 import { getCheckoutReportById } from "@/lib/actions/checkout";
-import { getProperties, getPropertyNames } from "@/lib/actions/properties";
+import { getProperties, getPropertyNames, getCachedProperty } from "@/lib/actions/properties";
 import { getGuests } from "@/lib/actions/guests";
 
 /* ---------------- Type Definitions ---------------- */
@@ -16,6 +16,8 @@ export type sortTypes = "none" | "asc" | "desc"
 type PropertyResponse = Awaited<ReturnType<typeof getProperties>>
 export type Property = PropertyResponse["properties"][number]
 export type Media = Property["media"][number]
+
+export type UniqueProperty = NonNullable<Awaited<ReturnType<typeof getCachedProperty>>>
 
 type AssignmentResponse = Awaited<ReturnType<typeof getInventoryAssignments>>
 export type Assignment = AssignmentResponse["assignments"][number]
@@ -48,6 +50,14 @@ export type CreateNewGuest = {
     notes?: string | undefined;
 }
 
+export type BookingStatus = "pending" | "reserved" | "checked_in" | "checked_out" | "cancelled"
+export type UnitStatus = "booked" | "reserved" | "maintenance" | "available" | "occupied"
+
+export type BadgeVariant =
+    | "dashboard"
+    | "listing"
+    | "details";
+
 /* ---------------- Interface Definitions ---------------- */
 export interface BookingsTableAndCardsProps {
     bookings: Booking[];
@@ -62,7 +72,7 @@ export interface Unit {
     updatedAt: Date;
     propertyId: number;
     type: string;
-    status: string;
+    status: UnitStatus;
     rent: number;
     bedrooms: number;
     bathrooms: number | null
@@ -178,6 +188,22 @@ export interface InvitationCardAndTableProps {
     handleResendInvite: (email: string) => void
 }
 
+export interface CreateBookingData {
+    guestId: number;
+    propertyId: number;
+    unitId: number;
+    checkInDate: Date;
+    checkOutDate: Date;
+    numberOfGuests: number;
+    totalAmount: number;
+    source: string;
+    purpose: string;
+    paymentMethod: string;
+    status: BookingStatus
+    specialRequests?: string;
+
+}
+
 export type UnitDetailsResponse = {
     id: number;
     name: string;
@@ -186,7 +212,7 @@ export type UnitDetailsResponse = {
     bathrooms: number;
     maxGuests: number;
     rent: number;
-    status: string;
+    status: UnitStatus;
     propertyId: number;
     createdAt: Date;
     updatedAt: Date;

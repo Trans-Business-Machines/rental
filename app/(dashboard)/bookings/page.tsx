@@ -5,7 +5,12 @@ import {
   getBookingFormData,
 } from "@/lib/actions/bookings";
 import { getPropertyNames } from "@/lib/actions/properties";
-import { Calendar, CheckCircle, Clock, Users } from "lucide-react";
+import {
+  Calendar,
+  CircleCheckBig,
+  CalendarClock,
+  CircleDashed,
+} from "lucide-react";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { Bookings } from "@/components/Bookings";
 import {
@@ -38,11 +43,11 @@ export default async function BookingsPage({
   const propertiesPromise = getPropertyNames();
   const bookingsStatsPromise = getBookingStats();
 
-  const [bookingsResponse, propertiesResponse, bookingStatsResponse] =
+  const [bookingStatsResponse, bookingsResponse, propertiesResponse] =
     await Promise.all([
+      bookingsStatsPromise,
       bookingsPromise,
       propertiesPromise,
-      bookingsStatsPromise,
     ]);
 
   const stats: StatCardsProps[] = [
@@ -53,21 +58,21 @@ export default async function BookingsPage({
       color: "blue",
     },
     {
-      title: "Confirmed",
-      value: bookingStatsResponse.confirmed,
-      icon: CheckCircle,
-      color: "green",
-    },
-    {
       title: "Pending",
       value: bookingStatsResponse.pending,
-      icon: Clock,
+      icon: CircleDashed,
       color: "orange",
     },
     {
-      title: "Completed",
-      value: bookingStatsResponse.completed,
-      icon: Users,
+      title: "Checked In",
+      value: bookingStatsResponse.checkedIn,
+      icon: CircleCheckBig,
+      color: "green",
+    },
+    {
+      title: "Reserved",
+      value: bookingStatsResponse.reserved,
+      icon: CalendarClock,
       color: "",
     },
   ];

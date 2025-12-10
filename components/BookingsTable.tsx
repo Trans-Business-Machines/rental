@@ -18,21 +18,24 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "./ui/dropdown-menu";
-import type { BookingsTableAndCardsProps } from "@/lib/types/types";
+import type {
+  BookingsTableAndCardsProps,
+  BookingStatus,
+} from "@/lib/types/types";
 import Link from "next/link";
 
-const getStatusColor = (status: string): string => {
+export const getStatusColor = (status: BookingStatus): string => {
   switch (status) {
-    case "confirmed":
-      return "bg-chart-4/10 text-chart-4 border-chart-2/20";
-    case "checked-in":
-      return "bg-chart-1/10 text-chart-1 border-chart-3/20";
-    case "completed":
-      return "bg-chart-2/10 text-chart-2 border-chart-4/20";
+    case "pending":
+      return "bg-chart-3/10 text-chart-3 border-chart-3";
+    case "reserved":
+      return "bg-chart-4/10 text-chart-4 border-chart-4";
+    case "checked_in":
+      return "bg-chart-2/10 text-chart-2 border-chart-2";
+    case "checked_out":
+      return "bg-chart-5/10 text-chart-5 border-chart-5";
     case "cancelled":
-      return "bg-destructive/10 text-destructive border-destructive/20";
-    case "checked-out":
-      return "bg-chart-3/10 text-chart-3 border-destructive/20";
+      return "bg-destructive/10 text-destructive border-destructive";
     default:
       return "bg-muted text-muted-foreground";
   }
@@ -99,7 +102,9 @@ function BookingsTable({
                   variant="secondary"
                   className={`${getStatusColor(booking.status)} capitalize`}
                 >
-                  {booking.status}
+                  {booking.status.includes("_")
+                    ? booking.status.replace("_", " ")
+                    : booking.status}
                 </Badge>
               </TableCell>
               <TableCell>

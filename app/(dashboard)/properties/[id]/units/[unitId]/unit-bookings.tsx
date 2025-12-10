@@ -12,32 +12,62 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { BookingDialog } from "@/components/BookingDialog";
-import type { UnitBooking } from "@/lib/types/types";
+import type { UnitBooking, UnitStatus } from "@/lib/types/types";
 
 interface UnitBookings {
   bookings: UnitBooking[];
   context: {
     unitId: number;
     propertyId: number;
+    unitStatus: UnitStatus;
   };
 }
 
-const getStatusColor = (status: string): string => {
+function getStatusBadge(status: UnitStatus) {
   switch (status) {
-    case "confirmed":
-      return "bg-chart-4/10 text-chart-4 border-chart-2/20";
-    case "checked-in":
-      return "bg-chart-1/10 text-chart-1 border-chart-3/20";
-    case "completed":
-      return "bg-chart-2/10 text-chart-2 border-chart-4/20";
-    case "cancelled":
-      return "bg-destructive/10 text-destructive border-destructive/20";
-    case "checked-out":
-      return "bg-chart-3/10 text-chart-3 border-destructive/20";
+    case "occupied":
+      return (
+        <Badge
+          variant="default"
+          className="bg-chart-5/20 border border-chart-5 text-chart-5 text-sm"
+        >
+          Occupied
+        </Badge>
+      );
+    case "available":
+      return (
+        <Badge
+          variant="default"
+          className="bg-chart-2/20 border border-chart-2 text-chart-2 text-sm"
+        >
+          Available
+        </Badge>
+      );
+    case "maintenance":
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-chart-1/20 border border-chart-1 text-chart-1 text-sm"
+        >
+          Maintenance
+        </Badge>
+      );
+    case "reserved":
+      return (
+        <Badge className="bg-chart-4/20 border border-chart-4 text-chart-4 text-sm">
+          Reserved
+        </Badge>
+      );
+    case "booked":
+      return (
+        <Badge className="bg-chart-3/20 border border-chart-3 text-chart-3 text-sm">
+          Booked
+        </Badge>
+      );
     default:
-      return "bg-muted text-muted-foreground";
+      return <Badge variant="outline">{status}</Badge>;
   }
-};
+}
 
 export default function UnitBookings({ bookings, context }: UnitBookings) {
   return (
@@ -62,7 +92,8 @@ export default function UnitBookings({ bookings, context }: UnitBookings) {
           >
             <Button
               size="sm"
-              className="gap-2 cursor-pointer bg-chart-1 hover:bg-chart-1/90"
+              disabled={context.unitStatus !== "available"}
+              className="gap-2 cursor-pointer disabled:cursor-not-allowed bg-chart-1 hover:bg-chart-1/90"
             >
               <Plus className="h-4 w-4" />
               New Booking
@@ -113,14 +144,7 @@ export default function UnitBookings({ bookings, context }: UnitBookings) {
                         ? format(new Date(booking.checkOutDate), "dd/MM/yyyy")
                         : "-"}
                     </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className={`${getStatusColor(booking.status)} capitalize`}
-                      >
-                        {booking.status}
-                      </Badge>
-                    </TableCell>
+                    <TableCell>{getStatusBadge(context.unitStatus)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

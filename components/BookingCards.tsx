@@ -20,31 +20,14 @@ import {
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import type { BookingsTableAndCardsProps } from "@/lib/types/types";
+import { getStatusColor } from "./BookingsTable";
 import Link from "next/link";
-
-const getStatusColor = (status: string): string => {
-  switch (status) {
-    case "confirmed":
-      return "bg-chart-4/10 text-chart-4 border-chart-2/20";
-    case "checked-in":
-      return "bg-chart-1/10 text-chart-1 border-chart-3/20";
-    case "completed":
-      return "bg-chart-2/10 text-chart-2 border-chart-4/20";
-    case "cancelled":
-      return "bg-destructive/10 text-destructive border-destructive/20";
-    case "checked-out":
-      return "bg-chart-3/10 text-chart-3 border-destructive/20";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-};
 
 function BookingCards({
   bookings,
   setEditBooking,
   setIsDialogOpen,
 }: BookingsTableAndCardsProps) {
-
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {bookings.map((booking) => {
@@ -119,7 +102,7 @@ function BookingCards({
                     {booking.property.name}
                   </span>
                   <span className="text-muted-foreground">•</span>
-                  <span className="text-muted-foreground">
+                  <span className="font-medium text-foreground">
                     {booking.unit.name}
                   </span>
                 </div>
@@ -158,13 +141,15 @@ function BookingCards({
                   variant="secondary"
                   className={`${getStatusColor(booking.status)} capitalize`}
                 >
-                  {booking.status}
+                  {booking.status.includes("_")
+                    ? booking.status.replace("_", " ")
+                    : booking.status}
                 </Badge>
 
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">{`${numOfNights} ${numOfNights === 1 ? "night" : "nights"}`}</p>
                   <p className="font-semibold text-foreground">
-                    ${booking.unit.rent}
+                    ${booking.totalAmount}
                   </p>
                 </div>
               </div>

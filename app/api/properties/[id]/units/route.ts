@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         const page = Number(request.nextUrl.searchParams.get("page")) || 1
 
         // Define the Limit for a page
-        const LIMIT = 4;
+        const LIMIT = 3;
 
         // Verify the property exists
         const existingProperty = await prisma.property.findUnique({

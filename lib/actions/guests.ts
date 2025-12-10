@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import type { GuestUpdateFormData, CreateNewGuest } from "@/lib/types/types"
 
 export async function getGuests(page: number = 1) {
@@ -45,84 +45,39 @@ export async function createGuest(data: CreateNewGuest) {
 }
 
 export async function updateGuest(id: number, data: GuestUpdateFormData) {
-	const guest = await prisma.guest.update({ where: { id }, data });
-	revalidatePath("/guests");
-	return guest;
-}
-
-export async function deleteGuest(id: number) {
-	await prisma.guest.delete({ where: { id } });
-	revalidatePath("/guests");
-}
-
-export async function searchGuests(query: string) {
 	try {
-		const guests = await prisma.guest.findMany({
-			where: {
-				OR: [
-					{
-						firstName: {
-							contains: query,
-						},
-					},
-					{
-						lastName: {
-							contains: query,
-						},
-					},
-					{
-						email: {
-							contains: query,
-						},
-					},
-					{
-						phone: {
-							contains: query,
-						},
-					},
-					{
-						idNumber: {
-							contains: query,
-						},
-					},
-					{
-						passportNumber: {
-							contains: query,
-						},
-					},
-				],
-			},
-			orderBy: {
-				createdAt: "desc",
-			},
-		});
-		return guests;
+		const updatedGuest = await prisma.guest.update({ where: { id }, data });
+
+		// check if the updatedGuest has been verified
+		if (updatedGuest.verificationStatus === "verified") {
+			revalidateTag("booking-form-data")
+		}
+
+		// revalidate the guests page
+		revalidatePath("/guests");
+		return updatedGuest;
 	} catch (error) {
-		console.error("Error searching guests:", error);
-		throw new Error("Failed to search guests");
+		console.error("Failed to update guest: ", error)
+		throw new Error("Failed to update guest")
 	}
 }
 
-// Booking (sign-in/check-in)
-export async function createBooking(data: any) {
-	const booking = await prisma.booking.create({ data });
-	revalidatePath("/guests");
-	revalidatePath("/properties");
-	return booking;
-}
-
-export async function updateBooking(id: number, data: any) {
-	const booking = await prisma.booking.update({ where: { id }, data });
-	revalidatePath("/guests");
-	revalidatePath("/properties");
-	return booking;
+export async function deleteGuest(id: number) {
+	try {
+		await prisma.guest.delete({ where: { id } });
+		revalidateTag("booking-form-data");
+		revalidatePath("/guests");
+	} catch (error) {
+		console.error("Failed to delete guest:", error);
+		throw new Error("Failed to delete guest.")
+	}
 }
 
 export async function checkoutGuest(bookingId: number, checkoutData: any) {
 	// Mark booking as checked-out and create a checkout report
 	const booking = await prisma.booking.update({
 		where: { id: bookingId },
-		data: { status: "checked-out" },
+		data: { status: "checked_out" },
 	});
 	const report = await prisma.checkoutReport.create({
 		data: {
