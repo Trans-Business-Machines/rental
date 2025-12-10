@@ -102,17 +102,25 @@ model Property {
   @@map("properties")
 }
 
+enum Unit_Status {
+  booked
+  reserved
+  maintenance
+  available
+  occupied
+}
+
 model Unit {
-  id         Int      @id @default(autoincrement())
-  name       String // e.g., "Apartment 2A", "Studio 1C"
+  id         Int         @id @default(autoincrement())
+  name       String
   propertyId Int
-  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  type       String // apartment, studio, condo, house
-  status     String   @default("available") // available, occupied, maintenance
+  property   Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  type       String
+  status     Unit_Status @default(available)
   rent       Int
-  bedrooms   Int      @default(1)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  bedrooms   Int         @default(1)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
   bathrooms  Int?
   maxGuests  Int?
 
@@ -199,14 +207,22 @@ model Guest {
   @@map("guests")
 }
 
+enum Booking_Status {
+  pending
+  reserved
+  checked_in
+  checked_out
+  cancelled
+}
+
 model Booking {
-  id              Int      @id @default(autoincrement())
+  id              Int            @id @default(autoincrement())
   guestId         Int
-  guest           Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  guest           Guest          @relation(fields: [guestId], references: [id], onDelete: Cascade)
   propertyId      Int
-  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property        Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   unitId          Int
-  unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unit            Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
   checkInDate     DateTime
   checkOutDate    DateTime
   numberOfGuests  Int
@@ -215,9 +231,9 @@ model Booking {
   purpose         String // business, leisure, etc.
   paymentMethod   String? // mpesa_till, credit_card, debit_card
   specialRequests String?
-  status          String   @default("completed") // checked-in, checked-out, cancelled
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  status          Booking_Status @default(pending)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   checkoutReport CheckoutReport?
 
