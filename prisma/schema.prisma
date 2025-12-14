@@ -255,9 +255,8 @@ model InventoryItem {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  checkoutItems CheckoutItem[]
-  movements     InventoryMovement[]
-  assignments   InventoryAssignment[]
+  movements   InventoryMovement[]
+  assignments InventoryAssignment[]
 
   @@map("inventory_items")
 }
@@ -295,6 +294,8 @@ model InventoryAssignment {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+  checkoutItems CheckoutItem[]
+
   @@map("inventory_assignments")
 }
 
@@ -318,16 +319,25 @@ model CheckoutReport {
   @@map("checkout_reports")
 }
 
+enum CheckoutItemStatus {
+  good
+  damaged
+  missing
+}
+
 model CheckoutItem {
-  id               Int            @id @default(autoincrement())
+  id Int @id @default(autoincrement())
+
   checkoutReportId Int
   checkoutReport   CheckoutReport @relation(fields: [checkoutReportId], references: [id], onDelete: Cascade)
-  inventoryItemId  Int
-  inventoryItem    InventoryItem  @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
-  condition        String // good, damaged, missing
-  damageCost       Int            @default(0)
-  notes            String?
-  createdAt        DateTime       @default(now())
+
+  inventoryAssignmentId Int
+  inventoryAssignment   InventoryAssignment @relation(fields: [inventoryAssignmentId], references: [id], onDelete: Cascade)
+
+  condition  CheckoutItemStatus @default(good)
+  damageCost Int                @default(0)
+  notes      String?
+  createdAt  DateTime           @default(now())
 
   @@map("checkout_items")
 }
