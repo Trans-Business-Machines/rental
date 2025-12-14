@@ -20,7 +20,6 @@ export function PropertyGallery({
   propertyImages,
   propertyImagesLength,
 }: PropertyGalleryProps) {
-  
   if (propertyImagesLength === 0) {
     return (
       <section className="p-6">
@@ -47,6 +46,7 @@ export function PropertyGallery({
                     src={image.filePath}
                     alt={`Property Image ${index + 1}`}
                     fill
+                    sizes="(max-width: 1024px) 100vw, 50vw"
                     className="object-cover overflow-hidden rounded-l-2xl"
                   />
 
@@ -73,7 +73,7 @@ export function PropertyGallery({
 
       {/* Images highlight */}
       <div className="hidden lg:grid gap-3 grid-cols-2 grid-rows-2 lg:col-span-2">
-        {propertyImages.slice(0, 4).map((image, index) => (
+        {propertyImages.slice(1, 5).map((image, index) => (
           <div
             key={index}
             className={`w-full relative group ${index % 2 !== 0 && "overflow-hidden rounded-r-xl"} `}
@@ -82,6 +82,7 @@ export function PropertyGallery({
               src={image.filePath}
               alt={`Property image ${index + 1}`}
               fill
+              sizes="(max-width: 1024px) 0px, 25vw"
               className="object-cover transition-transform duration-200 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />

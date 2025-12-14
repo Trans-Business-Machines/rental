@@ -211,23 +211,6 @@ export async function deleteBooking(id: number) {
 	}
 }
 
-export async function getAllPropertiesWithUnits() {
-	try {
-		const properties = await prisma.property.findMany({
-			include: {
-				units: true,
-			},
-			orderBy: {
-				name: "asc",
-			},
-		});
-		return properties;
-	} catch (error) {
-		console.error("Error fetching properties with units:", error);
-		return [];
-	}
-}
-
 export async function getBookingStats() {
 	try {
 		const totalBookings = await prisma.booking.count();

@@ -1,13 +1,46 @@
+"use client";
+
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { propertyUnitKeys } from "@/hooks/useProperties";
 
 interface Amenity {
   icon: React.ComponentType<{ className: string }>;
   label: string;
 }
 
-export function PropertyAmenities({ amenities }: { amenities: Amenity[] }) {
+export function PropertyAmenities({
+  amenities,
+  propertyId,
+}: {
+  amenities: Amenity[];
+  propertyId: number;
+}) {
+  const queryClient = useQueryClient();
+
+  const prefetchPropertyUnits = async () => {
+    await queryClient.prefetchQuery({
+      queryKey: propertyUnitKeys.propertyUnitList(propertyId, 1),
+      queryFn: async () => {
+        const response = await fetch(
+          `/api/properties/${propertyId}/units?page=${1}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch units: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data;
+      },
+    });
+  };
+
   return (
-    <Card className="flex-1 border-0 shadow-sm bg-card">
+    <Card
+      className="flex-1 border-0 shadow-sm bg-card"
+      onMouseEnter={prefetchPropertyUnits}
+    >
       <CardHeader>
         <CardTitle className="text-xl lg:text-2xl font-bold text-foreground">
           Amenities

@@ -1,15 +1,42 @@
+"use client";
+
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardContent, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Home, Users, Bed, Bath, Eye } from "lucide-react";
 import type { UniqueProperty } from "@/lib/types/types";
 import Link from "next/link";
+import { propertyUnitKeys } from "@/hooks/useProperties";
 
 function PropertyDetails({ property }: { property: UniqueProperty }) {
+  const queryClient = useQueryClient();
+
+  const prefetchPropertyUnits = async () => {
+    await queryClient.prefetchQuery({
+      queryKey: propertyUnitKeys.propertyUnitList(property.id, 1),
+      queryFn: async () => {
+        const response = await fetch(
+          `/api/properties/${property.id}/units?page=${1}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch units: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data;
+      },
+    });
+  };
+
   const maxGuests = property?.maxBedrooms ? property.maxBedrooms * 2 : 1;
 
   return (
-    <Card className="flex-2 gap-4 border-0 bg-card shadow-sm">
+    <Card
+      className="flex-2 gap-4 border-0 bg-card shadow-sm"
+      onMouseEnter={prefetchPropertyUnits}
+    >
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl lg:text-2xl font-bold text-foreground">
