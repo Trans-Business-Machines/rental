@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { propertyUnitKeys } from "@/hooks/useProperties";
 
 interface Amenity {
-  icon: React.ComponentType<{ className: string }>;
   label: string;
 }
 
@@ -52,16 +51,12 @@ export function PropertyAmenities({
       <CardContent>
         <div className="grid gap-3">
           {amenities.map((amenity) => {
-            const Icon = amenity.icon;
             return (
               <div
                 key={amenity.label}
                 className="flex items-center gap-3 p-3 rounded-lg transition-colors 
                      bg-chart-2/5 hover:bg-chart-2/10"
               >
-                <div className="p-2 rounded-lg bg-chart-2/10 text-chart-2">
-                  <Icon className="size-4" />
-                </div>
                 <span className="font-medium text-foreground">
                   {amenity.label}
                 </span>
