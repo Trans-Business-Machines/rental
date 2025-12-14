@@ -10,6 +10,7 @@ import {
   CircleCheckBig,
   CalendarClock,
   CircleDashed,
+  ClipboardPaste,
 } from "lucide-react";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { Bookings } from "@/components/Bookings";
@@ -18,6 +19,8 @@ import {
   HydrationBoundary,
   QueryClient,
 } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 interface BookingsPageProps {
   searchParams: Promise<{ page: string }>;
@@ -80,7 +83,7 @@ export default async function BookingsPage({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <section className="space-y-6">
-        <header className="flex items-center justify-between">
+        <header className="flex flex-col gap-3 md:gap-0 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-normal text-foreground">
               Bookings
@@ -90,7 +93,15 @@ export default async function BookingsPage({
             </p>
           </div>
 
-          <BookingDialog />
+          <div className="flex gap-3">
+            <BookingDialog />
+            <Button asChild>
+              <Link href="/checkout" className="flex items-center gap-3">
+                <ClipboardPaste className="size-4 text-white" />
+                <span className="text-white">Checkout guest</span>
+              </Link>
+            </Button>
+          </div>
         </header>
 
         {/* Statistics Cards */}

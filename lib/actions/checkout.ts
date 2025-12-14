@@ -18,7 +18,7 @@ export async function getCheckoutReports(page: number = 1) {
 				guest: true,
 				checkoutItems: {
 					include: {
-						inventoryItem: true,
+						inventoryAssignment: true,
 					},
 				},
 			},
@@ -71,7 +71,7 @@ export async function getCheckoutReportById(id: number) {
 				guest: true,
 				checkoutItems: {
 					include: {
-						inventoryItem: true,
+						inventoryAssignment: true,
 					},
 				},
 			},
@@ -92,8 +92,8 @@ export async function createCheckoutReport(data: {
 	depositDeduction: number;
 	notes?: string;
 	checkoutItems: {
-		inventoryItemId: number;
-		condition: string;
+		assignmentId: number;
+		condition: "good" | "damaged" | "missing";
 		damageCost: number;
 		notes?: string;
 	}[];
@@ -101,119 +101,170 @@ export async function createCheckoutReport(data: {
 	try {
 		const { checkoutItems, ...reportData } = data;
 
-		// Create the checkout report
-		const report = await prisma.checkoutReport.create({
-			data: {
-				...reportData,
-				status: "completed",
-			},
-			include: {
-				booking: {
-					include: {
-						guest: true,
-						property: true,
-						unit: true,
-					},
-				},
-				guest: true,
-			},
-		});
-
-		// Create checkout items and handle inventory assignments
-		await Promise.all(
-			checkoutItems.map(async (item) => {
-				// Create checkout item - note: item.inventoryItemId is actually assignmentId
-				await prisma.checkoutItem.create({
+		// Use transaction to ensure atomicity
+		const result = await prisma.$transaction(
+			async (tx) => {
+				// 1. Create the checkout report
+				const report = await tx.checkoutReport.create({
 					data: {
-						checkoutReportId: report.id,
-						inventoryItemId: item.inventoryItemId, // This is assignment ID in the new system
-						condition: item.condition,
-						damageCost: item.damageCost,
-						notes: item.notes,
+						...reportData,
+						status: "completed",
+					},
+					include: {
+						booking: {
+							include: {
+								guest: true,
+								property: true,
+								unit: true,
+							},
+						},
+						guest: true,
 					},
 				});
 
-				// Get the assignment to access the actual inventory item
-				const assignment = await prisma.inventoryAssignment.findUnique({
-					where: { id: item.inventoryItemId },
-					include: { inventoryItem: true },
-				});
+				// 2. Process each checkout item
+				for (const item of checkoutItems) {
+					// Get the assignment (item.inventoryItemId is actually assignmentId)
+					const assignment = await tx.inventoryAssignment.findUnique({
+						where: { id: item.assignmentId },
+						include: { inventoryItem: true },
+					});
 
-				if (assignment) {
-					// Return the assignment to stock (mark as inactive)
-					await prisma.inventoryAssignment.update({
+					if (!assignment) {
+						throw new Error(
+							`Assignment with ID ${item.assignmentId} not found`
+						);
+					}
+
+					// Create checkout item record
+					await tx.checkoutItem.create({
+						data: {
+							checkoutReportId: report.id,
+							inventoryAssignmentId: item.assignmentId,
+							condition: item.condition,
+							damageCost: item.damageCost,
+							notes: item.notes,
+						},
+					});
+
+					// Mark assignment as returned (inactive)
+					await tx.inventoryAssignment.update({
 						where: { id: assignment.id },
 						data: {
 							isActive: false,
 							returnedAt: new Date(),
-							notes: item.notes || assignment.notes,
+							notes: item.notes
+								? `${assignment.notes || ""}\n\nCheckout: ${item.notes}`.trim()
+								: assignment.notes,
 						},
 					});
 
-					// Increment the inventory item quantity (return to stock)
-					// Only if item is in good condition
+					// Handle inventory based on condition
 					if (item.condition === "good") {
-						await prisma.inventoryItem.update({
+						// Return to stock - increment quantity
+						await tx.inventoryItem.update({
 							where: { id: assignment.inventoryItem.id },
 							data: {
-								quantity: {
-									increment: 1,
-								},
+								quantity: { increment: 1 },
 							},
 						});
 
-						// Create movement record for return to stock
-						await prisma.inventoryMovement.create({
+						// Create movement record - return to store
+						await tx.inventoryMovement.create({
 							data: {
 								inventoryItemId: assignment.inventoryItem.id,
 								fromUnitId: assignment.unitId,
-								toUnitId: null, // Returning to store
-								movedBy: "checkout_system",
+								toUnitId: null,
+								movedBy: data.inspector,
 								direction: "to_store",
 								quantity: 1,
-								notes: `Returned from checkout - ${item.condition} condition`,
+								notes: `Returned from checkout in good condition`,
 							},
 						});
-					} else {
-						// For damaged/missing items, don't return to stock
-						// Create movement record for damaged/missing
-						await prisma.inventoryMovement.create({
+					} else if (item.condition === "damaged") {
+						// Damaged item - create movement record but don't return to stock
+						await tx.inventoryMovement.create({
 							data: {
 								inventoryItemId: assignment.inventoryItem.id,
 								fromUnitId: assignment.unitId,
-								toUnitId: null, // Not returning to any unit
-								movedBy: "checkout_system",
-								direction:
-									item.condition === "damaged"
-										? "damaged"
-										: "missing",
+								toUnitId: null,
+								movedBy: data.inspector,
+								direction: "damaged",
 								quantity: 1,
-								notes: `Checkout - ${item.condition} condition. Damage cost: KES ${item.damageCost}`,
+								notes: `Damaged during checkout. Damage cost: KES ${item.damageCost.toLocaleString()}. ${item.notes || ""
+									}`,
+							},
+						});
+					} else if (item.condition === "missing") {
+						// Missing item - create movement record
+						await tx.inventoryMovement.create({
+							data: {
+								inventoryItemId: assignment.inventoryItem.id,
+								fromUnitId: assignment.unitId,
+								toUnitId: null,
+								movedBy: data.inspector,
+								direction: "missing",
+								quantity: 1,
+								notes: `Missing during checkout. Cost: KES ${item.damageCost.toLocaleString()}. ${item.notes || ""
+									}`,
 							},
 						});
 					}
 				}
-			})
+
+				// 3. Update booking status
+				await tx.booking.update({
+					where: { id: data.bookingId },
+					data: {
+						status: "checked_out",
+						checkOutDate: data.checkoutDate, // Use the checkout date from form
+					},
+				});
+
+				// 4. Update unit status to maintenance
+				await tx.unit.update({
+					where: { id: report.booking.unit.id },
+					data: {
+						status: "available",
+					},
+				});
+
+				// 5. Update guest statistics
+				await tx.guest.update({
+					where: { id: data.guestId },
+					data: {
+						totalStays: { increment: 1 },
+						lastStay: data.checkoutDate,
+					},
+				});
+
+				return report;
+			},
+			{
+				timeout: 40000, // 40 seconds for complex checkout
+				maxWait: 5000,
+				isolationLevel: "ReadCommitted",
+			}
 		);
 
-		// Update booking status and set checkout date to today
-		await prisma.booking.update({
-			where: { id: data.bookingId },
-			data: {
-				status: "checked_out",
-				checkOutDate: new Date(), // Set to today's date when checkout is completed
-			},
-		});
-
+		// Revalidate relevant paths
+		revalidatePath("/checkout");
 		revalidatePath("/inventory");
+		revalidatePath("/dashboard");
+		revalidatePath("/properties");
 		revalidatePath("/bookings");
-		revalidatePath("/booking-requests");
 		revalidatePath("/guests");
 
-		return report;
+		return result;
 	} catch (error) {
 		console.error("Error creating checkout report:", error);
-		throw new Error("Failed to create checkout report");
+
+		// Provide more specific error messages
+		if (error instanceof Error) {
+			throw new Error(`Checkout failed: ${error.message}`);
+		}
+
+		throw new Error("Failed to create checkout report. Please try again.");
 	}
 }
 
@@ -221,9 +272,7 @@ export async function getBookingsForCheckout() {
 	try {
 		const bookings = await prisma.booking.findMany({
 			where: {
-				status: {
-					notIn: ["checked_out", "cancelled"],
-				},
+				status: "checked_in",
 			},
 			include: {
 				guest: true,
@@ -241,37 +290,35 @@ export async function getBookingsForCheckout() {
 	}
 }
 
-export async function getInventoryForUnit(unitId: number) {
+export async function getInventoryAssignmentsForUnit(unitId: number) {
 	try {
-		// Get only assignable items that are currently assigned to this unit
 		const assignments = await prisma.inventoryAssignment.findMany({
 			where: {
-				unitId: unitId,
+				unitId,
 				isActive: true,
 				inventoryItem: {
-					assignableOnBooking: true, // Only show items that can be assigned to guests
+					assignableOnBooking: true,
 				},
 			},
-			include: {
-				inventoryItem: true,
+			select: {
+				id: true,
+				serialNumber: true,
+				notes: true,
+				inventoryItem: {
+					select: {
+						id: true,
+						itemName: true,
+						category: true,
+						status: true,
+					},
+				},
 			},
 			orderBy: {
 				createdAt: "desc",
 			},
 		});
 
-		// Map assignments to include assignment details for individual tracking
-		const items = assignments.map((assignment) => ({
-			id: assignment.id, // Use assignment ID for individual tracking
-			inventoryItemId: assignment.inventoryItem.id,
-			itemName: assignment.inventoryItem.itemName,
-			category: assignment.inventoryItem.category,
-			status: assignment.inventoryItem.status,
-			serialNumber: assignment.serialNumber,
-			notes: assignment.notes,
-		}));
-
-		return items;
+		return assignments;
 	} catch (error) {
 		console.error("Error fetching inventory for unit:", error);
 		return [];

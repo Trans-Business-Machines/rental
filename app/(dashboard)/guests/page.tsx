@@ -1,11 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { GuestDialog } from "@/components/GuestDialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useGuests, useGuestStats } from "@/hooks/useGuests";
-import { Clock, Flag, Search, UserCheck, Users } from "lucide-react";
-import { useState } from "react";
+import {
+  Clock,
+  Flag,
+  Search,
+  UserCheck,
+  Users,
+  ClipboardPaste,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { useTableMode } from "@/hooks/useTableMode";
 import { useFilter } from "@/hooks/useFilter";
@@ -13,6 +21,7 @@ import { ItemsNotFound } from "@/components/ItemsNotFound";
 import { useSearchParams, useRouter } from "next/navigation";
 import GuestListings from "@/components/GuestListings";
 import Pagination from "@/components/Pagination";
+import Link from "next/link";
 import type { Guest } from "@/lib/types/types";
 
 export default function GuestsPage() {
@@ -137,7 +146,15 @@ export default function GuestsPage() {
           <p className="text-muted-foreground">Manage guest registrations.</p>
         </div>
 
-        <GuestDialog />
+        <div className="flex flex-col md:flex-row gap-3 items center">
+          <GuestDialog />
+          <Button asChild>
+            <Link href="/checkout" className="flex items-center gap-3">
+              <ClipboardPaste className="size-4 text-white" />
+              <span className="text-white">Checkout guest</span>
+            </Link>
+          </Button>
+        </div>
       </header>
 
       {/* Statistics Cards */}

@@ -9,6 +9,18 @@ export async function getGuests(page: number = 1) {
 	const LIMIT = 6;
 
 	const guests = await prisma.guest.findMany({
+		include: {
+			bookings: {
+				select: {
+					id: true,
+					status: true,
+				},
+				orderBy: {
+					createdAt: "desc"
+				},
+				take: 1
+			}
+		},
 		orderBy: { createdAt: "desc" },
 		take: LIMIT,
 		skip: (page - 1) * LIMIT
@@ -33,7 +45,20 @@ export async function getGuests(page: number = 1) {
 }
 
 export async function getGuestById(id: number) {
-	return prisma.guest.findUnique({ where: { id } });
+	return prisma.guest.findUnique({
+		where: { id }, include: {
+			bookings: {
+				select: {
+					id: true,
+					status: true,
+				},
+				orderBy: {
+					createdAt: "desc"
+				},
+				take: 1
+			}
+		},
+	});
 }
 
 export async function createGuest(data: CreateNewGuest) {

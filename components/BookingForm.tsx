@@ -480,8 +480,6 @@ export function BookingForm({
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="reserved">Reserved</SelectItem>
                   <SelectItem value="checked_in">Checked In</SelectItem>
-                  <SelectItem value="checked_out">Checked Out</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             )}

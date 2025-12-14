@@ -79,6 +79,9 @@ export async function createBooking(booking: CreateBookingData) {
 			where: {
 				propertyId: booking.propertyId,
 				unitId: booking.unitId,
+				status: {
+					in: ["pending", "reserved", "checked_in"]
+				},
 				checkInDate: {
 					gte: startOfDay,
 					lte: endOfDay,
@@ -96,31 +99,31 @@ export async function createBooking(booking: CreateBookingData) {
 		const unitStatus = evaluateUnitStatus(booking.status)
 
 		// use a prisma transaction to create booking and then update unit status
-		const result = await prisma.$transaction(async (tx) => {
+		const result = await prisma.$transaction(
+			async (tx) => {
+				// create booking
+				const newBooking = await tx.booking.create({
+					data: booking,
+					include: {
+						unit: true,
+						guest: true,
+					}
+				})
 
-			// create booking
-			const newBooking = await tx.booking.create({
-				data: booking,
-				include: {
-					unit: true,
-					guest: true,
-				}
-			})
+				// update unit status
+				await tx.unit.update({
+					where: {
+						id: newBooking.unit.id,
+						propertyId: newBooking.propertyId
+					},
+					data: {
+						status: unitStatus
+					}
 
-			// update unit status
-			await tx.unit.update({
-				where: {
-					id: newBooking.unit.id,
-					propertyId: newBooking.propertyId
-				},
-				data: {
-					status: unitStatus
-				}
+				})
 
-			})
-
-			return newBooking
-		})
+				return newBooking
+			}, { timeout: 10000, maxWait: 3000, isolationLevel: "ReadCommitted" })
 
 		revalidatePath("/bookings");
 		revalidatePath("/dashboard");
@@ -153,36 +156,36 @@ export async function updateBooking(
 		const unitStatus = evaluateUnitStatus(data.status)
 
 		// we use a prisma transaction to ensure atomicity and data consistency
-		const result = await prisma.$transaction(async (tx) => {
+		const result = await prisma.$transaction(
+			async (tx) => {
+				// update booking
+				const booking = await tx.booking.update({
+					where: { id },
+					data,
+					include: {
+						guest: true,
+						property: true,
+						unit: true,
+					},
+				});
 
-			// update booking
-			const booking = await tx.booking.update({
-				where: { id },
-				data,
-				include: {
-					guest: true,
-					property: true,
-					unit: true,
-				},
-			});
+				// update unit status
+				const unit = await tx.unit.update({
+					where: {
+						id: booking.unit.id,
+						propertyId: booking.property.id
+					},
+					data: {
+						status: unitStatus
+					}
+				})
 
-			// update unit status
-			const unit = await tx.unit.update({
-				where: {
-					id: booking.unit.id,
-					propertyId: booking.property.id
-				},
-				data: {
-					status: unitStatus
+				return {
+					booking,
+					unit
 				}
-			})
 
-			return {
-				booking,
-				unit
-			}
-
-		})
+			}, { timeout: 10000, maxWait: 3000, isolationLevel: "ReadCommitted" })
 
 		revalidateTag("unit")
 		revalidatePath("/bookings");
@@ -208,26 +211,6 @@ export async function deleteBooking(id: number) {
 	}
 }
 
-export async function getBookingsByUnit(unitId: number) {
-	try {
-		const bookings = await prisma.booking.findMany({
-			where: { unitId },
-			include: {
-				guest: true,
-				property: true,
-				unit: true,
-			},
-			orderBy: {
-				createdAt: "desc",
-			},
-		});
-		return bookings;
-	} catch (error) {
-		console.error("Error fetching bookings by unit:", error);
-		return [];
-	}
-}
-
 export async function getAllPropertiesWithUnits() {
 	try {
 		const properties = await prisma.property.findMany({
@@ -242,43 +225,6 @@ export async function getAllPropertiesWithUnits() {
 	} catch (error) {
 		console.error("Error fetching properties with units:", error);
 		return [];
-	}
-}
-
-export async function getMonthlyRevenue() {
-	try {
-		const currentDate = new Date();
-		const startOfMonth = new Date(
-			currentDate.getFullYear(),
-			currentDate.getMonth(),
-			1
-		);
-		const endOfMonth = new Date(
-			currentDate.getFullYear(),
-			currentDate.getMonth() + 1,
-			0
-		);
-
-		const bookings = await prisma.booking.findMany({
-			where: {
-				createdAt: {
-					gte: startOfMonth,
-					lte: endOfMonth,
-				},
-				status: {
-					in: ["checked_in", "checked_out"],
-				},
-			},
-		});
-
-		const totalRevenue = bookings.reduce(
-			(sum, booking) => sum + booking.totalAmount,
-			0
-		);
-		return totalRevenue;
-	} catch (error) {
-		console.error("Error calculating monthly revenue:", error);
-		return 0;
 	}
 }
 
@@ -388,4 +334,3 @@ export const getBookingFormData = unstable_cache(
 	revalidate: 60,
 	tags: ["booking-form-data"]
 })
-

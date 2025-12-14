@@ -47,27 +47,6 @@ export async function getProperties(page: number = 1) {
 	}
 }
 
-/* export async function getPropertyById(id: number) {
-	try {
-		const property = await prisma.property.findUnique({
-			where: {
-				id,
-				deletedAt: null,
-			},
-			include: {
-				tenants: true,
-				amenities: true,
-				media: true
-
-			},
-		});
-		return property;
-	} catch (error) {
-		console.error("Error fetching property:", error);
-		throw new Error("Failed to fetch property");
-	}
-} */
-
 export const getCachedProperty = unstable_cache(
 	async (propertyId: number) => {
 		return await prisma.property.findUnique({

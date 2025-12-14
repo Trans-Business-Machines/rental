@@ -135,6 +135,7 @@ export function BookingEditDialog({
                   type="date"
                   value={formData.checkInDate}
                   onChange={handleChange}
+                  disabled={booking.status === "checked_in"}
                   required
                 />
               </div>
@@ -178,6 +179,7 @@ export function BookingEditDialog({
                 <Label htmlFor="source">Booking Source</Label>
                 <Select
                   value={formData.source}
+                  disabled={booking.status === "checked_in"}
                   onValueChange={(value) => handleSelectChange("source", value)}
                 >
                   <SelectTrigger className="w-full">
@@ -252,15 +254,15 @@ export function BookingEditDialog({
               <Select
                 value={formData.status}
                 onValueChange={(value) => handleSelectChange("status", value)}
+                disabled={booking.status === "checked_in"}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pending" disabled>Pending</SelectItem>
-                  <SelectItem value="reserved">Reserved</SelectItem>
+                  <SelectItem value="reserved" disabled>Reserved</SelectItem>
                   <SelectItem value="checked_in">Checked In</SelectItem>
-                  <SelectItem value="checked_out">Checked Out</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>

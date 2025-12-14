@@ -5,7 +5,6 @@ import {
   getInventoryStats,
 } from "@/lib/actions/inventory";
 import { getPropertyNames } from "@/lib/actions/properties";
-import { CheckoutDialog } from "@/components/CheckoutDialog";
 import { InventoryDialog } from "@/components/InventoryDialog";
 import { InventoryAssignments } from "@/components/InventoryAssignments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -95,7 +94,6 @@ export default async function InventoryPage({
           </p>
         </div>
         <div className="flex space-x-2">
-          <CheckoutDialog />
           <InventoryDialog />
         </div>
       </div>

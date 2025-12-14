@@ -11,7 +11,7 @@ function BookingNotFound() {
           <XCircle className="size-12 text-chart-5/80 mx-auto mb-4" />
           <h2 className="text-xl font-semibold">Booking not found</h2>
           <p className="text-sm text-muted-foreground">
-            The booking you are looking for does not exist !
+            The booking you are looking for does not exist!
           </p>
           <Button asChild className="mt-4">
             <Link href="/bookings">Back to bookings</Link>
