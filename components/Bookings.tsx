@@ -120,11 +120,10 @@ function Bookings({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="confirmed">Confirmed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="checked-in">Checked In</SelectItem>
-            <SelectItem value="checked-out">Checked Out</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="reserved">Reserved</SelectItem>
+            <SelectItem value="checked_in">Checked In</SelectItem>
+            <SelectItem value="checked_out">Checked Out</SelectItem>
           </SelectContent>
         </Select>
 
@@ -135,7 +134,7 @@ function Bookings({
             setSelectFilter((prev) => ({ ...prev, propertyName: value }));
           }}
         >
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-56">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

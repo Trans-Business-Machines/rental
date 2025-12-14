@@ -1,11 +1,13 @@
 "use client";
 
+//import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Eye, Mail, Phone } from "lucide-react";
 import type { Guest } from "@/lib/types/types";
+//import { canDeleteGuest } from "@/lib/utils";
 import Link from "next/link";
 
 interface GuestCardsProps {
@@ -13,6 +15,13 @@ interface GuestCardsProps {
   setIsDialogOpen: (open: boolean) => void;
   setEditGuest: (guest: Guest) => void;
 }
+
+/* 
+interface GuestToDelete {
+  id: number;
+  firstName: string;
+  lastName: string;
+} */
 
 const getVerificationColor = (status: string) => {
   switch (status) {

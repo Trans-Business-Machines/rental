@@ -8,38 +8,16 @@ import {
 import {
   Archive,
   ArrowRightLeft,
-  Bath,
-  Bed,
   Calendar,
   DollarSign,
   Home,
-  Lamp,
   ArrowLeft,
   MapPin,
-  Monitor,
-  Package,
   User,
   UtensilsCrossed,
 } from "lucide-react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-
-function getCategoryIcon(category: string) {
-  switch (category) {
-    case "Furniture":
-      return Bed;
-    case "Electronics":
-      return Monitor;
-    case "Appliances":
-      return UtensilsCrossed;
-    case "Bathroom":
-      return Bath;
-    case "Lighting":
-      return Lamp;
-    default:
-      return Package;
-  }
-}
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -69,28 +47,24 @@ export default async function InventoryDetailsPage({
   if (!item) return notFound();
 
   const movements = await getInventoryMovementsForItem(itemId);
-  const CategoryIcon = getCategoryIcon(item.category);
 
   return (
-    <div className="max-w-4xl mx-auto py-10 space-y-8">
+    <section className="space-y-6">
       {/* Header and Navigation */}
       <div className="flex items-center gap-2">
         <div>
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="secondary" asChild>
             <Link href="/inventory">
-              <ArrowLeft className="size-4" />
+              <ArrowLeft className="size-4 flex items-center gap-2" />
+              <span className="">Back to Inventory</span>
             </Link>
           </Button>
         </div>
-        <h2 className="text-lg font-medium">Back to Inventory</h2>
       </div>
 
       {/* Hero Section */}
       <Card className="shadow-lg border-0 bg-gradient-to-br from-muted/50 to-white">
-        <CardContent className="flex items-center gap-6 py-8">
-          <div className="flex-shrink-0 rounded-xl bg-muted p-6 flex items-center justify-center">
-            <CategoryIcon className="h-12 w-12 text-primary" />
-          </div>
+        <CardContent className="flex items-center gap-6 py-4 md:py-6">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold tracking-tight">
@@ -104,7 +78,7 @@ export default async function InventoryDetailsPage({
               </Badge>
               <Badge variant="outline">Qty: {item.quantity}</Badge>
             </div>
-            <div className="text-muted-foreground text-lg mb-2">
+            <div className="text-muted-foreground text-lg my-4">
               {item.description}
             </div>
             <div className="flex gap-2 mt-2">
@@ -242,6 +216,6 @@ export default async function InventoryDetailsPage({
           )}
         </CardContent>
       </Card>
-    </div>
+    </section>
   );
 }

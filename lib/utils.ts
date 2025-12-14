@@ -1,39 +1,48 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
-import { countries, } from '@nexisltd/country';
-import type { BookingStatus, UnitStatus, } from "@/lib/types/types"
-
-
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { countries } from "@nexisltd/country";
+import type { BookingStatus, UnitStatus, Guest } from "@/lib/types/types";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 export function getNationalities() {
-  const worldCountries = countries()
+  const worldCountries = countries();
 
-  const nationalities = worldCountries.map((country) => country.nationality).sort((a, b) => a.localeCompare(b))
+  const nationalities = worldCountries
+    .map((country) => country.nationality)
+    .sort((a, b) => a.localeCompare(b));
 
-  return nationalities
-
+  return nationalities;
 }
 
 export function evaluateUnitStatus(bookingStatus: BookingStatus): UnitStatus {
-  let computedUnitStatus: UnitStatus = "available"
+  let computedUnitStatus: UnitStatus = "available";
 
   if (bookingStatus === "pending") {
-    computedUnitStatus = "booked"
+    computedUnitStatus = "booked";
   } else if (bookingStatus === "reserved") {
-    computedUnitStatus = "reserved"
+    computedUnitStatus = "reserved";
   } else if (bookingStatus === "checked_in") {
-    computedUnitStatus = "occupied"
+    computedUnitStatus = "occupied";
   } else if (bookingStatus === "checked_out") {
-    computedUnitStatus = "available"
+    computedUnitStatus = "available";
   } else if (bookingStatus === "cancelled") {
-    computedUnitStatus = "available"
+    computedUnitStatus = "available";
   }
 
-  return computedUnitStatus
-
+  return computedUnitStatus;
 }
 
+export function shouldDisableDelete(guest: Guest) {
+  if (!guest.bookings || guest.bookings.length === 0) {
+    return false
+  }
+
+  const latestBooking = guest.bookings[0]
+  const activeStatuses = ["pending", "reserved", "checked_in"]
+
+  return activeStatuses.includes(latestBooking.status)
+
+}

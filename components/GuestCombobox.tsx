@@ -91,7 +91,6 @@ function GuestCombobox({
                   let guestStatus = "";
 
                   if (guest.isCheckedIn) {
-                    console.log(guest);
                     const bookingStatus = guest.bookings[0].status;
                     guestStatus =
                       bookingStatus === "pending"

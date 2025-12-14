@@ -1,8 +1,8 @@
 import { getBookingById } from "@/lib/actions/bookings";
 import { getInventoryItems, getInventoryAssignments } from "@/lib/actions/inventory"
-import { getCheckoutReportById } from "@/lib/actions/checkout";
+import { getCheckoutReportById, getBookingsForCheckout, getInventoryAssignmentsForUnit } from "@/lib/actions/checkout";
 import { getProperties, getPropertyNames, getCachedProperty } from "@/lib/actions/properties";
-import { getGuests } from "@/lib/actions/guests";
+import { getGuests, } from "@/lib/actions/guests";
 
 /* ---------------- Type Definitions ---------------- */
 export type Booking = NonNullable<Awaited<ReturnType<typeof getBookingById>>>
@@ -24,6 +24,9 @@ export type Assignment = AssignmentResponse["assignments"][number]
 
 type InvetoryItemResponse = Awaited<ReturnType<typeof getInventoryItems>>
 export type InventoryItem = InvetoryItemResponse["items"][number]
+
+export type BookingsForCheckout = NonNullable<Awaited<ReturnType<typeof getBookingsForCheckout>>>
+export type InventoryAssignmentForUnit = NonNullable<Awaited<ReturnType<typeof getInventoryAssignmentsForUnit>>>
 
 
 export type CreateNewGuest = {

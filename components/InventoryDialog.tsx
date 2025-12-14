@@ -19,9 +19,9 @@ export function InventoryDialog({ children }: { children?: React.ReactNode }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children || (
-          <Button>
-            <Plus className="size-4 mr-1" />
-            <span>Add Item</span>
+          <Button className="flex justify-start items-center cursor-pointer">
+            <Plus className="size-4 mr-1 text-white" />
+            <span className="text-white">Add Item</span>
           </Button>
         )}
       </DialogTrigger>

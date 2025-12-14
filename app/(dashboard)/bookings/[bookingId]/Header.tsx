@@ -32,7 +32,12 @@ function Header({ booking }: { booking: Booking }) {
           <span>Export</span>
         </Button>
         <BookingEditDialog booking={booking}>
-          <Button className="cursor-pointer">
+          <Button
+            className="cursor-pointer"
+            disabled={
+              booking.status === "checked_out" || booking.status === "cancelled"
+            }
+          >
             <SquarePen className="size-4" />
             <span>Edit Booking</span>
           </Button>

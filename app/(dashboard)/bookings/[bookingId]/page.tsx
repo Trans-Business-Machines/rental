@@ -25,6 +25,7 @@ import {
 import { format, differenceInDays } from "date-fns";
 import Header from "./Header";
 import type { BookingStatus } from "@/lib/types/types";
+import { cn } from "@/lib/utils";
 
 const getStatusColor = (status: BookingStatus): string => {
   switch (status) {
@@ -68,15 +69,15 @@ async function BookingDetails({ params }: BookingDetailsPros) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "confirmed":
-        return <CheckCircle2 className="size-4" />;
-      case "checked-in":
-        return <Clock className="size-4" />;
-      case "checked-out":
-        return <CheckCircle2 className="size-4" />;
+        return <CheckCircle2 className="size-5" />;
+      case "checked_in":
+        return <Clock className="size-5" />;
+      case "checked_out":
+        return <CheckCircle2 className="size-5" />;
       case "cancelled":
-        return <XCircle className="size-4" />;
+        return <XCircle className="size-5" />;
       default:
-        return <Clock className="size-4" />;
+        return <Clock className="size-5" />;
     }
   };
 
@@ -85,7 +86,16 @@ async function BookingDetails({ params }: BookingDetailsPros) {
       <Header booking={booking} />
 
       {/* Booking status banner */}
-      <Card className="border-l-2 border-l-chart-2 mb-6">
+      <Card
+        className={cn(
+          "border-l-2 mb-6",
+          booking.status === "pending" && "border-l-chart-3",
+          booking.status === "reserved" && "border-l-chart-4",
+          booking.status === "checked_in" && "border-l-chart-2",
+          booking.status === "checked_out" && "border-l-chart-5",
+          booking.status === "cancelled" && "border-l-destructive"
+        )}
+      >
         <CardContent className="flex items-center justify-between p-4">
           <div className="flex items-center gap-4">
             <div className="size-12 rounded-full bg-chart-2/10 flex items-center justify-center">
@@ -318,13 +328,10 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
-                      Check-in
+                      Check in date
                     </p>
                     <p className="text-sm font-normal text-foreground">
                       {format(checkInDate, "EEE, MMM d, yyyy")}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(checkInDate, "hh:mm a")}
                     </p>
                   </div>
                 </div>
@@ -337,13 +344,10 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
-                      Check-out
+                      Check out date
                     </p>
                     <p className="text-sm font-normal text-foreground">
                       {format(checkOutDate, "EEE, MMM d, yyyy")}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(checkOutDate, "hh:mm a")}
                     </p>
                   </div>
                 </div>
