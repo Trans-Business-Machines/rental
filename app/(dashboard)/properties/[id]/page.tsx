@@ -72,7 +72,7 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
 
       <div className="flex gap-2">
         <PropertyDetails property={property} />
-        <PropertyAmenities amenities={amenities} />
+        <PropertyAmenities amenities={amenities} propertyId={property.id} />
       </div>
     </section>
   );

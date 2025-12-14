@@ -14,19 +14,33 @@ export default function UnitsPage() {
   const params = useParams();
 
   const currentPage = Number(searchParams.get("page")) || 1;
+
+  // Get the property id from params
   const propertyId = params.id;
+  const parsedPropertyId = Number(propertyId);
 
   // Fetch property units from DB
-  const { data, isError, error, isLoading } = usePropertyUnits({
+  const { data, isError, error, isLoading, refetch } = usePropertyUnits({
     page: currentPage,
-    propertyId: Number(propertyId),
+    propertyId: parsedPropertyId,
   });
+
+  if (!propertyId || isNaN(parsedPropertyId)) {
+    return (
+      <div className="text-center p-6 bg-red-50 border border-red-400">
+        <p className="text-red-400">Invalid property ID</p>
+      </div>
+    );
+  }
 
   if (isError) {
     console.error("Fetch units failed: ", error);
     return (
       <div className="text-center p-6 bg-red-50 border border-red-400">
-        <p className="text-red-400">{error.message}</p>
+        <p className="text-red-400">An error occured fetching units</p>
+        <Button size="sm" variant="outline" onClick={() => refetch()}>
+          Refetch units
+        </Button>
       </div>
     );
   }

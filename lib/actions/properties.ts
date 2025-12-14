@@ -127,16 +127,6 @@ export async function softDeleteProperty(id: number) {
 	}
 }
 
-export async function getAllPropertiesWithUnits() {
-	return prisma.property.findMany({
-		where: {
-			deletedAt: null,
-		},
-		include: { units: true },
-		orderBy: { name: "asc" },
-	});
-}
-
 export async function getPropertyStats() {
 	try {
 		const totalProperties = await prisma.property.count({

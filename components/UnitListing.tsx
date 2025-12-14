@@ -180,6 +180,7 @@ export function UnitListing({ units }: UnitListingProps) {
             <SelectItem value="available">Available</SelectItem>
             <SelectItem value="occupied">Occupied</SelectItem>
             <SelectItem value="reserved">Reserved</SelectItem>
+            <SelectItem value="maintenance">Maintenance</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -213,6 +214,7 @@ export function UnitListing({ units }: UnitListingProps) {
                           src={image.filePath}
                           alt={`Unit ${unit.name}  image ${index} + 1`}
                           fill
+                          sizes="(max-width: 1024px) 100vw, 50vw"
                           className="object-cover"
                         />
                         {getStatusBadge(unit.status)}
