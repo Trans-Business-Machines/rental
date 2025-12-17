@@ -20,9 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQueryClient } from "@tanstack/react-query";
 import { Edit } from "lucide-react";
 import { updateBooking } from "@/lib/actions/bookings";
 import { toast } from "sonner";
+import { checkoutKeys } from "@/hooks/useGuestCheckout";
 import type { Booking } from "@/lib/types/types";
 
 interface BookingEditDialogProps {
@@ -41,6 +43,9 @@ export function BookingEditDialog({
   // Detect if this Dialog is controlled or not.
   const isControlled =
     controlledOpen !== undefined && controlledOnOpenChange !== undefined;
+
+  // Get the query client
+  const queyClient = useQueryClient();
 
   // Define state to control dialog if its an uncontrolled dialog box
   const [internalOpen, setInternalOpen] = useState(false);
@@ -87,8 +92,19 @@ export function BookingEditDialog({
       checkOutDate: new Date(formData.checkOutDate),
     };
 
+    if (booking.status === "reserved" && data.status === "pending") {
+      toast.error("You can not move from reserved to pending!");
+      return;
+    }
+
     try {
-      await updateBooking(booking.id, data);
+      const { booking: updatedBooking } = await updateBooking(booking.id, data);
+
+      if (updatedBooking.status === "checked_in") {
+        queyClient.invalidateQueries({
+          queryKey: checkoutKeys.bookingsList,
+        });
+      }
 
       toast.success("Booking successfully updated.");
       setOpen(false);
@@ -260,8 +276,10 @@ export function BookingEditDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending" disabled>Pending</SelectItem>
-                  <SelectItem value="reserved" disabled>Reserved</SelectItem>
+                  <SelectItem value="pending" disabled>
+                    Pending
+                  </SelectItem>
+                  <SelectItem value="reserved">Reserved</SelectItem>
                   <SelectItem value="checked_in">Checked In</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
