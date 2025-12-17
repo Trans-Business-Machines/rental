@@ -1,132 +1,122 @@
-import { NextRequest, NextResponse, } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { MediaService } from "@/lib/services/mediaService"
 import { revalidatePath } from "next/cache";
-import z from "zod"
+import z from "zod";
 
+// Define schema for uploaded image data 
+const uploadedImageSchema = z.object({
+    url: z.string().url(),
+    filename: z.string(),
+    originalName: z.string(),
+    fileSize: z.number(),
+    mimeType: z.string(),
+});
+
+// Define schema for the new unit
 const unitSchema = z.object({
     name: z.string().min(1),
     type: z.string().min(1),
     rent: z.coerce.number().positive(),
     bedrooms: z.coerce.number().positive(),
-    bathrooms: z.coerce.number().positive(),
+    bathrooms: z.coerce.number().min(0),
     maxGuests: z.coerce.number().positive(),
+    images: z.array(uploadedImageSchema).min(1, "At least one image is required"),
 });
 
-export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-    try {
-        const formData = await request.formData();
-        const { id } = await context.params
+interface RouteParams {
+    params: Promise<{
+        id: string;
+    }>;
+}
 
-        const propertyId = Number(id)
+export async function POST(request: NextRequest, { params }: RouteParams) {
+    try {
+        const { id } = await params;
+        const propertyId = parseInt(id);
 
         if (isNaN(propertyId)) {
-            throw new Error("Invalid poperty id, it is not a number.")
+            return NextResponse.json(
+                { error: "Invalid property ID" },
+                { status: 400 }
+            );
         }
 
-        // check property already exists
+        // Verify property exists
         const property = await prisma.property.findUnique({
-            where: {
-                id: propertyId
-            }
-        })
+            where: { id: propertyId },
+        });
 
         if (!property) {
-            throw new Error("Property does not exist.")
+            return NextResponse.json(
+                { error: "Property not found" },
+                { status: 404 }
+            );
         }
 
-        // Extract the unit data
-        const unitData = {
-            name: formData.get("name") as string,
-            type: formData.get("type") as string,
-            rent: formData.get("rent") as string,
-            bedrooms: formData.get("bedrooms") as string,
-            bathrooms: formData.get("bathrooms") as string,
-            maxGuests: formData.get("maxGuests") as string,
-        }
+        // Get the request body
+        const body = await request.json();
 
-        // validate the data
-        const validatedData = unitSchema.parse(unitData)
+        // Validate the request body
+        const validated = unitSchema.parse(body);
 
-        // Extract image file
-        const imageFiles = formData.getAll("images") as File[];
+        const { images, ...unitData } = validated;
 
-        // use a transaction to add the unit and it's images
+        // Use a transaction to ensure atomicity
         const result = await prisma.$transaction(
             async (tx) => {
-                // add the unit details first to the db
+                // 1. Create the unit
                 const unit = await tx.unit.create({
                     data: {
-                        ...validatedData,
-                        propertyId
-                    }
-                })
+                        ...unitData,
+                        propertyId: propertyId,
+                    },
+                });
 
-                // next we upload the images to disk and save metadata to db
-                const uploadedMedia = []
+                // 2. Create media records for all uploaded images
+                const mediaRecords = [];
 
-                if (imageFiles && imageFiles.length > 0) {
-                    for (const file of imageFiles) {
-                        // validate the file
-                        const fileValidation = MediaService.validateFile(file)
-
-                        if (!fileValidation.valid) {
-                            throw new Error(`Image validation failed. ${fileValidation.error}`)
-                        }
-
-                        // convert image file to a buffer and get a unique file name
-                       
-                        const uniqueFileName = MediaService.generateUniqueFilename(file.name, unit.id, "unit")
-
-                        // save file to disk
-                        const filePath = await MediaService.saveFile(file, uniqueFileName)
-
-                        // create media record
-                        const media = await tx.media.create({
-                            data: {
-                                filename: uniqueFileName,
-                                originalName: file.name,
-                                fileSize: file.size,
-                                mimeType: file.type,
-                                unitId: unit.id,
-                                filePath
-                            }
-                        })
-
-                        uploadedMedia.push(media)
-                    }
+                for (const img of images) {
+                    const media = await tx.media.create({
+                        data: {
+                            filename: img.filename,
+                            originalName: img.originalName,
+                            fileSize: img.fileSize,
+                            mimeType: img.mimeType,
+                            unitId: unit.id,
+                            filePath: img.url,
+                        },
+                    });
+                    mediaRecords.push(media);
                 }
 
                 return {
                     unit,
-                    media: uploadedMedia
-                }
+                    media: mediaRecords,
+                };
             },
             { timeout: 30000, maxWait: 5000, isolationLevel: "ReadCommitted" }
-        )
+        );
 
-        revalidatePath(`/properties/${propertyId}`)
+        revalidatePath("/properties");
+        revalidatePath(`/properties/${propertyId}`);
+        revalidatePath("/dashboard");
 
         return NextResponse.json({
             message: "Unit created successfully.",
-            property: result.unit,
+            unit: result.unit,
             media: result.media,
-        })
-
-
-
+        });
     } catch (error) {
+        // Handle validation errors
         if (error instanceof z.ZodError) {
-            const fieldErrors = error.errors.map(err => ({
+            const fieldErrors = error.errors.map((err) => ({
                 field: err.path.join("."),
-                details: err.message
-            }))
-
-            console.log("Validation error: ", error)
+                message: err.message,
+            }));
 
             return NextResponse.json(
                 {
-                    message: "Validation failed",
+                    error: "Validation failed",
                     details: fieldErrors,
                 },
                 { status: 400 }
@@ -134,16 +124,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         }
 
         // Handle other errors
-        console.error("Error creating unit with media: ", error);
+        console.error("Error creating unit: ", error);
 
         let errorMessage = "Failed to create unit";
         if (error instanceof Error) {
             errorMessage = error.message;
         }
 
-        return NextResponse.json(
-            { message: errorMessage },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

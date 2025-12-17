@@ -1,9 +1,18 @@
-import { NextRequest, NextResponse, } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { MediaService } from "@/lib/services/mediaService"
 import { revalidatePath } from "next/cache";
-import z from "zod"
+import z from "zod";
 
+// Define a schema for uploaded image data 
+const uploadedImageSchema = z.object({
+    url: z.string().url(),
+    filename: z.string(),
+    originalName: z.string(),
+    fileSize: z.number(),
+    mimeType: z.string(),
+});
+
+// Define a schema  for property details
 const propertySchema = z.object({
     name: z.string().min(1),
     address: z.string().min(1),
@@ -12,90 +21,64 @@ const propertySchema = z.object({
     maxBedrooms: z.coerce.number().positive(),
     maxBathrooms: z.coerce.number().positive(),
     description: z.string().min(1).max(1000),
+    images: z.array(uploadedImageSchema).min(1, "At least one image is required"),
 });
 
+
 export async function POST(request: NextRequest) {
-
     try {
-        const formData = await request.formData();
+        // Get the request body
+        const body = await request.json();
 
-        // Extract the property data
-        const propertyData = {
-            name: formData.get("name") as string,
-            address: formData.get("address") as string,
-            type: formData.get("type") as string,
-            rent: formData.get("rent") as string,
-            maxBedrooms: formData.get("maxBedrooms") as string,
-            maxBathrooms: formData.get("maxBathrooms") as string,
-            description: formData.get("description") as string,
-        }
+        // validate the request body
+        const validated = propertySchema.parse(body);
 
-        // Validate and coerce types
-        const validated = propertySchema.parse(propertyData);
+        const { images, ...propertyData } = validated;
 
-        // append a static image so as not to break the exisiting image property
-        const validatedData = { ...validated, image: "https://images.unsplash.com/photo-1612637968894-660373e23b03?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8YXBhcnRtZW50JTIwYnVpbGRpbmd8ZW58MHx8MHx8fDA%3D" }
-
-        // Extract the images from the form data
-        const imageFiles = formData.getAll("images") as File[];
-
-        // Use a transaction to ensure atomicity
+        // we use a transaction to ensure atomicity and consistency
         const result = await prisma.$transaction(async (tx) => {
-            // 1. create the property
+            // 1. Create the property
             const property = await tx.property.create({
-                data: validatedData,
-                include: { media: true }
-            })
+                data: {
+                    ...propertyData,
+                    // Use first image URL as the main property image
+                    image: images[0]?.url || "",
+                },
+            });
 
-            // 2. Upload the images next if provided
-            const uploadedMedia = []
-
-            if (imageFiles && imageFiles.length > 0) {
-                for (const file of imageFiles) {
-                    // validate each file
-                    const fileValidation = MediaService.validateFile(file)
-
-                    if (!fileValidation.valid) {
-                        throw new Error(`Image validation failed. ${fileValidation.error}`)
-                    }
-
-                    // get a unique file name
-
-                    const uniqueFilename = MediaService.generateUniqueFilename(file.name, property.id, "property")
-
-                    // save file to disk the and file path
-                    const filePath = await MediaService.saveFile(file, uniqueFilename)
-
-                    // create a media record
-                    const media = await tx.media.create({
-                        data: {
-                            filename: uniqueFilename,
-                            originalName: file.name,
-                            fileSize: file.size,
-                            mimeType: file.type,
-                            propertyId: property.id,
-                            filePath
-                        }
-                    })
-
-                    uploadedMedia.push(media)
-                }
+            // 2. Create media records for all uploaded images
+            const mediaRecords = [];
+            for (const img of images) {
+                const media = await tx.media.create({
+                    data: {
+                        filename: img.filename,
+                        originalName: img.originalName,
+                        fileSize: img.fileSize,
+                        mimeType: img.mimeType,
+                        propertyId: property.id,
+                        filePath: img.url, // use supabase public URL
+                    },
+                });
+                mediaRecords.push(media);
             }
 
             return {
                 property,
-                media: uploadedMedia
-            }
+                media: mediaRecords,
+            };
+
+
         }, { timeout: 30000, maxWait: 5000, isolationLevel: "ReadCommitted" })
 
-        revalidatePath("/properties")
-        revalidatePath("/dashboard")
+        // revalidate dashboard and properties paths
+        revalidatePath("/properties");
+        revalidatePath("/dashboard");
 
         return NextResponse.json({
             message: "Property created successfully.",
             property: result.property,
             media: result.media,
-        })
+        });
 
 
     } catch (error) {
@@ -113,20 +96,19 @@ export async function POST(request: NextRequest) {
                 },
                 { status: 400 }
             );
+
         }
 
         // Handle other errors
-        console.error("Error creating property with media: ", error);
+        console.error("Error creating property: ", error);
 
         let errorMessage = "Failed to create property";
         if (error instanceof Error) {
             errorMessage = error.message;
         }
 
-        return NextResponse.json(
-            { error: errorMessage },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
+
 
 }
