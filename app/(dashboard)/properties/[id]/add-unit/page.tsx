@@ -13,13 +13,22 @@ async function AddUnitPage({ params }: AddUnitPageParams) {
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <Link href={`/properties/${propertyId}`}>
-          <Button variant="ghost" size="sm">
+      <div className="flex flex-col  items-start gap-2 md:gap-4">
+        <Button
+          asChild
+          size="sm"
+          variant="outline"
+          className="group hover:bg-blue-500 hover:border-blue-500 hover:text-white"
+        >
+          <Link
+            href={`/properties/${propertyId}/units`}
+            className="flex items center gap-3"
+          >
             <ArrowLeft className="size-4 mr-1" />
-            Back to Property
-          </Button>
-        </Link>
+            <span>Back to units</span>
+          </Link>
+        </Button>
+
         <div>
           <h1 className="font-bold text-lg md:text-2xl">Add a unit</h1>
           <p className="text-muted-foreground">
@@ -28,8 +37,7 @@ async function AddUnitPage({ params }: AddUnitPageParams) {
         </div>
       </div>
 
-      <div className="w-11/12">
-        {/* NewUnitForm goes here */}
+      <div className="w-12/12">
         <NewUnitForm propertyId={propertyId} />
       </div>
     </section>

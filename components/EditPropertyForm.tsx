@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useForm } from "react-hook-form";
+import { SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -21,50 +21,16 @@ import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
-import z from "zod";
-
-const FileSchema = z
-  .instanceof(File)
-  .refine(
-    (file) =>
-      [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/webp",
-        "images/avif",
-      ].includes(file.type),
-    "Only JPEG, PNG, WebP, and avif images are allowed"
-  )
-  .refine(
-    (file) => file.size <= 10 * 1024 * 1024,
-    "File size must be less than 10MB"
-  );
-
-const EditPropertySchema = z.object({
-  name: z.string().min(1, "Property name is required."),
-  address: z.string().min(10, "At least 10 characters are required"),
-  type: z.string().min(1, "Property type is required."),
-  rent: z
-    .number()
-    .positive("Rent must be a positive integer.")
-    .min(1, "Minimum is 1"),
-  maxBedrooms: z
-    .number()
-    .positive("Max bedrooms must be a positive integer.")
-    .min(1, "Minimum is 1"),
-  maxBathrooms: z
-    .number()
-    .positive("Max bathrooms must be a positive integer.")
-    .min(0, "Minimum is 0"),
-  description: z
-    .string()
-    .min(1, "description is required.")
-    .max(1000, "At most 1000 characters allowed."),
-  images: z.array(FileSchema).optional(),
-});
-
-type EditPropertyType = z.infer<typeof EditPropertySchema>;
+import {
+  ClientMediaService,
+  type UploadResult,
+} from "@/lib/services/clientMediaService";
+import {
+  FileSchema,
+  EditPropertyFormData,
+  EditPropertySchema,
+} from "@/lib/schemas/properties";
+import type { Property } from "@/lib/types/types";
 
 interface ExistingImage {
   id: string;
@@ -73,8 +39,6 @@ interface ExistingImage {
   filePath: string;
   markedForDelete?: boolean;
 }
-
-import type { Property } from "@/lib/types/types";
 
 interface EditPropertyFormProps {
   propertyId: string;
@@ -85,9 +49,9 @@ export function EditPropertyForm({
   propertyId,
   initialProperty,
 }: EditPropertyFormProps) {
-  /* ---------------------- Component state ----------------------  */
   const router = useRouter();
   const [isDragActive, setIsDragActive] = useState(false);
+
   const [newImages, setNewImages] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<ExistingImage[]>(
     initialProperty.media.map((img) => ({
@@ -95,16 +59,16 @@ export function EditPropertyForm({
       markedForDelete: false,
     }))
   );
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  /* ---------------------- Form Management ----------------------  */
   const {
     register,
     watch,
     setValue,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<EditPropertyType>({
+  } = useForm<EditPropertyFormData>({
     mode: "all",
     resolver: zodResolver(EditPropertySchema),
     defaultValues: {
@@ -115,41 +79,32 @@ export function EditPropertyForm({
       maxBedrooms: initialProperty.maxBedrooms || 1,
       maxBathrooms: initialProperty.maxBathrooms || 1,
       description: initialProperty.description,
-      images: [],
     },
   });
 
   const propertyType = watch("type");
 
-  /* ---------------------- Update Mutation ----------------------  */
+  /* ---------------- Update Mutation ---------------- */
   const updateMutation = useMutation({
-    mutationFn: async (data: EditPropertyType) => {
-      const formData = new FormData();
-
-      // Append property details
-      formData.append("name", data.name);
-      formData.append("address", data.address);
-      formData.append("type", data.type);
-      formData.append("rent", data.rent.toString());
-      formData.append("maxBedrooms", data.maxBedrooms.toString());
-      formData.append("maxBathrooms", data.maxBathrooms.toString());
-      formData.append("description", data.description);
-
-      // Append images to delete
-      const imagesToDelete = existingImages
-        .filter((img) => img.markedForDelete)
-        .map((img) => img.id);
-
-      formData.append("imagesToDelete", JSON.stringify(imagesToDelete));
-
-      // Append new images
-      newImages.forEach((file) => {
-        formData.append("images", file);
-      });
-
+    mutationFn: async ({
+      data,
+      uploadedImages,
+      imagesToDelete,
+    }: {
+      data: EditPropertyFormData;
+      uploadedImages: UploadResult[];
+      imagesToDelete: string[];
+    }) => {
       const response = await fetch(`/api/properties/${propertyId}/update`, {
         method: "PUT",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...data,
+          newImages: uploadedImages,
+          imagesToDelete,
+        }),
       });
 
       if (!response.ok) {
@@ -159,48 +114,62 @@ export function EditPropertyForm({
 
       return response.json();
     },
-    onSuccess: (_, prop) => {
-      toast.success(`${prop.name} updated successfully.`);
+    onSuccess: (_, { data }) => {
+      toast.success(`${data.name} updated successfully.`);
       router.push(`/properties/${propertyId}`);
     },
-    onError: (error) => {
+    onError: async (error, { uploadedImages }) => {
+      console.error("Error updating property: ", error);
+
+      // Cleanup newly uploaded images on error
+      if (uploadedImages.length > 0) {
+        console.log("Cleaning up uploaded images...");
+        await ClientMediaService.deleteFromSupabase(
+          uploadedImages.map((img) => img.filename)
+        );
+      }
+
       const errMsg =
-        error instanceof Error ? error.message : "Failed to update property";
-      console.error("Error updating property: ", error.message);
-      setUploadError(errMsg);
+        error instanceof Error ? error.message : "Failed to update property.";
+      toast.error(errMsg);
     },
   });
 
-  /* ---------------------- Image handling ----------------------  */
-  const addNewImages = (files: File[]) => {
-    const validImages = files.filter((file) => file.type.startsWith("image/"));
+  /* ---------------- Image handling ---------------- */
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
 
-    if (validImages.length === 0) {
-      setUploadError("No valid image files selected");
-      return;
+    setImageError(null);
+    const newFiles: File[] = [];
+
+    for (const file of Array.from(files)) {
+      const result = FileSchema.safeParse(file);
+      if (!result.success) {
+        setImageError(result.error.errors[0].message);
+        return;
+      }
+      newFiles.push(file);
     }
 
-    const allImages = [...newImages, ...validImages];
-    const totalImages =
-      existingImages.filter((img) => !img.markedForDelete).length +
-      allImages.length;
+    const activeExistingCount = existingImages.filter(
+      (img) => !img.markedForDelete
+    ).length;
 
-    if (totalImages > 10) {
-      setUploadError(
-        `Maximum 10 images allowed. You have ${existingImages.filter((img) => !img.markedForDelete).length} existing images.`
+    const totalAfterAdd =
+      activeExistingCount + newImages.length + newFiles.length;
+
+    if (totalAfterAdd > 10) {
+      setImageError(
+        `Maximum 10 images allowed. You have ${activeExistingCount} existing images.`
       );
       return;
     }
 
-    setNewImages(allImages);
-    setValue("images", allImages);
-    setUploadError(null);
+    setNewImages((prev) => [...prev, ...newFiles]);
   };
 
   const removeNewImage = (index: number) => {
-    const updated = newImages.filter((_, i) => i !== index);
-    setNewImages(updated);
-    setValue("images", updated);
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const toggleDeleteExistingImage = (imageId: string) => {
@@ -213,32 +182,83 @@ export function EditPropertyForm({
     );
   };
 
-  /* ---------------------- Drag and drop ----------------------  */
-  const handleDrag = (e: React.DragEvent) => {
+  /* ---------------- Drag and drop ---------------- */
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragActive(e.type === "dragenter" || e.type === "dragover");
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(false);
-
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    addNewImages(droppedFiles);
+    handleFileSelect(e.dataTransfer.files);
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.currentTarget.files || []);
-    addNewImages(files);
+  /* ---------------- Form submission ---------------- */
+  const onSubmit: SubmitHandler<EditPropertyFormData> = async (data) => {
+    // Check if at least one image will remain
+    const activeExistingCount = existingImages.filter(
+      (img) => !img.markedForDelete
+    ).length;
+    const totalImages = activeExistingCount + newImages.length;
+
+    if (totalImages === 0) {
+      setImageError("At least one image is required.");
+      return;
+    }
+
+    setIsUploading(true);
+    let uploadedImages: UploadResult[] = [];
+
+    try {
+      // Step 1: Delete images marked for deletion from Supabase
+      const imagesToDeleteFromStorage = existingImages
+        .filter((img) => img.markedForDelete)
+        .map((img) => img.filename);
+
+      if (imagesToDeleteFromStorage.length > 0) {
+        toast.info("Removing deleted images...", { duration: 3000 });
+        await ClientMediaService.deleteFromSupabase(imagesToDeleteFromStorage);
+      }
+
+      // Step 2: Upload new images to Supabase
+      if (newImages.length > 0) {
+        toast.info("Uploading new images...", { duration: 5000 });
+        uploadedImages = await ClientMediaService.processAndUploadImages(
+          newImages,
+          "property"
+        );
+      }
+
+      toast.info("Updating property...", { duration: 5000 });
+
+      // Step 3: Send data to server
+      const imagesToDelete = existingImages
+        .filter((img) => img.markedForDelete)
+        .map((img) => img.id);
+
+      await updateMutation.mutateAsync({
+        data,
+        uploadedImages,
+        imagesToDelete,
+      });
+    } catch (error) {
+      console.error("Failed to update property: ", error);
+      toast.error("Failed to update property.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  /* ---------------------- Form submission ----------------------  */
-
-  const onSubmit = (data: EditPropertyType) => {
-    updateMutation.mutate(data);
-  };
+  const isLoading = isSubmitting || isUploading;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
@@ -270,7 +290,6 @@ export function EditPropertyForm({
                 <Label htmlFor="type" className="mb-1.5 block">
                   Property Type
                 </Label>
-
                 <Select
                   value={propertyType}
                   onValueChange={(value) => setValue("type", value)}
@@ -326,7 +345,7 @@ export function EditPropertyForm({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="rent" className="mb-1.5 block">
-                  Base Rent ($)
+                  Base Rent (KES)
                 </Label>
                 <Input
                   id="rent"
@@ -343,7 +362,7 @@ export function EditPropertyForm({
               </div>
               <div>
                 <Label htmlFor="max-bedrooms" className="mb-1.5 block">
-                  Max bedrooms
+                  Max Bedrooms
                 </Label>
                 <Input
                   id="max-bedrooms"
@@ -415,18 +434,24 @@ export function EditPropertyForm({
                   {existingImages.map((img, index) => (
                     <div
                       key={img.id}
-                      className={`relative group ${img.markedForDelete ? "opacity-50" : ""}`}
+                      className={cn(
+                        "relative group",
+                        img.markedForDelete && "opacity-50"
+                      )}
                     >
-                      <Image
-                        src={img.filePath}
-                        alt={`${img.originalName} - ${index}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
+                      <div className="aspect-square relative">
+                        <Image
+                          src={img.filePath}
+                          alt={`${img.originalName} - ${index}`}
+                          fill
+                          className="object-cover rounded-lg"
+                        />
+                      </div>
                       <button
                         type="button"
                         onClick={() => toggleDeleteExistingImage(img.id)}
-                        disabled={isSubmitting || updateMutation.isPending}
-                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
+                        disabled={isLoading || updateMutation.isPending}
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
                         title={
                           img.markedForDelete ? "Restore image" : "Delete image"
                         }
@@ -434,13 +459,13 @@ export function EditPropertyForm({
                         <X size={16} />
                       </button>
                       {img.markedForDelete && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
                           <p className="text-white text-xs font-medium">
                             Marked for deletion
                           </p>
                         </div>
                       )}
-                      <p className="text-xs text-gray-600 mt-1 truncate">
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
                         {img.originalName}
                       </p>
                     </div>
@@ -455,22 +480,25 @@ export function EditPropertyForm({
                 Add New Images
               </p>
               <div
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition ${
+                className={cn(
+                  "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
                   isDragActive
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-300 hover:border-gray-400"
-                } ${isSubmitting || updateMutation.isPending ? "opacity-50 cursor-not-allowed" : ""}`}
+                    ? "border-primary bg-primary/5"
+                    : "border-muted-foreground/25 hover:border-muted-foreground/50",
+                  (isLoading || updateMutation.isPending) &&
+                    "opacity-50 cursor-not-allowed",
+                  imageError && "border-red-400"
+                )}
               >
                 <input
                   type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/avif"
                   multiple
-                  accept="image/*"
-                  onChange={handleFileInput}
-                  disabled={isSubmitting || updateMutation.isPending}
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                  disabled={isLoading || updateMutation.isPending}
                   className="hidden"
                   id="file-input"
                 />
@@ -494,20 +522,23 @@ export function EditPropertyForm({
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {newImages.map((file, index) => (
                     <div key={index} className="relative group">
-                      <Image
-                        src={URL.createObjectURL(file)}
-                        alt={`Preview ${index}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
+                      <div className="aspect-square relative">
+                        <Image
+                          src={URL.createObjectURL(file)}
+                          alt={`Preview ${index}`}
+                          fill
+                          className="object-cover rounded-lg"
+                        />
+                      </div>
                       <button
                         type="button"
                         onClick={() => removeNewImage(index)}
-                        disabled={isSubmitting || updateMutation.isPending}
-                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
+                        disabled={isLoading || updateMutation.isPending}
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
                       >
                         <X size={16} />
                       </button>
-                      <p className="text-xs text-gray-600 mt-1 truncate">
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
                         {file.name}
                       </p>
                     </div>
@@ -517,21 +548,13 @@ export function EditPropertyForm({
             )}
 
             {/* Error Message */}
-            {(errors.images || uploadError) && (
+            {imageError && (
               <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded text-sm">
-                {errors.images?.message || uploadError}
+                {imageError}
               </div>
             )}
           </CardContent>
         </Card>
-
-        {/* Error from API */}
-        {updateMutation.isError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded">
-            <p className="font-medium">Failed to update property</p>
-            <p className="text-sm">{uploadError}</p>
-          </div>
-        )}
 
         {/* Action buttons */}
         <div className="my-4 pt-4 flex gap-3 justify-center">
@@ -539,16 +562,16 @@ export function EditPropertyForm({
             type="button"
             variant="outline"
             onClick={() => router.back()}
-            disabled={isSubmitting || updateMutation.isPending}
+            disabled={isLoading || updateMutation.isPending}
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting || updateMutation.isPending}
+            disabled={isLoading || updateMutation.isPending}
             className="w-48 cursor-pointer font-semibold"
           >
-            {updateMutation.isPending
+            {isLoading || updateMutation.isPending
               ? "Updating Property..."
               : "Update Property"}
           </Button>

@@ -36,7 +36,7 @@ function CheckoutLandingPage() {
     return (
       <section className="space-y-6  min-h-screen flex items-center justify-center">
         <div className="text-muted-foreground flex flex-col gap-2 items-center justify-center">
-          <Loader2 className="size-6 lg:size-12 animate-spin text-chart-1" />
+          <Loader2 className="size-6 lg:size-10 animate-spin text-chart-1" />
           <p>Loading checked in bookings . . .</p>
         </div>
       </section>
@@ -69,9 +69,13 @@ function CheckoutLandingPage() {
   return (
     <section className="space-y-3 md:space-y-4 lg:space-y-6">
       <header className="flex flex-col items-start gap-3">
-        <Button asChild variant="secondary" className="group">
+        <Button
+          asChild
+          variant="outline"
+          className="group hover:bg-blue-500 hover:border-blue-500 hover:text-white"
+        >
           <Link href="/bookings" className="flex items-center gap-2">
-            <ArrowLeft className="size-4 group-hover:rotate-45 transition-transform duration-300 ease-in-out" />
+            <ArrowLeft className="size-4" />
             <span>Back to bookings</span>
           </Link>
         </Button>

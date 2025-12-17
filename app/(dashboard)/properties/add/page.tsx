@@ -1,4 +1,3 @@
-//import { PropertyForm } from "@/components/PropertyForm";
 import { Button } from "@/components/ui/button";
 import { NewPropertyForm } from "./new-property-form";
 import { ArrowLeft } from "lucide-react";
@@ -16,13 +15,11 @@ export default function AddPropertyPage() {
         </Link>
         <div>
           <h1 className="font-bold text-lg md:text-2xl">Add New Property</h1>
-          <p className="text-muted-foreground">
-            Create a new rental property.
-          </p>
+          <p className="text-muted-foreground">Create a new rental property.</p>
         </div>
       </div>
 
-      <div className="w-11/12">
+      <div className="w-12/12">
         <NewPropertyForm />
       </div>
     </section>

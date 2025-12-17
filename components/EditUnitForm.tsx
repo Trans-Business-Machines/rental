@@ -20,47 +20,17 @@ import { toast } from "sonner";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { unitKeys } from "@/hooks/useUnitDetails";
-import type { Unit } from "@/lib/types/types";
 import Image from "next/image";
-import z from "zod";
-
-// Define file schema
-const FileSchema = z
-  .instanceof(File)
-  .refine(
-    (file) =>
-      [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/webp",
-        "images/avif",
-      ].includes(file.type),
-    "Only jpeg, jpg, png,avif, and webp images are allowed."
-  )
-  .refine(
-    (file) => file.size < 10 * 1024 * 1024,
-    "File size must less than 10MB."
-  );
-
-// Define the  New property schema
-const EditUnitSchema = z.object({
-  name: z.string().min(1, "unit name is required."),
-  type: z.string().min(1, "unit type is required."),
-  rent: z
-    .number()
-    .positive("rent must a positve integer.")
-    .min(1, "minimum is 1"),
-  bedrooms: z
-    .number()
-    .positive("bedrooms must a positve integer.")
-    .min(1, "minimum is 1"),
-  bathrooms: z.number().positive("bathrooms must a positve integer."),
-  maxGuests: z.number().positive("max guests must a positve integer."),
-  images: z.array(FileSchema).optional(),
-});
-
-type EditUnitType = z.infer<typeof EditUnitSchema>;
+import {
+  ClientMediaService,
+  type UploadResult,
+} from "@/lib/services/clientMediaService";
+import {
+  FileSchema,
+  EditUnitFormData,
+  EditUnitSchema,
+} from "@/lib/schemas/properties";
+import type { Unit } from "@/lib/types/types";
 
 interface ExistingImage {
   id: string;
@@ -77,7 +47,9 @@ interface EditUnitFormProps {
 }
 
 function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
-  // Component state
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
   const [isDragActive, setIsDragActive] = useState(false);
   const [newImages, setNewImages] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<ExistingImage[]>(
@@ -86,13 +58,9 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
       markedForDelete: false,
     }))
   );
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  // Get query client and router objects
-  const router = useRouter();
-  const queryClient = useQueryClient();
-
-  // React hook form management
   const {
     register,
     watch,
@@ -100,7 +68,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
     reset,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<EditUnitType>({
+  } = useForm<EditUnitFormData>({
     mode: "all",
     resolver: zodResolver(EditUnitSchema),
     defaultValues: {
@@ -110,55 +78,46 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
       bedrooms: initialUnit.bedrooms || 1,
       bathrooms: initialUnit.bathrooms || 0,
       maxGuests: initialUnit.maxGuests || 1,
-      images: [],
     },
   });
 
   const unitType = watch("type");
 
-  /* ---------------- Mutation for form submission data goes here---------------- */
+  /* ---------------- Update Mutation ---------------- */
   const updateMutation = useMutation({
-    mutationFn: async (data: EditUnitType) => {
-      const formData = new FormData();
-
-      // Append property details
-      formData.append("name", data.name);
-      formData.append("type", data.type);
-      formData.append("rent", data.rent.toString());
-      formData.append("bedrooms", data.bedrooms.toString());
-      formData.append("bathrooms", data.bathrooms.toString());
-      formData.append("maxGuests", data.maxGuests.toString());
-
-      // Append images to delete
-      const imagesToDelete = existingImages
-        .filter((img) => img.markedForDelete)
-        .map((img) => img.id);
-
-      formData.append("imagesToDelete", JSON.stringify(imagesToDelete));
-
-      // Append new images
-      newImages.forEach((file) => {
-        formData.append("images", file);
-      });
-
+    mutationFn: async ({
+      data,
+      uploadedImages,
+      imagesToDelete,
+    }: {
+      data: EditUnitFormData;
+      uploadedImages: UploadResult[];
+      imagesToDelete: string[];
+    }) => {
       const response = await fetch(
         `/api/units/${unitId}/update?propertyId=${propertyId}`,
         {
           method: "PUT",
-          body: formData,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...data,
+            newImages: uploadedImages,
+            imagesToDelete,
+          }),
         }
       );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to update property");
+        throw new Error(error.error || "Failed to update unit");
       }
 
       return response.json();
     },
-    onSuccess: async (_, prop) => {
-      // invalidate the queries that display unit data
-
+    onSuccess: async (_, { data }) => {
+      // Invalidate queries
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["property", "units"],
@@ -168,55 +127,64 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
         }),
       ]);
 
-      // Reset the form
       reset();
       setExistingImages([]);
       setNewImages([]);
 
-      //  show success message
-      toast.success(`${prop.name} updated successfully.`);
-
-      // Navigate to the unit details page
+      toast.success(`${data.name} updated successfully.`);
       router.push(`/properties/${propertyId}/units/${unitId}`);
     },
-    onError: (error) => {
+    onError: async (error, { uploadedImages }) => {
+      console.error("Error updating unit: ", error);
+
+      // Cleanup newly uploaded images on error
+      if (uploadedImages.length > 0) {
+        console.log("Cleaning up uploaded images...");
+        await ClientMediaService.deleteFromSupabase(
+          uploadedImages.map((img) => img.filename)
+        );
+      }
+
       const errMsg =
-        error instanceof Error ? error.message : "Failed to update unit";
-      console.error("Error updating unit: ", error.message);
-      setUploadError(errMsg);
+        error instanceof Error ? error.message : "Failed to update unit.";
+      toast.error(errMsg);
     },
   });
 
-  /* ---------------- Image handling functions ---------------- */
-  const addNewImages = (files: File[]) => {
-    const validImages = files.filter((file) => file.type.startsWith("image/"));
+  /* ---------------- Image handling ---------------- */
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
 
-    if (validImages.length === 0) {
-      setUploadError("No valid image files selected");
-      return;
+    setImageError(null);
+    const newFiles: File[] = [];
+
+    for (const file of Array.from(files)) {
+      const result = FileSchema.safeParse(file);
+      if (!result.success) {
+        setImageError(result.error.errors[0].message);
+        return;
+      }
+      newFiles.push(file);
     }
 
-    const allImages = [...newImages, ...validImages];
-    const totalImages =
-      existingImages.filter((img) => !img.markedForDelete).length +
-      allImages.length;
+    const activeExistingCount = existingImages.filter(
+      (img) => !img.markedForDelete
+    ).length;
+    const totalAfterAdd =
+      activeExistingCount + newImages.length + newFiles.length;
 
-    if (totalImages > 10) {
-      setUploadError(
-        `Maximum 10 images allowed. You have ${existingImages.filter((img) => !img.markedForDelete).length} existing images.`
+    if (totalAfterAdd > 10) {
+      setImageError(
+        `Maximum 10 images allowed. You have ${activeExistingCount} existing images.`
       );
       return;
     }
 
-    setNewImages(allImages);
-    setValue("images", allImages);
-    setUploadError(null);
+    setNewImages((prev) => [...prev, ...newFiles]);
   };
 
   const removeNewImage = (index: number) => {
-    const updated = newImages.filter((_, i) => i !== index);
-    setNewImages(updated);
-    setValue("images", updated);
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const toggleDeleteExistingImage = (imageId: string) => {
@@ -229,32 +197,83 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
     );
   };
 
-  /* ---------------- Drag and drop functions ---------------- */
-  const handleDrag = (e: React.DragEvent) => {
+  /* ---------------- Drag and drop ---------------- */
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragActive(e.type === "dragenter" || e.type === "dragover");
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(false);
-
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    addNewImages(droppedFiles);
+    handleFileSelect(e.dataTransfer.files);
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.currentTarget.files || []);
-    addNewImages(files);
+  /* ---------------- Form submission ---------------- */
+  const onSubmit: SubmitHandler<EditUnitFormData> = async (data) => {
+    // Check if at least one image will remain
+    const activeExistingCount = existingImages.filter(
+      (img) => !img.markedForDelete
+    ).length;
+    const totalImages = activeExistingCount + newImages.length;
+
+    if (totalImages === 0) {
+      setImageError("At least one image is required.");
+      return;
+    }
+
+    setIsUploading(true);
+    let uploadedImages: UploadResult[] = [];
+
+    try {
+      // Step 1: Delete images marked for deletion from Supabase
+      const imagesToDeleteFromStorage = existingImages
+        .filter((img) => img.markedForDelete)
+        .map((img) => img.filename);
+
+      if (imagesToDeleteFromStorage.length > 0) {
+        toast.info("Removing deleted images...", { duration: 3000 });
+        await ClientMediaService.deleteFromSupabase(imagesToDeleteFromStorage);
+      }
+
+      // Step 2: Upload new images to Supabase
+      if (newImages.length > 0) {
+        toast.info("Uploading new images...", { duration: 5000 });
+        uploadedImages = await ClientMediaService.processAndUploadImages(
+          newImages,
+          "unit"
+        );
+      }
+
+      toast.info("Updating unit...", { duration: 5000 });
+
+      // Step 3: Send data to server
+      const imagesToDelete = existingImages
+        .filter((img) => img.markedForDelete)
+        .map((img) => img.id);
+
+      await updateMutation.mutateAsync({
+        data,
+        uploadedImages,
+        imagesToDelete,
+      });
+    } catch (error) {
+      console.error("Failed to update unit: ", error);
+      toast.error("Failed to update unit.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  /* ---------------- onSubmit handler ---------------- */
-  const onSubmit: SubmitHandler<EditUnitType> = (data) => {
-    console.log(data);
-    updateMutation.mutate(data);
-  };
+  const isLoading = isSubmitting || isUploading;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
@@ -272,7 +291,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                 </Label>
                 <Input
                   id="name"
-                  placeholder="Enter property name"
+                  placeholder="Enter unit name"
                   className={cn(errors.name && "border border-red-400")}
                   {...register("name")}
                 />
@@ -286,7 +305,6 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                 <Label htmlFor="type" className="mb-1.5 block">
                   Unit Type
                 </Label>
-
                 <Select
                   value={unitType}
                   onValueChange={(value) => setValue("type", value)}
@@ -314,10 +332,11 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
 
             <div>
               <Label htmlFor="rent" className="mb-1.5 block">
-                Rent
+                Rent (KES)
               </Label>
               <Input
                 id="rent"
+                type="number"
                 placeholder="Enter unit rent"
                 className={cn(errors.rent && "border border-red-400")}
                 {...register("rent", { valueAsNumber: true })}
@@ -339,11 +358,11 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="max-bedrooms" className="mb-1.5 block">
+                <Label htmlFor="bedrooms" className="mb-1.5 block">
                   Bedrooms
                 </Label>
                 <Input
-                  id="max-bedrooms"
+                  id="bedrooms"
                   type="number"
                   placeholder="Number of bedrooms"
                   className={cn(errors.bedrooms && "border border-red-400")}
@@ -356,13 +375,13 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                 )}
               </div>
               <div>
-                <Label htmlFor="max-bathrooms" className="mb-1.5 block">
+                <Label htmlFor="bathrooms" className="mb-1.5 block">
                   Bathrooms
                 </Label>
                 <Input
-                  id="max-bathrooms"
+                  id="bathrooms"
                   type="number"
-                  min={1}
+                  min={0}
                   placeholder="Number of bathrooms"
                   className={cn(errors.bathrooms && "border border-red-400")}
                   {...register("bathrooms", { valueAsNumber: true })}
@@ -375,11 +394,11 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
               </div>
             </div>
             <div>
-              <Label htmlFor="max-guests" className="mb-1.5 block">
+              <Label htmlFor="maxGuests" className="mb-1.5 block">
                 Max Guests
               </Label>
               <Input
-                id="max-guests"
+                id="maxGuests"
                 type="number"
                 min={1}
                 placeholder="Maximum guests allowed"
@@ -395,13 +414,13 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
           </CardContent>
         </Card>
 
-        {/* Media Upload goes here */}
+        {/* Media Upload */}
         <Card>
           <CardHeader>
             <CardTitle>Unit Images</CardTitle>
           </CardHeader>
-          <CardContent>
-            {/* Existing Images Preview */}
+          <CardContent className="space-y-4">
+            {/* Existing Images */}
             {existingImages.length > 0 && (
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-3">
@@ -412,18 +431,24 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                   {existingImages.map((img, index) => (
                     <div
                       key={img.id}
-                      className={`relative group ${img.markedForDelete ? "opacity-50" : ""}`}
+                      className={cn(
+                        "relative group",
+                        img.markedForDelete && "opacity-50"
+                      )}
                     >
-                      <Image
-                        src={img.filePath}
-                        alt={`${img.originalName} - ${index}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
+                      <div className="aspect-square relative">
+                        <Image
+                          src={img.filePath}
+                          alt={`${img.originalName} - ${index}`}
+                          fill
+                          className="object-cover rounded-lg"
+                        />
+                      </div>
                       <button
                         type="button"
                         onClick={() => toggleDeleteExistingImage(img.id)}
-                        disabled={isSubmitting || updateMutation.isPending}
-                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
+                        disabled={isLoading || updateMutation.isPending}
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
                         title={
                           img.markedForDelete ? "Restore image" : "Delete image"
                         }
@@ -431,13 +456,13 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                         <X size={16} />
                       </button>
                       {img.markedForDelete && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
                           <p className="text-white text-xs font-medium">
                             Marked for deletion
                           </p>
                         </div>
                       )}
-                      <p className="text-xs text-gray-600 mt-1 truncate">
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
                         {img.originalName}
                       </p>
                     </div>
@@ -446,38 +471,46 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
               </div>
             )}
 
-            {/* Drag and drop Area */}
-            <div
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition ${
-                isDragActive
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-300 hover:border-gray-400"
-              } ${isSubmitting || updateMutation.isPending ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleFileInput}
-                disabled={isSubmitting}
-                className="hidden"
-                id="file-input"
-              />
-              <label htmlFor="file-input" className="block cursor-pointer">
-                <p className="font-medium text-gray-900">
-                  Drag and drop images here.
-                </p>
-                <p className="text-sm text-gray-600">
-                  or click to select files (Max 10 images, 10MB each)
-                </p>
-              </label>
+            {/* Drag and Drop for New Images */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-3">
+                Add New Images
+              </p>
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={cn(
+                  "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
+                  isDragActive
+                    ? "border-primary bg-primary/5"
+                    : "border-muted-foreground/25 hover:border-muted-foreground/50",
+                  (isLoading || updateMutation.isPending) &&
+                    "opacity-50 cursor-not-allowed",
+                  imageError && "border-red-400"
+                )}
+              >
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/avif"
+                  multiple
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                  disabled={isLoading || updateMutation.isPending}
+                  className="hidden"
+                  id="file-input"
+                />
+                <label htmlFor="file-input" className="block cursor-pointer">
+                  <p className="font-medium text-gray-900">
+                    Drag and drop images here
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    or click to select files (Max 10 total, 10MB each)
+                  </p>
+                </label>
+              </div>
             </div>
 
-            {/* Images preview */}
+            {/* New Images Preview */}
             {newImages.length > 0 && (
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-3">
@@ -486,20 +519,23 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {newImages.map((file, index) => (
                     <div key={index} className="relative group">
-                      <Image
-                        src={URL.createObjectURL(file)}
-                        alt={`Preview ${index}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
+                      <div className="aspect-square relative">
+                        <Image
+                          src={URL.createObjectURL(file)}
+                          alt={`Preview ${index}`}
+                          fill
+                          className="object-cover rounded-lg"
+                        />
+                      </div>
                       <button
                         type="button"
                         onClick={() => removeNewImage(index)}
-                        disabled={isSubmitting || updateMutation.isPending}
-                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
+                        disabled={isLoading || updateMutation.isPending}
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
                       >
                         <X size={16} />
                       </button>
-                      <p className="text-xs text-gray-600 mt-1 truncate">
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
                         {file.name}
                       </p>
                     </div>
@@ -509,38 +545,32 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
             )}
 
             {/* Error Message */}
-            {(errors.images || uploadError) && (
+            {imageError && (
               <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded text-sm">
-                {errors.images?.message || uploadError}
+                {imageError}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Error from API */}
-        {updateMutation.isError && (
-          <div className="bg-red-50 border border-red-200 text-red-400 p-4 rounded">
-            <p className="font-medium">Failed to create unit.</p>
-            <p className="text-sm">{uploadError}</p>
-          </div>
-        )}
-
-        {/* Action button */}
+        {/* Action buttons */}
         <div className="my-4 pt-4 flex gap-3 justify-center">
           <Button
             type="button"
             variant="outline"
             onClick={() => router.back()}
-            disabled={isSubmitting || updateMutation.isPending}
+            disabled={isLoading || updateMutation.isPending}
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting || updateMutation.isPending}
+            disabled={isLoading || updateMutation.isPending}
             className="w-48 cursor-pointer font-semibold"
           >
-            {updateMutation.isPending ? "Updating unit. . ." : "Update unit"}
+            {isLoading || updateMutation.isPending
+              ? "Updating Unit..."
+              : "Update Unit"}
           </Button>
         </div>
       </div>

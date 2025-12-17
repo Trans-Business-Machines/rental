@@ -1,196 +1,150 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { MediaService } from "@/lib/services/mediaService";
+import { revalidatePath } from "next/cache";
 import z from "zod";
 
+// Define schema for uploaded image data 
+const uploadedImageSchema = z.object({
+    url: z.string().url(),
+    filename: z.string(),
+    originalName: z.string(),
+    fileSize: z.number(),
+    mimeType: z.string(),
+});
 
+// Define schema for updated property details
 const updatePropertySchema = z.object({
     name: z.string().min(1),
-    address: z.string().min(10),
+    address: z.string().min(1),
     type: z.string().min(1),
     rent: z.coerce.number().positive(),
     maxBedrooms: z.coerce.number().positive(),
     maxBathrooms: z.coerce.number().positive(),
     description: z.string().min(1).max(1000),
-    imagesToDelete: z.array(z.string()).optional(),
+    // New images uploaded from client
+    newImages: z.array(uploadedImageSchema).optional().default([]),
+    // IDs of existing images to delete
+    imagesToDelete: z.array(z.string()).optional().default([]),
 });
 
+interface RouteParams {
+    params: Promise<{
+        id: string;
+    }>;
+}
 
-export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function PUT(request: NextRequest, { params }: RouteParams) {
     try {
-        const formData = await request.formData();
-        const { id } = await context.params
-
-        const propertyId = Number(id);
+        const { id } = await params;
+        const propertyId = parseInt(id);
 
         if (isNaN(propertyId)) {
-            return NextResponse.json({
-                error: "Invalid property Id",
-                details: "Property Id is not number"
-            }, {
-                status: 400
-            })
+            return NextResponse.json(
+                { error: "Invalid property ID" },
+                { status: 400 }
+            );
         }
 
-        // Extract property details
-        const propertyData = {
-            name: formData.get('name') as string,
-            address: formData.get('address') as string,
-            type: formData.get('type') as string,
-            rent: formData.get('rent') as string,
-            maxBedrooms: formData.get('maxBedrooms') as string,
-            maxBathrooms: formData.get('maxBathrooms') as string,
-            description: formData.get('description') as string,
-            imagesToDelete: JSON.parse(formData.get('imagesToDelete') as string || '[]'),
-        };
+        // Get the request body
+        const body = await request.json();
 
-        // Validate the data
-        const validatedData = updatePropertySchema.parse(propertyData);
+        // Validate the request body
+        const validated = updatePropertySchema.parse(body);
 
-        // Extract image files
-        const newImageFiles = formData.getAll("images") as File[]
+        const { newImages, imagesToDelete, ...propertyData } = validated;
 
-        // Verify the property is existing
-        const property = await prisma.property.findUnique({
-            where: {
-                id: propertyId,
-                deletedAt: null
-            }
-        })
+        // Use a transaction to ensure atomicity
+        const result = await prisma.$transaction(
+            async (tx) => {
+                // 1. Delete marked images from database
+                // Note: Actual file deletion from Supabase should be done on client
+                // before calling this API, or via a cleanup job
+                if (imagesToDelete.length > 0) {
+                    await tx.media.deleteMany({
+                        where: {
+                            id: { in: imagesToDelete },
+                            propertyId: propertyId,
+                        },
+                    });
+                }
 
+                // 2. Create media records for new images
+                const newMediaRecords = [];
+                for (const img of newImages) {
+                    const media = await tx.media.create({
+                        data: {
+                            filename: img.filename,
+                            originalName: img.originalName,
+                            fileSize: img.fileSize,
+                            mimeType: img.mimeType,
+                            propertyId: propertyId,
+                            filePath: img.url,
+                        },
+                    });
+                    newMediaRecords.push(media);
+                }
 
-        // Return a 404 error if property is not found
-        if (!property) {
+                // 3. Get all remaining media to determine main image
+                const allMedia = await tx.media.findMany({
+                    where: { propertyId: propertyId },
+                    orderBy: { createdAt: "asc" },
+                });
+
+                // 4. Update the property
+                const property = await tx.property.update({
+                    where: { id: propertyId },
+                    data: {
+                        ...propertyData,
+                        // Update main image to first available image
+                        image: allMedia[0]?.filePath || "",
+                    },
+                    include: { media: true },
+                });
+
+                return {
+                    property,
+                    newMedia: newMediaRecords,
+                    deletedCount: imagesToDelete.length,
+                };
+            },
+            { timeout: 30000, maxWait: 5000, isolationLevel: "ReadCommitted" }
+        );
+
+        revalidatePath("/properties");
+        revalidatePath(`/properties/${propertyId}`);
+        revalidatePath("/dashboard");
+
+        return NextResponse.json({
+            message: "Property updated successfully.",
+            property: result.property,
+            newMedia: result.newMedia,
+            deletedCount: result.deletedCount,
+        });
+    } catch (error) {
+        // Handle validation errors
+        if (error instanceof z.ZodError) {
+            const fieldErrors = error.errors.map((err) => ({
+                field: err.path.join("."),
+                message: err.message,
+            }));
+
             return NextResponse.json(
                 {
-                    error: "property not found."
+                    error: "Validation failed",
+                    details: fieldErrors,
                 },
-                {
-                    status: 404
-                })
+                { status: 400 }
+            );
         }
 
+        // Handle other errors
+        console.error("Error updating property: ", error);
 
-        // update property details first
-        await prisma.property.update({
-            where: { id: propertyId },
-            data: {
-                name: validatedData.name,
-                address: validatedData.address,
-                type: validatedData.type,
-                rent: validatedData.rent,
-                maxBedrooms: validatedData.maxBedrooms,
-                maxBathrooms: validatedData.maxBathrooms,
-                description: validatedData.description,
-            },
-        })
-
-
-        // Delete marked images
-        if (validatedData.imagesToDelete && validatedData.imagesToDelete.length > 0) {
-            for (const imageId of validatedData.imagesToDelete) {
-                const media = await prisma.media.findUnique({
-                    where: {
-                        id: imageId
-                    }
-                })
-
-                if (media) {
-                    await MediaService.deleteFile(media.filename)
-                    await prisma.media.delete({
-                        where: {
-                            id: imageId
-                        }
-                    })
-                }
-            }
-        }
-
-        // upload the new images
-        const uploadedMedia = [];
-
-        if (newImageFiles && newImageFiles.length > 0) {
-            for (const file of newImageFiles) {
-                const fileValidation = MediaService.validateFile(file)
-
-                if (!fileValidation.valid) {
-                    throw new Error(`Image validation failed: ${fileValidation.error}`);
-                }
-
-               
-                const uniqueFileName = MediaService.generateUniqueFilename(
-                    file.name, propertyId, "property")
-
-                const filePath = await MediaService.saveFile(file, uniqueFileName)
-
-                const media = await prisma.media.create({
-                    data: {
-                        filename: uniqueFileName,
-                        originalName: file.name,
-                        fileSize: file.size,
-                        mimeType: file.type,
-                        filePath,
-                        propertyId,
-                    }
-                })
-
-                uploadedMedia.push(media)
-            }
-        }
-
-        // Revalidate cache
-        revalidateTag('property');
-
-        // fetch the updated property with all media
-        const finalProperty = await prisma.property.findUnique({
-            where: {
-                id: propertyId,
-                deletedAt: null
-            }
-        })
-
-
-
-        // Return response 
-        return NextResponse.json({
-            message: 'Property updated successfully',
-            property: finalProperty,
-            newMedia: uploadedMedia,
-        }, {
-            status: 200
-        })
-
-
-    } catch (error) {
-
-        if (error instanceof z.ZodError) {
-            const fieldErrors = error.errors.map(err => ({
-                field: err.path.join("."),
-                message: err.message
-            }))
-
-            return NextResponse.json({
-                error: "Validation failed",
-                details: fieldErrors
-            }, {
-                status: 400
-            })
-        }
-
-        // handle other errors
-        console.error('Error updating property:', error);
-
-        let errorMessage = 'Failed to update property';
+        let errorMessage = "Failed to update property";
         if (error instanceof Error) {
             errorMessage = error.message;
         }
 
-        return NextResponse.json(
-            { error: errorMessage },
-            { status: 500 }
-        );
-
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
-
 }

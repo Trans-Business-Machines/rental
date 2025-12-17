@@ -165,7 +165,7 @@ export function Step2InventoryChecklist({
                                 <div
                                   className={cn(
                                     "space-y-1.5",
-                                    item.condition !== "damaged"
+                                    item.condition === "good"
                                       ? "sm:col-span-2"
                                       : "sm:col-span-1"
                                   )}
@@ -208,10 +208,13 @@ export function Step2InventoryChecklist({
                                   </Select>
                                 </div>
 
-                                {item.condition === "damaged" && (
+                                {(item.condition === "damaged" ||
+                                  item.condition === "missing") && (
                                   <div className="space-y-1.5">
                                     <Label htmlFor={`damage-cost-${index}`}>
-                                      Damage Cost (KES)
+                                      {item.condition === "missing"
+                                        ? "Replacement Cost (KES)"
+                                        : "Damage Cost (KES)"}
                                     </Label>
                                     <Input
                                       id={`damage-cost-${index}`}

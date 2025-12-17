@@ -20,106 +20,67 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { toast } from "sonner";
-import z from "zod";
-
-// Define file schema
-const FileSchema = z
-  .instanceof(File)
-  .refine(
-    (file) =>
-      [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/webp",
-        "images/avif",
-      ].includes(file.type),
-    "Only jpeg, jpg, png,avif, and webp images are allowed."
-  )
-  .refine(
-    (file) => file.size < 10 * 1024 * 1024,
-    "File size must less than 10MB."
-  );
-
-// Define the  New property schema
-const NewPropertySchema = z.object({
-  name: z.string().min(1, "property name is required."),
-  address: z.string().min(10, "At least 10 characters are required"),
-  type: z.string().min(1, "property type is required."),
-  rent: z
-    .number()
-    .positive("rent must a positve integer.")
-    .min(1, "Minimum is 1"),
-  maxBedrooms: z
-    .number()
-    .positive("max bedrooms must a positve integer.")
-    .min(1, "Minimum is 1"),
-  maxBathrooms: z.number().positive("max bedrooms must a positve integer."),
-  description: z
-    .string()
-    .min(1, "description is required.")
-    .max(1000, "At most 1000 characters allowed."),
-  images: z
-    .array(FileSchema)
-    .min(1, "At least one image is required")
-    .max(10, "Maximum of 10 images allowed"),
-});
-
-type NewPropertyType = z.infer<typeof NewPropertySchema>;
+import {
+  ClientMediaService,
+  type UploadResult,
+} from "@/lib/services/clientMediaService";
+import {
+  FileSchema,
+  NewPropertyFormData,
+  NewPropertySchema,
+} from "@/lib/schemas/properties";
+import Image from "next/image";
 
 function NewPropertyForm() {
   const router = useRouter();
-  const [isDragActive, setIsDragActive] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
 
   // React hook form management
   const {
     register,
     watch,
+    reset,
     setValue,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<NewPropertyType>({
+  } = useForm<NewPropertyFormData>({
     mode: "all",
     resolver: zodResolver(NewPropertySchema),
     defaultValues: {
       type: "apartment",
-      images: [],
     },
   });
 
   const propertyType = watch("type");
-  const formImages = watch("images");
 
   /* ---------------- Mutation for form submission data goes here---------------- */
   const createMutation = useMutation({
-    mutationFn: async (data: NewPropertyType) => {
-      const formData = new FormData();
-
-      // Append property details
-      formData.append("name", data.name);
-      formData.append("address", data.address);
-      formData.append("type", data.type);
-      formData.append("rent", data.rent.toString());
-      formData.append("maxBedrooms", data.maxBedrooms.toString());
-      formData.append("maxBathrooms", data.maxBathrooms.toString());
-      formData.append("description", data.description);
-
-      data.images.forEach((image) => {
-        formData.append("images", image);
-      });
-
+    mutationFn: async ({
+      data,
+      uploadedImages,
+    }: {
+      data: NewPropertyFormData;
+      uploadedImages: UploadResult[];
+    }) => {
       //  make the API call
       const response = await fetch("/api/properties/create", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...data,
+          images: uploadedImages,
+        }),
       });
 
       // check for errors
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create property!");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create property!");
       }
 
       return response.json();
@@ -127,48 +88,66 @@ function NewPropertyForm() {
     onSuccess: (data) => {
       console.log("Property created: ", data);
       toast.success(`${data.property.name} created successfully.`);
+
+      reset();
+      setSelectedImages([]);
+
       router.push(`/properties/${data.property.id}`);
     },
-    onError: (error) => {
-      setUploadError(
-        error instanceof Error ? error.message : "Failed to create property"
-      );
+    onError: async (error, { uploadedImages }) => {
+      console.error("Error creating property: ", error);
+
+      if (uploadedImages.length > 0) {
+        console.log("Cleaning up uploaded images");
+        const fileNames = uploadedImages.map((img) => img.filename);
+
+        await ClientMediaService.deleteFromSupabase(fileNames);
+      }
+
+      const errMsg =
+        error instanceof Error ? error.message : "Failed to create property.";
+      toast.error(errMsg);
     },
   });
 
   /* ---------------- Image handling functions ---------------- */
-  const addImages = (files: File[]) => {
-    const validImages = files.filter((file) => file.type.startsWith("image/"));
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
 
-    if (validImages.length === 0) {
-      setUploadError("No valid images selected");
+    setImageError(null);
+    const newFiles: File[] = [];
+
+    for (const file of Array.from(files)) {
+      const result = FileSchema.safeParse(file);
+
+      if (!result.success) {
+        setImageError(result.error.errors[0].message);
+        return;
+      }
+
+      newFiles.push(file);
+    }
+
+    // check total count
+    if (selectedImages.length + newFiles.length > 10) {
+      setImageError("Maximum of 10 images alllowed");
       return;
     }
 
-    const newImages = [...(formImages || []), ...validImages];
-
-    if (newImages.length > 10) {
-      setUploadError("Maximum of 10 images allowed.");
-      return;
-    }
-
-    setSelectedImages(newImages);
-    setValue("images", newImages);
-    setUploadError(null);
-  };
-
-  const removeImage = (index: number) => {
-    const updatedImages = formImages?.filter((_, i) => i !== index) || [];
-    setSelectedImages(updatedImages);
-    setValue("images", updatedImages);
+    setSelectedImages((prev) => [...prev, ...newFiles]);
   };
 
   /* ---------------- Drag and drop functions ---------------- */
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setIsDragActive(true);
+  };
 
-    setIsDragActive(e.type === "dragenter" || e.type === "dragover");
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -176,19 +155,50 @@ function NewPropertyForm() {
     e.stopPropagation();
     setIsDragActive(false);
 
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    addImages(droppedFiles);
+    handleFileSelect(e.dataTransfer.files);
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.currentTarget.files || []);
-    addImages(files);
+  const removeImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   /* ---------------- onSubmit handler ---------------- */
-  const onSubmit: SubmitHandler<NewPropertyType> = (data) => {
-    createMutation.mutate(data);
+  const onSubmit: SubmitHandler<NewPropertyFormData> = async (data) => {
+    if (selectedImages.length === 0) {
+      setImageError("At least one image is required");
+      return;
+    }
+
+    // set is uploading to true
+    setIsUploading(true);
+    let uploadedImages: UploadResult[] = [];
+
+    try {
+      // step 1: upload images to supabase
+      toast.info("Uploading images...", {
+        duration: 5000,
+      });
+
+      uploadedImages = await ClientMediaService.processAndUploadImages(
+        selectedImages,
+        "property"
+      );
+
+      toast.info("Creating property...", {
+        duration: 5000,
+      });
+
+      // step 2: send the property data with URLS to server
+      await createMutation.mutateAsync({ data, uploadedImages });
+    } catch (error) {
+      console.error("Failed to create property ", error);
+      toast.error("Failed to create property");
+    } finally {
+      setIsUploading(false);
+    }
   };
+
+  const isLoading = isSubmitting || isUploading;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
@@ -356,24 +366,24 @@ function NewPropertyForm() {
           <CardContent>
             {/* Drag and drop Area */}
             <div
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
               onDrop={handleDrop}
               className={cn(
-                "border-2 border-dashed rounded-large p-6 text-center cursor-pointer transition",
+                "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
                 isDragActive
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-300 hover:border-gray-400",
-                (isSubmitting || createMutation.isPending) &&
-                  "opacity-50 cursor-not-allowed"
+                  ? "border-primary bg-primary/5"
+                  : "border-muted-foreground/25 hover:border-muted-foreground/50",
+                (isLoading || createMutation.isPending) &&
+                  "opacity-50 cursor-not-allowed",
+                imageError && "border-red-400"
               )}
             >
               <input
                 type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/avif"
                 multiple
-                accept="image/*"
-                onChange={handleFileInput}
+                onChange={(e) => handleFileSelect(e.target.files)}
                 disabled={isSubmitting || createMutation.isPending}
                 className="hidden"
                 id="file-input"
@@ -389,64 +399,66 @@ function NewPropertyForm() {
             </div>
 
             {/* Error Message */}
-            {(errors.images || uploadError) && (
-              <p className="my-1 text-sm text-red-400">
-                {errors.images?.message || uploadError}
-              </p>
-            )}
+            {imageError && <p className="text-sm text-red-400">{imageError}</p>}
 
             {/* Images preview */}
-            {formImages && formImages.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-3">
-                  {selectedImages.length} image(s) selected
+            {selectedImages.length > 0 && (
+              <>
+                <p className="text-xs my-2 text-muted-foreground">
+                  {selectedImages.length === 1
+                    ? "1 image selected"
+                    : `${selectedImages.length} images selected`}
                 </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {selectedImages.map((file, index) => (
+                    <Card
+                      key={index}
+                      className="relative group overflow-hidden py-0"
+                    >
+                      <CardContent className="p-0">
+                        <div className="aspect-square relative">
+                          <Image
+                            src={URL.createObjectURL(file)}
+                            alt={`Preview ${index + 1}`}
+                            fill
+                            className="object-cover"
+                          />
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {formImages.map((file, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={`Preview ${index}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        disabled={isSubmitting || createMutation.isPending}
-                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
-                      >
-                        <X size={16} />
-                      </button>
-                      <p className="text-xs text-gray-600 mt-1 truncate">
-                        {file.name}
-                      </p>
-                    </div>
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            disabled={isLoading || createMutation.isPending}
+                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:bg-gray-400 disabled:cursor-not-allowed"
+                          >
+                            <X className="size-4" />
+                          </button>
+
+                          <div className="p-2 text-muted-foreground">
+                            <p className="text-xs truncate">{file.name}</p>
+                            <p className="text-xs truncate">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
-              </div>
+              </>
             )}
           </CardContent>
         </Card>
-
-        {/* Error from API */}
-        {createMutation.isError && (
-          <div className="bg-red-50 border border-red-200 text-red-400 p-4 rounded">
-            <p className="font-medium">Failed to create property</p>
-            <p className="text-sm">{uploadError}</p>
-          </div>
-        )}
 
         {/* Action button */}
         <div className="my-4 pt-4 text-center">
           <Button
             type="submit"
-            disabled={isSubmitting || createMutation.isPending}
+            disabled={isLoading || createMutation.isPending}
             className="w-2/3 cursor-pointer font-semibold"
           >
-            {createMutation.isPending
+            {createMutation.isPending || isLoading
               ? "Creating Property..."
-              : "Save Property"}
+              : "Create Property"}
           </Button>
         </div>
       </div>
