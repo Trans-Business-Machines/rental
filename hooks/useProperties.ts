@@ -1,13 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 
-//Property Query keys
-export const propertyKeys = {
-	all: ["properties"] as const,
-	list: () => [...propertyKeys.all, "list"] as const,
-	details: () => [...propertyKeys.all, "detail"] as const,
-	detail: (id: number) => [...propertyKeys.details(), id] as const,
-};
-
 export const propertyUnitKeys = {
 	propertyUnitList: (propertyId: number, page: number) => ["property", propertyId, "units", page]
 }

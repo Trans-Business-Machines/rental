@@ -73,14 +73,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
                 if (imagesToDelete.length > 0) {
                     await tx.media.deleteMany({
                         where: {
-                            id: { in: imagesToDelete },
                             unitId: unitIdNum,
+                            id: { in: imagesToDelete },
                         },
                     });
                 }
 
                 // 2. Create media records for new images
                 const newMediaRecords = [];
+
                 for (const img of newImages) {
                     const media = await tx.media.create({
                         data: {
@@ -113,11 +114,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
         // Revalidate paths
         revalidatePath("/properties");
+        revalidatePath("/dashboard");
         if (propertyId) {
             revalidatePath(`/properties/${propertyId}`);
             revalidatePath(`/properties/${propertyId}/units/${unitIdNum}`);
         }
-        revalidatePath("/dashboard");
+
 
         return NextResponse.json({
             message: "Unit updated successfully.",
