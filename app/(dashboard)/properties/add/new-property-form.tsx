@@ -38,11 +38,9 @@ function NewPropertyForm() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
 
-  // React hook form management
   const {
     register,
     watch,
-    reset,
     setValue,
     handleSubmit,
     formState: { errors, isSubmitting },
@@ -56,7 +54,16 @@ function NewPropertyForm() {
 
   const propertyType = watch("type");
 
-  /* ---------------- Mutation for form submission data goes here---------------- */
+  /* ---------------- Helper Functions ---------------- */
+  const getSelectedImageNames = () =>
+    selectedImages.map((file) => file.name.toLowerCase());
+
+  const isFormValid = () => {
+    const count = selectedImages.length;
+    return count > 0 && count <= 10 && !imageError;
+  };
+
+  /* ---------------- Mutation for form submission ---------------- */
   const createMutation = useMutation({
     mutationFn: async ({
       data,
@@ -65,7 +72,6 @@ function NewPropertyForm() {
       data: NewPropertyFormData;
       uploadedImages: UploadResult[];
     }) => {
-      //  make the API call
       const response = await fetch("/api/properties/create", {
         method: "POST",
         headers: {
@@ -77,7 +83,6 @@ function NewPropertyForm() {
         }),
       });
 
-      // check for errors
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to create property!");
@@ -86,21 +91,14 @@ function NewPropertyForm() {
       return response.json();
     },
     onSuccess: (data) => {
-      console.log("Property created: ", data);
       toast.success(`${data.property.name} created successfully.`);
-
-      reset();
-      setSelectedImages([]);
-
       router.push(`/properties/${data.property.id}`);
     },
     onError: async (error, { uploadedImages }) => {
       console.error("Error creating property: ", error);
 
       if (uploadedImages.length > 0) {
-        console.log("Cleaning up uploaded images");
         const fileNames = uploadedImages.map((img) => img.filename);
-
         await ClientMediaService.deleteFromSupabase(fileNames);
       }
 
@@ -115,26 +113,50 @@ function NewPropertyForm() {
     if (!files) return;
 
     setImageError(null);
-    const newFiles: File[] = [];
+    const validFiles: File[] = [];
+    const duplicateFiles: string[] = [];
+    const existingNames = getSelectedImageNames();
 
     for (const file of Array.from(files)) {
+      // Validate file type and size
       const result = FileSchema.safeParse(file);
-
       if (!result.success) {
         setImageError(result.error.errors[0].message);
         return;
       }
 
-      newFiles.push(file);
+      // Check for duplicate filename
+      if (existingNames.includes(file.name.toLowerCase())) {
+        duplicateFiles.push(file.name);
+        continue; // Skip this file but continue processing others
+      }
+
+      validFiles.push(file);
+      existingNames.push(file.name.toLowerCase()); // Add to check list for subsequent files
     }
 
-    // check total count
-    if (selectedImages.length + newFiles.length > 10) {
-      setImageError("Maximum of 10 images alllowed");
+    // Show warning for duplicates
+    if (duplicateFiles.length > 0) {
+      toast.warning(
+        `Skipped duplicate image(s): ${duplicateFiles.join(", ")}`,
+        { duration: 4000 }
+      );
+    }
+
+    // Check total count
+    const totalAfterAdd = selectedImages.length + validFiles.length;
+
+    if (totalAfterAdd > 10) {
+      setImageError(
+        `Maximum 10 images allowed. You currently have ${selectedImages.length} image(s).`
+      );
       return;
     }
 
-    setSelectedImages((prev) => [...prev, ...newFiles]);
+    if (validFiles.length > 0) {
+      setSelectedImages((prev) => [...prev, ...validFiles]);
+      setImageError(null); // Clear error on successful add
+    }
   };
 
   /* ---------------- Drag and drop functions ---------------- */
@@ -154,41 +176,47 @@ function NewPropertyForm() {
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(false);
-
     handleFileSelect(e.dataTransfer.files);
   };
 
   const removeImage = (index: number) => {
     setSelectedImages((prev) => prev.filter((_, idx) => idx !== index));
+
+    // Clear error after removal if conditions are now met
+    setTimeout(() => {
+      const newCount = selectedImages.length - 1;
+      if (newCount > 0 && newCount <= 10) {
+        setImageError(null);
+      }
+    }, 0);
   };
 
   /* ---------------- onSubmit handler ---------------- */
   const onSubmit: SubmitHandler<NewPropertyFormData> = async (data) => {
+    // Final validation before submit
     if (selectedImages.length === 0) {
-      setImageError("At least one image is required");
+      setImageError("At least one image is required.");
       return;
     }
 
-    // set is uploading to true
+    if (selectedImages.length > 10) {
+      setImageError("Maximum 10 images allowed.");
+      return;
+    }
+
     setIsUploading(true);
     let uploadedImages: UploadResult[] = [];
 
     try {
-      // step 1: upload images to supabase
-      toast.info("Uploading images...", {
-        duration: 5000,
-      });
+      toast.info("Uploading images...", { duration: 5000 });
 
       uploadedImages = await ClientMediaService.processAndUploadImages(
         selectedImages,
         "property"
       );
 
-      toast.info("Creating property...", {
-        duration: 5000,
-      });
+      toast.info("Creating property...", { duration: 5000 });
 
-      // step 2: send the property data with URLS to server
       await createMutation.mutateAsync({ data, uploadedImages });
     } catch (error) {
       console.error("Failed to create property ", error);
@@ -199,6 +227,7 @@ function NewPropertyForm() {
   };
 
   const isLoading = isSubmitting || isUploading;
+  const canSubmit = isFormValid() && !isLoading && !createMutation.isPending;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
@@ -286,7 +315,7 @@ function NewPropertyForm() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="rent" className="mb-1.5 block">
-                  Base Rent ($)
+                  Base Rent (KES)
                 </Label>
                 <Input
                   id="rent"
@@ -303,7 +332,7 @@ function NewPropertyForm() {
               </div>
               <div>
                 <Label htmlFor="max-bedrooms" className="mb-1.5 block">
-                  Max bedrooms
+                  Max Bedrooms
                 </Label>
                 <Input
                   id="max-bedrooms"
@@ -358,12 +387,12 @@ function NewPropertyForm() {
           </CardContent>
         </Card>
 
-        {/* Media Upload goes here */}
+        {/* Media Upload */}
         <Card>
           <CardHeader>
             <CardTitle>Property Images</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {/* Drag and drop Area */}
             <div
               onDragLeave={handleDragLeave}
@@ -384,7 +413,7 @@ function NewPropertyForm() {
                 accept="image/jpeg,image/jpg,image/png,image/webp,image/avif"
                 multiple
                 onChange={(e) => handleFileSelect(e.target.files)}
-                disabled={isSubmitting || createMutation.isPending}
+                disabled={isLoading || createMutation.isPending}
                 className="hidden"
                 id="file-input"
               />
@@ -398,53 +427,65 @@ function NewPropertyForm() {
               </label>
             </div>
 
-            {/* Error Message */}
-            {imageError && <p className="text-sm text-red-400">{imageError}</p>}
-
             {/* Images preview */}
             {selectedImages.length > 0 && (
-              <>
-                <p className="text-xs my-2 text-muted-foreground">
-                  {selectedImages.length === 1
-                    ? "1 image selected"
-                    : `${selectedImages.length} images selected`}
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {selectedImages.map((file, index) => (
-                    <Card
-                      key={index}
-                      className="relative group overflow-hidden py-0"
-                    >
-                      <CardContent className="p-0">
-                        <div className="aspect-square relative">
-                          <Image
-                            src={URL.createObjectURL(file)}
-                            alt={`Preview ${index + 1}`}
-                            fill
-                            className="object-cover"
-                          />
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {selectedImages.map((file, index) => (
+                  <Card
+                    key={index}
+                    className="relative group overflow-hidden py-0"
+                  >
+                    <CardContent className="p-0">
+                      <div className="aspect-square relative">
+                        <Image
+                          src={URL.createObjectURL(file)}
+                          alt={`Preview ${index + 1}`}
+                          fill
+                          sizes="auto"
+                          className="object-cover"
+                        />
 
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            disabled={isLoading || createMutation.isPending}
-                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:bg-gray-400 disabled:cursor-not-allowed"
-                          >
-                            <X className="size-4" />
-                          </button>
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          disabled={isLoading || createMutation.isPending}
+                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                      <div className="p-2 text-muted-foreground">
+                        <p className="text-xs truncate">{file.name}</p>
+                        <p className="text-xs truncate">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
-                          <div className="p-2 text-muted-foreground">
-                            <p className="text-xs truncate">{file.name}</p>
-                            <p className="text-xs truncate">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </>
+            {/* Image count indicator */}
+            <p
+              className={cn(
+                "text-xs",
+                selectedImages.length > 10
+                  ? "text-red-500"
+                  : "text-muted-foreground"
+              )}
+            >
+              {selectedImages.length}/10 images selected
+              {selectedImages.length > 0 && (
+                <span> • Images will be compressed before upload</span>
+              )}
+            </p>
+
+            {/* Error Message */}
+            {imageError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded text-sm">
+                {imageError}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -453,7 +494,7 @@ function NewPropertyForm() {
         <div className="my-4 pt-4 text-center">
           <Button
             type="submit"
-            disabled={isLoading || createMutation.isPending}
+            disabled={!canSubmit}
             className="w-2/3 cursor-pointer font-semibold"
           >
             {createMutation.isPending || isLoading

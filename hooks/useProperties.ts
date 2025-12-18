@@ -14,9 +14,6 @@ export const propertyUnitKeys = {
 
 // Fetch the units that belong to a given property
 export const usePropertyUnits = ({ page, propertyId }: { page: number, propertyId: number }) => {
-
-	console.log({ page, propertyId })
-
 	return useQuery({
 		queryKey: propertyUnitKeys.propertyUnitList(propertyId, page),
 		queryFn: async () => {

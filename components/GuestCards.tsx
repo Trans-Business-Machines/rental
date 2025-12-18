@@ -1,13 +1,11 @@
 "use client";
 
-//import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Eye, Mail, Phone } from "lucide-react";
 import type { Guest } from "@/lib/types/types";
-//import { canDeleteGuest } from "@/lib/utils";
 import Link from "next/link";
 
 interface GuestCardsProps {
@@ -15,13 +13,6 @@ interface GuestCardsProps {
   setIsDialogOpen: (open: boolean) => void;
   setEditGuest: (guest: Guest) => void;
 }
-
-/* 
-interface GuestToDelete {
-  id: number;
-  firstName: string;
-  lastName: string;
-} */
 
 const getVerificationColor = (status: string) => {
   switch (status) {
@@ -34,13 +25,6 @@ const getVerificationColor = (status: string) => {
     default:
       return "secondary";
   }
-};
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("en-KE", {
-    style: "currency",
-    currency: "KES",
-  }).format(amount);
 };
 
 const formatDate = (dateString: string | Date | null) => {
@@ -108,26 +92,14 @@ function GuestCards({
 
             {/* Statistics */}
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="text-center p-2 bg-muted/50 rounded-lg">
+              <div className="text-center col-span-2 p-2 bg-muted/50 rounded-lg">
                 <p className="font-medium">{guest.totalStays || 0}</p>
                 <p className="text-muted-foreground">Total Stays</p>
-              </div>
-              <div className="text-center p-2 bg-muted/50 rounded-lg">
-                <p className="font-medium">{guest.totalNights || 0}</p>
-                <p className="text-muted-foreground">Total Nights</p>
               </div>
             </div>
 
             {/* Financial Info */}
             <div className="">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Total Spent
-                </span>
-                <span className="font-medium">
-                  {formatCurrency(guest.totalSpent || 0)}
-                </span>
-              </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Last Stay</span>
                 <span className="text-sm">

@@ -55,7 +55,7 @@ export function PropertyAmenities({
               <div
                 key={amenity.label}
                 className="flex items-center gap-3 p-3 rounded-lg transition-colors 
-                     bg-chart-2/5 hover:bg-chart-2/10"
+                     bg-chart-2/20 hover:bg-chart-2/40"
               >
                 <span className="font-medium text-foreground">
                   {amenity.label}

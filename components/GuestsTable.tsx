@@ -96,9 +96,6 @@ function GuestsTable({
                 total stays
               </TableHead>
               <TableHead className="font-semibold text-foreground">
-                total nights
-              </TableHead>
-              <TableHead className="font-semibold text-foreground">
                 last stay
               </TableHead>
               <TableHead className="font-semibold text-foreground">
@@ -136,7 +133,6 @@ function GuestsTable({
                   </div>
                 </TableCell>
                 <TableCell>{guest.totalStays}</TableCell>
-                <TableCell>{guest.totalNights}</TableCell>
                 <TableCell>
                   {guest.lastStay
                     ? format(new Date(guest.lastStay), "dd/MM/yyyy")

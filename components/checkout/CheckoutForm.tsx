@@ -155,8 +155,6 @@ export function CheckoutForm({
         checkoutItems: checkedItems,
       };
 
-      console.log(checkoutData);
-
       await createCheckoutReport(checkoutData);
 
       toast.success("Checkout completed successfully!");

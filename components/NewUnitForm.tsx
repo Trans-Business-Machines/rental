@@ -52,6 +52,13 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
 
   const unitType = watch("type");
 
+  /* ---------------- Helper Functions ---------------- */
+  const getSelectedImageNames = () =>
+    selectedImages.map((file) => file.name.toLowerCase());
+
+  // Check if images exceed limit
+  const hasExceededLimit = () => selectedImages.length > 10;
+
   /* ---------------- Mutation for form submission ---------------- */
   const createMutation = useMutation({
     mutationFn: async ({
@@ -83,15 +90,14 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
       return response.json();
     },
     onSuccess: (data) => {
-      console.log("Unit created: ", data);
       toast.success(`${data.unit.name} created successfully.`);
       reset();
       setSelectedImages([]);
+      setImageError(null);
     },
     onError: async (error, { uploadedImages }) => {
       console.error("Error creating unit: ", error);
 
-      // Cleanup uploaded images on error
       if (uploadedImages.length > 0) {
         console.log("Cleaning up uploaded images...");
         await ClientMediaService.deleteFromSupabase(
@@ -110,25 +116,50 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
     if (!files) return;
 
     setImageError(null);
-    const newFiles: File[] = [];
+    const validFiles: File[] = [];
+    const duplicateFiles: string[] = [];
+    const existingNames = getSelectedImageNames();
 
     for (const file of Array.from(files)) {
+      // Validate file type and size
       const result = FileSchema.safeParse(file);
-
       if (!result.success) {
         setImageError(result.error.errors[0].message);
         return;
       }
 
-      newFiles.push(file);
+      // Check for duplicate filename
+      if (existingNames.includes(file.name.toLowerCase())) {
+        duplicateFiles.push(file.name);
+        continue;
+      }
+
+      validFiles.push(file);
+      existingNames.push(file.name.toLowerCase());
     }
 
-    if (selectedImages.length + newFiles.length > 10) {
-      setImageError("Maximum of 10 images allowed.");
+    // Show warning for duplicates
+    if (duplicateFiles.length > 0) {
+      toast.warning(
+        `Skipped duplicate image(s): ${duplicateFiles.join(", ")}`,
+        { duration: 4000 }
+      );
+    }
+
+    // Check total count
+    const totalAfterAdd = selectedImages.length + validFiles.length;
+
+    if (totalAfterAdd > 10) {
+      setImageError(
+        `Maximum 10 images allowed. You currently have ${selectedImages.length} image(s).`
+      );
       return;
     }
 
-    setSelectedImages((prev) => [...prev, ...newFiles]);
+    if (validFiles.length > 0) {
+      setSelectedImages((prev) => [...prev, ...validFiles]);
+      setImageError(null);
+    }
   };
 
   /* ---------------- Drag and drop functions ---------------- */
@@ -152,23 +183,35 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
   };
 
   const removeImage = (index: number) => {
-    setSelectedImages((prev) => prev.filter((_, idx) => idx !== index));
+    setSelectedImages((prev) => {
+      const updated = prev.filter((_, idx) => idx !== index);
+
+      // Clear error if conditions are now met
+      if (updated.length <= 10) {
+        setImageError(null);
+      }
+
+      return updated;
+    });
   };
 
   /* ---------------- onSubmit handler ---------------- */
   const onSubmit: SubmitHandler<NewUnitFormData> = async (data) => {
+    // Validate images before submit
     if (selectedImages.length === 0) {
       setImageError("At least one image is required.");
       return;
-    } else {
-      setImageError(null);
+    }
+
+    if (selectedImages.length > 10) {
+      setImageError("Maximum 10 images allowed.");
+      return;
     }
 
     setIsUploading(true);
     let uploadedImages: UploadResult[] = [];
 
     try {
-      // Step 1: Upload images to Supabase
       toast.info("Uploading images...", { duration: 5000 });
 
       uploadedImages = await ClientMediaService.processAndUploadImages(
@@ -178,7 +221,6 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
 
       toast.info("Creating unit...", { duration: 5000 });
 
-      // Step 2: Send unit data with URLs to server
       await createMutation.mutateAsync({ data, uploadedImages });
     } catch (error) {
       console.error("Failed to create unit: ", error);
@@ -189,6 +231,13 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
   };
 
   const isLoading = isSubmitting || isUploading;
+
+  // Button is disabled only when:
+  // 1. Form is loading/submitting
+  // 2. Images exceed the limit (> 10)
+  // 3. There's an active image error (type/size validation)
+  const isButtonDisabled =
+    isLoading || createMutation.isPending || hasExceededLimit() || !!imageError;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
@@ -334,7 +383,7 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
           <CardHeader>
             <CardTitle>Unit Images</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {/* Drag and drop Area */}
             <div
               onDragLeave={handleDragLeave}
@@ -369,53 +418,64 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
               </label>
             </div>
 
-            {/* Error Message */}
-            {imageError && (
-              <p className="mt-2 text-sm text-red-400">{imageError}</p>
-            )}
-
             {/* Images preview */}
             {selectedImages.length > 0 && (
-              <>
-                <p className="text-xs my-2 text-muted-foreground">
-                  {selectedImages.length === 1
-                    ? "1 image selected"
-                    : `${selectedImages.length} images selected`}
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {selectedImages.map((file, index) => (
-                    <Card
-                      key={index}
-                      className="relative group overflow-hidden py-0"
-                    >
-                      <CardContent className="p-0">
-                        <div className="aspect-square relative">
-                          <Image
-                            src={URL.createObjectURL(file)}
-                            alt={`Preview ${index + 1}`}
-                            fill
-                            className="object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            disabled={isLoading || createMutation.isPending}
-                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:bg-gray-400 disabled:cursor-not-allowed"
-                          >
-                            <X className="size-4" />
-                          </button>
-                          <div className="p-2 text-muted-foreground">
-                            <p className="text-xs truncate">{file.name}</p>
-                            <p className="text-xs truncate">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {selectedImages.map((file, index) => (
+                  <Card
+                    key={index}
+                    className="relative group overflow-hidden py-0"
+                  >
+                    <CardContent className="p-0">
+                      <div className="aspect-square relative">
+                        <Image
+                          src={URL.createObjectURL(file)}
+                          alt={`Preview ${index + 1}`}
+                          fill
+                          className="object-cover"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          disabled={isLoading || createMutation.isPending}
+                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                      <div className="p-2 text-muted-foreground">
+                        <p className="text-xs truncate">{file.name}</p>
+                        <p className="text-xs truncate">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Image count indicator */}
+            <p
+              className={cn(
+                "text-xs",
+                selectedImages.length > 10
+                  ? "text-red-500"
+                  : "text-muted-foreground"
+              )}
+            >
+              {selectedImages.length}/10 images selected
+              {selectedImages.length > 0 && (
+                <span> • Images will be compressed before upload</span>
+              )}
+            </p>
+
+            {/* Error Message */}
+            {imageError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded text-sm">
+                {imageError}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -424,7 +484,7 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
         <div className="my-4 pt-4 text-center">
           <Button
             type="submit"
-            disabled={isLoading || createMutation.isPending}
+            disabled={isButtonDisabled}
             className="w-2/3 cursor-pointer font-semibold"
           >
             {createMutation.isPending || isLoading
