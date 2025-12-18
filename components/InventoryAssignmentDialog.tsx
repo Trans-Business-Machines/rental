@@ -15,7 +15,10 @@ import { InventoryAssignmentForm } from "./InventoryAssignmentForm";
 
 interface InventoryAssignmentDialogProps {
   preselectedItemId?: number;
+  preselectedUnitId?: number;
+  preselectedPropertyId?: number;
   trigger?: React.ReactNode;
+  children?: React.ReactNode;
   onSuccess?: () => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -24,7 +27,10 @@ interface InventoryAssignmentDialogProps {
 export function InventoryAssignmentDialog({
   preselectedItemId,
   trigger,
+  preselectedPropertyId,
+  children,
   onSuccess,
+  preselectedUnitId,
   open: controlledOpen,
   onOpenChange,
 }: InventoryAssignmentDialogProps) {
@@ -52,10 +58,10 @@ export function InventoryAssignmentDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
-      {trigger && (
+      {(trigger || children) && (
         <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
       )}
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] w-9/12 md:w-[40rem] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Assign Inventory Item</DialogTitle>
           <DialogDescription>
@@ -64,6 +70,8 @@ export function InventoryAssignmentDialog({
           </DialogDescription>
         </DialogHeader>
         <InventoryAssignmentForm
+          preselectedUnitId={preselectedUnitId}
+          preselectedPropertyId={preselectedPropertyId}
           preselectedItemId={preselectedItemId}
           onSuccess={handleSuccess}
           onCancel={handleCancel}

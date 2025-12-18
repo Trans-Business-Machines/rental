@@ -1,6 +1,7 @@
 import { createBooking, getBookings } from "@/lib/actions/bookings";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { unitKeys } from "./useUnitDetails"
 import type { CreateBookingData } from "@/lib/types/types"
 
 interface Booking {
@@ -36,7 +37,6 @@ interface Booking {
 	};
 }
 
-
 // Query keys
 export const bookingKeys = {
 	all: ["bookings"] as const,
@@ -67,11 +67,16 @@ export const useCreateBooking = () => {
 			const booking = await createBooking(bookingData);
 			return booking;
 		},
-		onSuccess: (newBooking) => {
+		onSuccess: async (newBooking) => {
 			toast.success("Booking created successfully");
 
-			// Invalidate and refetch bookings list
-			queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+			// Invalidate and refetch bookings list and unit details
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: bookingKeys.lists() }),
+				queryClient.invalidateQueries({
+					queryKey: unitKeys.details(newBooking.unitId.toString(), newBooking.propertyId.toString())
+				})
+			])
 
 			// Optionally update the cache with the new booking
 			queryClient.setQueryData(

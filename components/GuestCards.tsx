@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, Mail, Phone } from "lucide-react";
-import type { Guest } from "@/lib/types/types";
+import { Edit, Eye, Mail, Phone, Calendar } from "lucide-react";
+import { formatDate } from "date-fns";
 import Link from "next/link";
+import type { Guest } from "@/lib/types/types";
 
 interface GuestCardsProps {
   guests: Guest[];
@@ -25,11 +26,6 @@ const getVerificationColor = (status: string) => {
     default:
       return "secondary";
   }
-};
-
-const formatDate = (dateString: string | Date | null) => {
-  if (!dateString) return "Never";
-  return new Date(dateString).toLocaleDateString();
 };
 
 function GuestCards({
@@ -92,18 +88,27 @@ function GuestCards({
 
             {/* Statistics */}
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="text-center col-span-2 p-2 bg-muted/50 rounded-lg">
-                <p className="font-medium">{guest.totalStays || 0}</p>
+              <div className="text-center col-span-2 p-2 bg-muted rounded-lg">
+                <p className="font-semibold text-sm md:text-base">
+                  {guest.totalStays || 0}
+                </p>
                 <p className="text-muted-foreground">Total Stays</p>
               </div>
             </div>
 
-            {/* Financial Info */}
+            {/* Last  Stay Info */}
             <div className="">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Last Stay</span>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Last Stay
+                  </span>
+                </div>
                 <span className="text-sm">
-                  {formatDate(guest.lastStay || null)}
+                  {guest.lastStay === null
+                    ? "Never"
+                    : formatDate(new Date(guest.lastStay), "EE PPP")}
                 </span>
               </div>
             </div>

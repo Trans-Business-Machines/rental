@@ -73,7 +73,10 @@ function UnitDetailsPage() {
       <UnitInfo unit={unit} />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <UnitInventory assignments={unit.assignments} />
+        <UnitInventory
+          assignments={unit.assignments}
+          context={{ unitId: unit.id, propertyId: unit.propertyId }}
+        />
         <UnitBookings
           bookings={unit.bookings}
           context={{
