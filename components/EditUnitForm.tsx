@@ -145,10 +145,14 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
       return response.json();
     },
     onSuccess: async (_, { data }) => {
+      // Invalidate react query cache
       await Promise.all([
+        // Revalidates the property listings page
         queryClient.invalidateQueries({
-          queryKey: ["property", "units"],
+          queryKey: ["property"],
         }),
+
+        // Revalidates the unit details page
         queryClient.invalidateQueries({
           queryKey: unitKeys.details(unitId, propertyId),
         }),
@@ -182,6 +186,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
     if (!files) return;
 
     setImageError(null);
+
     const validFiles: File[] = [];
     const duplicateFiles: string[] = [];
     const existingNames = getAllExistingNames();
@@ -284,15 +289,18 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
     let uploadedImages: UploadResult[] = [];
 
     try {
+      // Evaluate images marked for deletion
       const imagesToDeleteFromStorage = existingImages
         .filter((img) => img.markedForDelete)
         .map((img) => img.filename);
 
+      // Delete the images from supabase
       if (imagesToDeleteFromStorage.length > 0) {
         toast.info("Removing deleted images...", { duration: 3000 });
         await ClientMediaService.deleteFromSupabase(imagesToDeleteFromStorage);
       }
 
+      // If there are new images add them to supabase
       if (newImages.length > 0) {
         toast.info("Uploading new images...", { duration: 5000 });
         uploadedImages = await ClientMediaService.processAndUploadImages(
@@ -303,6 +311,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
 
       toast.info("Updating unit...", { duration: 5000 });
 
+      // Evaluate the ID of the deleted images
       const imagesToDelete = existingImages
         .filter((img) => img.markedForDelete)
         .map((img) => img.id);

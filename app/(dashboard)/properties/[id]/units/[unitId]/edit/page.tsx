@@ -1,5 +1,5 @@
 import { EditUnitForm } from "@/components/EditUnitForm";
-import { getCachedUnitById } from "@/lib/actions/units";
+import { getUnitById } from "@/lib/actions/units";
 import { notFound } from "next/navigation";
 
 interface EditUnitPageParams {
@@ -9,10 +9,7 @@ interface EditUnitPageParams {
 async function EditUnitPage({ params }: EditUnitPageParams) {
   const { id: propertyId, unitId } = await params;
 
-  const parsedPropertyId = Number(propertyId);
-  const parsedUnitId = Number(unitId);
-
-  const unit = await getCachedUnitById(parsedUnitId, parsedPropertyId);
+  const unit = await getUnitById(unitId, propertyId);
 
   if (!unit) {
     notFound();
@@ -22,7 +19,7 @@ async function EditUnitPage({ params }: EditUnitPageParams) {
     <section className="container mx-auto py-8">
       <header className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Edit Unit</h1>
-        <p className="text-gray-600 mt-2">{/* Add unit.name */}</p>
+        <p className="text-gray-600 mt-2">{unit.name}</p>
       </header>
 
       {/* Edit Unit Form goes here */}

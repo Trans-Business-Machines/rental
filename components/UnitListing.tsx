@@ -72,6 +72,7 @@ const getStatusBadge = (status: UnitStatus) => {
 };
 
 export function UnitListing({ units }: UnitListingProps) {
+  
   // State to manage sorting and filtering
   const [searchTerm, setSearchTerm] = useState("");
   const [selectFilters, setselectFilters] = useState({

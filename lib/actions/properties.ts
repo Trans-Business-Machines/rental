@@ -66,7 +66,7 @@ export const getCachedProperty = unstable_cache(
 	},
 	["property"],
 	{
-		revalidate: 3600,
+		revalidate: 2 * 60,
 		tags: ["property"],
 	}
 )
