@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-
+import { useQueryClient } from "@tanstack/react-query";
+import { unitKeys } from "@/hooks/useUnitDetails";
 import {
   createInventoryAssignment,
   getAllUnitsForAssignment,
@@ -28,6 +29,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface InventoryAssignmentFormProps {
+  preselectedUnitId?: number;
+  preselectedPropertyId?: number;
   preselectedItemId?: number;
   onSuccess?: () => void;
   onCancel?: () => void;
@@ -58,6 +61,8 @@ interface AssignmentDetail {
 
 export function InventoryAssignmentForm({
   preselectedItemId,
+  preselectedUnitId,
+  preselectedPropertyId,
   onSuccess,
   onCancel,
 }: InventoryAssignmentFormProps) {
@@ -67,13 +72,15 @@ export function InventoryAssignmentForm({
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [formData, setFormData] = useState({
     inventoryItemId: preselectedItemId || "",
-    unitId: "",
-    propertyId: "",
+    unitId: preselectedUnitId?.toString() || "",
+    propertyId: preselectedPropertyId?.toString() || "",
     quantity: 1,
   });
   const [assignmentDetails, setAssignmentDetails] = useState<
     AssignmentDetail[]
   >([]);
+
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -176,6 +183,15 @@ export function InventoryAssignmentForm({
 
       await Promise.all(promises);
 
+      if (preselectedUnitId && preselectedPropertyId) {
+        await queryClient.invalidateQueries({
+          queryKey: unitKeys.details(
+            preselectedUnitId.toString(),
+            preselectedPropertyId.toString()
+          ),
+        });
+      }
+
       const itemName = selectedItem?.itemName || "items";
       toast.success(`${formData.quantity} ${itemName} assigned successfully`);
       onSuccess?.();
@@ -201,8 +217,8 @@ export function InventoryAssignmentForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Basic Assignment Info - 2 Column Layout */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-2 col-span-2">
           <Label htmlFor="inventory-item">Inventory Item *</Label>
           <Select
             value={formData.inventoryItemId.toString()}
@@ -211,7 +227,7 @@ export function InventoryAssignmentForm({
             }
             disabled={!!preselectedItemId}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Select item" />
             </SelectTrigger>
             <SelectContent>
@@ -229,7 +245,7 @@ export function InventoryAssignmentForm({
           </Select>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 col-span-2">
           <Label htmlFor="unit">Unit *</Label>
           <Select
             value={
@@ -237,7 +253,7 @@ export function InventoryAssignmentForm({
             }
             onValueChange={handleUnitChange}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full" disabled={!!preselectedUnitId}>
               <SelectValue placeholder="Select unit" />
             </SelectTrigger>
             <SelectContent>

@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Package, Plus } from "lucide-react";
+import { Package } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -9,15 +8,20 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { InventoryDialog } from "@/components/InventoryDialog";
+import { InventoryAssignmentDialog } from "@/components/InventoryAssignmentDialog";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
 import type { UnitAssignment } from "@/lib/types/types";
 
 interface Assignments {
   assignments: UnitAssignment[];
+  context: {
+    unitId: number;
+    propertyId: number;
+  };
 }
 
-export default function UnitInventory({ assignments }: Assignments) {
+export default function UnitInventory({ assignments, context }: Assignments) {
   return (
     <Card className="border-border shadow-sm bg-card rounded-xl">
       <CardHeader>
@@ -33,15 +37,12 @@ export default function UnitInventory({ assignments }: Assignments) {
               </p>
             )}
           </div>
-          <InventoryDialog>
-            <Button
-              size="sm"
-              className="gap-2 cursor-pointer bg-chart-1 hover:bg-chart-1/90"
-            >
-              <Plus className="size-4" />
-              Add Item
-            </Button>
-          </InventoryDialog>
+          <InventoryAssignmentDialog
+            preselectedUnitId={context.unitId}
+            preselectedPropertyId={context.propertyId}
+          >
+            <Button size="sm">Assign item</Button>
+          </InventoryAssignmentDialog>
         </div>
       </CardHeader>
       <CardContent>

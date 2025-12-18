@@ -27,7 +27,6 @@ import Pagination from "@/components/Pagination";
 import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
-//import { StockMetricSlider } from "@/components/StockMetricSlider";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { InventoryItem } from "@/lib/types/types";
 
