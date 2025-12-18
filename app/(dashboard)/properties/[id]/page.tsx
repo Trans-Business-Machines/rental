@@ -26,7 +26,7 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
 
   return (
     <section className="pb-6">
-      <header className="flex justify-between p-2">
+      <header className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between md:pb-3">
         <div className="flex gap-2">
           <Button asChild className="self-center" size="icon" variant="ghost">
             <Link href="/properties">
@@ -35,7 +35,7 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
           </Button>
 
           <div className="flex flex-col">
-            <p className="text-2xl font-bold text-foreground capitalize">
+            <p className="text-xl md:text-2xl font-bold text-foreground capitalize">
               {property.name}
             </p>
 
@@ -48,7 +48,7 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 py-3 md:py-0">
           <Button asChild>
             <Link href={`/properties/${id}/edit`}>
               <SquarePen className="size-4 text-white" />
@@ -70,7 +70,7 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
         propertyImagesLength={property.media.length}
       />
 
-      <div className="flex gap-2">
+      <div className="flex flex-col md:flex-row gap-2">
         <PropertyDetails property={property} />
         <PropertyAmenities amenities={amenities} propertyId={property.id} />
       </div>

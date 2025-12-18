@@ -45,7 +45,6 @@ const getStatusBadge = (status: UnitStatus) => {
 };
 
 export default function UnitInfo({ unit }: UnitInfoProps) {
-  console.log(unit);
   return (
     <Card className="border-border py-4 shadow-sm bg-card rounded-xl">
       <CardContent className="p-6">

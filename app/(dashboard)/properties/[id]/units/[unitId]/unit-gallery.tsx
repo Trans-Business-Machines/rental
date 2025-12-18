@@ -28,6 +28,7 @@ function UnitGallery({ images }: { images: UnitMedia[] }) {
                     src={image.filePath}
                     alt={`Unit Image ${index + 1}`}
                     fill
+                    priority
                     sizes="(max-width: 1024px) 100vw, 50vw"
                     className="object-cover overflow-hidden rounded-l-2xl"
                   />
@@ -64,6 +65,7 @@ function UnitGallery({ images }: { images: UnitMedia[] }) {
               src={image.filePath}
               alt={`Unit image ${index + 1}`}
               fill
+              priority
               sizes="(max-width: 1024px) 0px, 25vw"
               className="object-cover transition-transform duration-200 group-hover:scale-105"
             />

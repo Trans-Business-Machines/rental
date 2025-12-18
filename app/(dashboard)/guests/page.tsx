@@ -46,8 +46,6 @@ export default function GuestsPage() {
     error,
   } = useGuests(Number(currentPage));
 
-  console.log(guestsResponse?.guests);
-
   const filteredGuests = useFilter<Guest>({
     items: guestsResponse?.guests ?? [],
     searchTerm,

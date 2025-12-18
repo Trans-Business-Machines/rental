@@ -15,7 +15,7 @@ export interface UploadResult {
 }
 
 const COMPRESSION_OPTIONS = {
-    maxSizeMB: 2,
+    maxSizeMB: 1,
     maxWidthOrHeight: 1920,
     useWebWorker: true,
     initialQuality: 0.8
@@ -149,7 +149,7 @@ export class ClientMediaService {
 
 
         }
-        
+
         return results;
     }
 

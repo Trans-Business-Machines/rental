@@ -48,8 +48,6 @@ function BookingCards({
 
   const handleConfirmDelete = async () => {
     if (bookingToDelete) {
-      console.log("Deleting booking:", bookingToDelete);
-
       try {
         await deleteBooking(bookingToDelete);
         toast.success("Booking deleted successfully.");

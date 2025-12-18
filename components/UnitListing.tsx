@@ -121,7 +121,7 @@ export function UnitListing({ units }: UnitListingProps) {
       {/* Units Search & Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         {/* Search Bar  */}
-        <div className="relative flex-1 w-full lg:max-w-md">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-2  size-4  text-muted-foreground" />
           <Input
             placeholder="seach by name or type ..."
@@ -131,58 +131,60 @@ export function UnitListing({ units }: UnitListingProps) {
           />
         </div>
 
-        {/* Price filter */}
-        <Select
-          value={sortOrder}
-          onValueChange={(value: sortTypes) => {
-            setSortOrder(value);
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Any price</SelectItem>
-            <SelectItem value="asc">Price: Low to high</SelectItem>
-            <SelectItem value="desc">Price: Hight to low</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex-2 md:flex md:items-center space-y-4 md:space-y-0 md:space-x-2">
+          {/* Price filter */}
+          <Select
+            value={sortOrder}
+            onValueChange={(value: sortTypes) => {
+              setSortOrder(value);
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Any price</SelectItem>
+              <SelectItem value="asc">Price: Low to high</SelectItem>
+              <SelectItem value="desc">Price: Hight to low</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {/*  Unit type filter */}
-        <Select
-          value={selectFilters.type}
-          onValueChange={(value: string) => {
-            setselectFilters((prev) => ({ ...prev, type: value }));
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All types</SelectItem>
-            <SelectItem value="apartment">Apartment</SelectItem>
-            <SelectItem value="studio">Studio</SelectItem>
-          </SelectContent>
-        </Select>
+          {/*  Unit type filter */}
+          <Select
+            value={selectFilters.type}
+            onValueChange={(value: string) => {
+              setselectFilters((prev) => ({ ...prev, type: value }));
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="apartment">Apartment</SelectItem>
+              <SelectItem value="studio">Studio</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {/* Unit status filter */}
-        <Select
-          value={selectFilters.status}
-          onValueChange={(value: string) => {
-            setselectFilters((prev) => ({ ...prev, status: value }));
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All status</SelectItem>
-            <SelectItem value="available">Available</SelectItem>
-            <SelectItem value="occupied">Occupied</SelectItem>
-            <SelectItem value="reserved">Reserved</SelectItem>
-            <SelectItem value="maintenance">Maintenance</SelectItem>
-          </SelectContent>
-        </Select>
+          {/* Unit status filter */}
+          <Select
+            value={selectFilters.status}
+            onValueChange={(value: string) => {
+              setselectFilters((prev) => ({ ...prev, status: value }));
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All status</SelectItem>
+              <SelectItem value="available">Available</SelectItem>
+              <SelectItem value="occupied">Occupied</SelectItem>
+              <SelectItem value="reserved">Reserved</SelectItem>
+              <SelectItem value="maintenance">Maintenance</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Unit listing grid */}
@@ -214,6 +216,7 @@ export function UnitListing({ units }: UnitListingProps) {
                           src={image.filePath}
                           alt={`Unit ${unit.name}  image ${index} + 1`}
                           fill
+                          priority
                           sizes="(max-width: 1024px) 100vw, 50vw"
                           className="object-cover"
                         />

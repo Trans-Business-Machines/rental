@@ -83,6 +83,34 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
 
   const unitType = watch("type");
 
+  /* ---------------- Helper Functions ---------------- */
+  const getActiveExistingImages = () =>
+    existingImages.filter((img) => !img.markedForDelete);
+
+  const getTotalImageCount = () =>
+    getActiveExistingImages().length + newImages.length;
+
+  const getAllExistingNames = () => {
+    const existingNames = getActiveExistingImages().map((img) =>
+      img.originalName.toLowerCase()
+    );
+    const newNames = newImages.map((file) => file.name.toLowerCase());
+    return [...existingNames, ...newNames];
+  };
+
+  const validateAndClearError = () => {
+    const totalCount = getTotalImageCount();
+
+    if (totalCount > 0 && totalCount <= 10) {
+      setImageError(null);
+    }
+  };
+
+  const isFormValid = () => {
+    const totalCount = getTotalImageCount();
+    return totalCount > 0 && totalCount <= 10 && !imageError;
+  };
+
   /* ---------------- Update Mutation ---------------- */
   const updateMutation = useMutation({
     mutationFn: async ({
@@ -117,7 +145,6 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
       return response.json();
     },
     onSuccess: async (_, { data }) => {
-      // Invalidate queries
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["property", "units"],
@@ -137,7 +164,6 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
     onError: async (error, { uploadedImages }) => {
       console.error("Error updating unit: ", error);
 
-      // Cleanup newly uploaded images on error
       if (uploadedImages.length > 0) {
         console.log("Cleaning up uploaded images...");
         await ClientMediaService.deleteFromSupabase(
@@ -156,35 +182,57 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
     if (!files) return;
 
     setImageError(null);
-    const newFiles: File[] = [];
+    const validFiles: File[] = [];
+    const duplicateFiles: string[] = [];
+    const existingNames = getAllExistingNames();
 
     for (const file of Array.from(files)) {
+      // Validate file type and size
       const result = FileSchema.safeParse(file);
       if (!result.success) {
         setImageError(result.error.errors[0].message);
         return;
       }
-      newFiles.push(file);
+
+      // Check for duplicate filename
+      if (existingNames.includes(file.name.toLowerCase())) {
+        duplicateFiles.push(file.name);
+        continue;
+      }
+
+      validFiles.push(file);
+      existingNames.push(file.name.toLowerCase());
     }
 
-    const activeExistingCount = existingImages.filter(
-      (img) => !img.markedForDelete
-    ).length;
+    // Show warning for duplicates
+    if (duplicateFiles.length > 0) {
+      toast.warning(
+        `Skipped duplicate image(s): ${duplicateFiles.join(", ")}`,
+        { duration: 4000 }
+      );
+    }
+
+    // Check total count
+    const activeExistingCount = getActiveExistingImages().length;
     const totalAfterAdd =
-      activeExistingCount + newImages.length + newFiles.length;
+      activeExistingCount + newImages.length + validFiles.length;
 
     if (totalAfterAdd > 10) {
       setImageError(
-        `Maximum 10 images allowed. You have ${activeExistingCount} existing images.`
+        `Maximum 10 images allowed. You have ${activeExistingCount} existing and ${newImages.length} new images.`
       );
       return;
     }
 
-    setNewImages((prev) => [...prev, ...newFiles]);
+    if (validFiles.length > 0) {
+      setNewImages((prev) => [...prev, ...validFiles]);
+      setImageError(null);
+    }
   };
 
   const removeNewImage = (index: number) => {
     setNewImages((prev) => prev.filter((_, i) => i !== index));
+    setTimeout(validateAndClearError, 0);
   };
 
   const toggleDeleteExistingImage = (imageId: string) => {
@@ -195,6 +243,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
           : img
       )
     );
+    setTimeout(validateAndClearError, 0);
   };
 
   /* ---------------- Drag and drop ---------------- */
@@ -219,14 +268,15 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
 
   /* ---------------- Form submission ---------------- */
   const onSubmit: SubmitHandler<EditUnitFormData> = async (data) => {
-    // Check if at least one image will remain
-    const activeExistingCount = existingImages.filter(
-      (img) => !img.markedForDelete
-    ).length;
-    const totalImages = activeExistingCount + newImages.length;
+    const totalImages = getTotalImageCount();
 
     if (totalImages === 0) {
       setImageError("At least one image is required.");
+      return;
+    }
+
+    if (totalImages > 10) {
+      setImageError("Maximum 10 images allowed.");
       return;
     }
 
@@ -234,7 +284,6 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
     let uploadedImages: UploadResult[] = [];
 
     try {
-      // Step 1: Delete images marked for deletion from Supabase
       const imagesToDeleteFromStorage = existingImages
         .filter((img) => img.markedForDelete)
         .map((img) => img.filename);
@@ -244,7 +293,6 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
         await ClientMediaService.deleteFromSupabase(imagesToDeleteFromStorage);
       }
 
-      // Step 2: Upload new images to Supabase
       if (newImages.length > 0) {
         toast.info("Uploading new images...", { duration: 5000 });
         uploadedImages = await ClientMediaService.processAndUploadImages(
@@ -255,7 +303,6 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
 
       toast.info("Updating unit...", { duration: 5000 });
 
-      // Step 3: Send data to server
       const imagesToDelete = existingImages
         .filter((img) => img.markedForDelete)
         .map((img) => img.id);
@@ -274,6 +321,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
   };
 
   const isLoading = isSubmitting || isUploading;
+  const canSubmit = isFormValid() && !isLoading && !updateMutation.isPending;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
@@ -424,8 +472,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
             {existingImages.length > 0 && (
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-3">
-                  Current Images (
-                  {existingImages.filter((img) => !img.markedForDelete).length})
+                  Current Images ({getActiveExistingImages().length})
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {existingImages.map((img, index) => (
@@ -441,6 +488,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                           src={img.filePath}
                           alt={`${img.originalName} - ${index}`}
                           fill
+                          sizes="auto"
                           className="object-cover rounded-lg"
                         />
                       </div>
@@ -524,6 +572,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                           src={URL.createObjectURL(file)}
                           alt={`Preview ${index}`}
                           fill
+                          sizes="auto"
                           className="object-cover rounded-lg"
                         />
                       </div>
@@ -543,6 +592,18 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                 </div>
               </div>
             )}
+
+            {/* Image count indicator */}
+            <p
+              className={cn(
+                "text-xs",
+                getTotalImageCount() > 10
+                  ? "text-red-500"
+                  : "text-muted-foreground"
+              )}
+            >
+              Total: {getTotalImageCount()}/10 images
+            </p>
 
             {/* Error Message */}
             {imageError && (
@@ -565,7 +626,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
           </Button>
           <Button
             type="submit"
-            disabled={isLoading || updateMutation.isPending}
+            disabled={!canSubmit}
             className="w-48 cursor-pointer font-semibold"
           >
             {isLoading || updateMutation.isPending
