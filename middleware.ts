@@ -13,6 +13,8 @@ export function middleware(request: NextRequest) {
 		"/login",
 		"/invite",
 		"/setup",
+		"/forgot-password",
+		"/reset-password",
 		"/api/auth",
 		"/api/better-auth",
 	];

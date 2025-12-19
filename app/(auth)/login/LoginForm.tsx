@@ -1,7 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
@@ -9,8 +15,11 @@ import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import {Eye, EyeOff} from "lucide-react"
+import Link from "next/link";
 
 export default function LoginForm() {
+  const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -49,13 +58,17 @@ export default function LoginForm() {
             <Building2 className="h-8 w-8 text-primary-foreground" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">RentManager</h1>
-          <p className="mt-2 text-muted-foreground">Property Management System</p>
+          <p className="mt-2 text-muted-foreground">
+            Property Management System
+          </p>
         </div>
 
         {/* Login Card */}
         <Card className="shadow-xl border-0">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-2xl text-center font-semibold">Welcome back</CardTitle>
+            <CardTitle className="text-2xl text-center font-semibold">
+              Welcome back
+            </CardTitle>
             <CardDescription className="text-center text-muted-foreground">
               Sign in to your account to continue
             </CardDescription>
@@ -63,7 +76,10 @@ export default function LoginForm() {
           <CardContent className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-foreground">
+                <Label
+                  htmlFor="email"
+                  className="text-sm font-medium text-foreground"
+                >
                   Email address
                 </Label>
                 <Input
@@ -76,23 +92,54 @@ export default function LoginForm() {
                   className="h-11"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-foreground">
-                  Password
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="h-11"
-                />
+              <div>
+               
+                <div className="space-y-2">
+                      <Label
+                        htmlFor="password"
+                        className="text-sm font-medium text-foreground"
+                      >
+                        Password
+                      </Label>
+
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="h-11 pr-10"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
               </div>
-              <Button 
-                type="submit" 
-                className="w-full h-11" 
+
+                <div className="flex justify-end py-2">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-blue-600 hover:underline hover:underline-offset-1"
+                  >
+                    Forgot your password?
+                  </Link>
+                </div>
+              </div>
+              <Button
+                type="submit"
+                className="w-full h-11"
                 disabled={isLoading}
               >
                 {isLoading ? "Signing in..." : "Sign in"}
@@ -103,9 +150,9 @@ export default function LoginForm() {
 
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground">
-          <p>© 2024 RentManager. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} RentManager. All rights reserved.</p>
         </div>
       </div>
     </div>
   );
-} 
+}
