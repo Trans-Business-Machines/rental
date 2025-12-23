@@ -1,8 +1,8 @@
-// app/api/send-reset-email/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { render } from "@react-email/components";
 import { ResetPasswordEmail } from "@/lib/emails/ResetPasswordEmail";
+import { render } from "@react-email/components";
+
 
 export async function POST(request: NextRequest) {
     try {
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
 
         const emailHtml = await render(
             ResetPasswordEmail({
-                name: name || "there",
+                name: name,
                 resetLink,
                 expiresIn: "1 hour",
             })
@@ -23,9 +23,9 @@ export async function POST(request: NextRequest) {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                from: process.env.EMAIL_FROM || "onboarding@resend.dev",
+                from: `RentalsManager <${process.env.RESEND_FROM}>`,
                 to: email,
-                subject: "Reset Your Password - RentManager",
+                subject: "Reset Your Password - Rentals Manager",
                 html: emailHtml,
             }),
         });

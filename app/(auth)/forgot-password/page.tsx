@@ -65,23 +65,10 @@ export default function ForgotPasswordPage() {
             <CardTitle className="text-2xl">Check Your Email</CardTitle>
             <CardDescription className="mt-2">
               We&apos;ve sent a password reset link to:
-              <span className="block font-medium text-gray-900 mt-1">
-                {submittedEmail}
-              </span>
+              <strong>{submittedEmail}</strong> if it exists in the system.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800">
-                <strong>Didn&apos;t receive the email?</strong>
-              </p>
-              <ul className="text-sm text-blue-700 mt-2 space-y-1 list-disc list-inside">
-                <li>Check your spam or junk folder</li>
-                <li>Make sure you entered the correct email</li>
-                <li>Wait a few minutes and try again</li>
-              </ul>
-            </div>
-
             <Button
               variant="outline"
               className="w-full"
@@ -116,9 +103,7 @@ export default function ForgotPasswordPage() {
           <Building2 className="h-8 w-8 text-primary-foreground" />
         </div>
         <h1 className="text-3xl font-bold text-foreground">RentManager</h1>
-        <p className="mt-2 text-muted-foreground">
-          Property Management System
-        </p>
+        <p className="mt-2 text-muted-foreground">Property Management System</p>
       </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">

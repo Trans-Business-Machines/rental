@@ -4,7 +4,7 @@ export function InviteUserEmail({ name, inviteLink, invitedByName }: { name: str
   return (
     <Html>
       <Tailwind>
-        <Body className="bg-gray-50 font-sans">
+        <Body className="bg-gray-50 font-sans p-4">
           <Container className="bg-white max-w-lg mx-auto my-10 p-8 rounded-xl shadow">
             <Text className="text-2xl font-bold mb-2 text-gray-900">You are invited to join RentManager</Text>
             <Text className="mb-4 text-gray-700">Hi {name},</Text>

@@ -15,11 +15,11 @@ import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import {Eye, EyeOff} from "lucide-react"
+import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginForm() {
-  const [showPassword, setShowPassword] = useState(false)
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -93,14 +93,13 @@ export default function LoginForm() {
                 />
               </div>
               <div>
-               
                 <div className="space-y-2">
-                      <Label
-                        htmlFor="password"
-                        className="text-sm font-medium text-foreground"
-                      >
-                        Password
-                      </Label>
+                  <Label
+                    htmlFor="password"
+                    className="text-sm font-medium text-foreground"
+                  >
+                    Password
+                  </Label>
 
                   <div className="relative">
                     <Input
@@ -117,7 +116,9 @@ export default function LoginForm() {
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5" />
@@ -126,7 +127,7 @@ export default function LoginForm() {
                       )}
                     </button>
                   </div>
-              </div>
+                </div>
 
                 <div className="flex justify-end py-2">
                   <Link
