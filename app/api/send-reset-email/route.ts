@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                from: `RentalsManager <${process.env.RESEND_FROM}>`,
+                from: `RentalsManager <${process.env.EMAIL_FROM}>`,
                 to: email,
                 subject: "Reset Your Password - Rentals Manager",
                 html: emailHtml,
