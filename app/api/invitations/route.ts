@@ -1,12 +1,39 @@
 import { createInvitation, resendInvitation } from "@/lib/actions/users";
 import { NextRequest, NextResponse } from "next/server";
+import { userInvitationSchema } from "@/lib/schemas/invitations"
+import z from "zod"
 
 export async function POST(req: NextRequest) {
 	try {
-		const { email, role, invitedById } = await req.json();
-		const invitation = await createInvitation({ email, role, invitedById });
+		const body = await req.json();
+
+		const { email, invitedById, role, name } = userInvitationSchema.parse(body)
+
+		const invitation = await createInvitation({ email, role, invitedById, name });
+
 		return NextResponse.json({ success: true, invitation });
 	} catch (error: any) {
+
+		console.error("Error inviting user: ", error)
+
+		if (error instanceof z.ZodError) {
+			const fieldErrors = error.errors.map((err) => ({
+				field: err.path.join("."),
+				message: err.message
+			}))
+
+			return NextResponse.json(
+				{
+					success: false,
+					error: "Validation failed",
+					details: fieldErrors,
+				},
+				{ status: 400 }
+			);
+
+		}
+
+
 		return NextResponse.json(
 			{ success: false, error: error.message },
 			{ status: 400 }

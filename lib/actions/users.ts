@@ -1,45 +1,56 @@
 import { render } from "@react-email/components";
-import { randomBytes } from "crypto";
+import { randomBytes } from "node:crypto";
 import { auth } from "../auth";
 import { InviteUserEmail } from "../emails/InviteUserEmail";
 import { prisma } from "../prisma";
 import resend from "../emailClient";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://rentmanager.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://rentalsmanager.app" as const;
 
 export async function createInvitation({
 	email,
 	role,
 	invitedById,
+	name
 }: {
+	name: string,
 	email: string;
 	role: string;
 	invitedById?: string;
 }) {
 	// Check if invitation or user already exists
 	const existingUser = await prisma.user.findUnique({ where: { email } });
+
+	// if there is an existing user throw error
 	if (existingUser) throw new Error("A user with this email already exists.");
 
+
+	// Check if there is an exisitng invite already sent that has not being accepted
 	const existingInvite = await prisma.invitation.findUnique({
 		where: { email },
 	});
 
+
+	// if so throw an error
 	if (existingInvite && !existingInvite.acceptedAt)
 		throw new Error("An invitation has already been sent to this email.");
 
-	// Generate token
+	// Generate an invitation token
 	const token = randomBytes(32).toString("hex");
-	// Create invitation (omit name)
+
+	// Create invitation 
 	const invitation = await prisma.invitation.create({
 		data: {
+			name,
 			email,
 			role,
 			token,
 			invitedById,
 		},
 	});
+
 	// Send invite email
-	await sendInviteEmail({ name: "", email, token, invitedById });
+	await sendInviteEmail({ name, email, token, invitedById });
 	return invitation;
 }
 
@@ -49,37 +60,45 @@ async function sendInviteEmail({
 	token,
 	invitedById,
 }: {
-	name?: string;
+	name: string;
 	email: string;
 	token: string;
 	invitedById?: string | null;
 }) {
 	let invitedByName = "An admin";
+
 	if (invitedById) {
 		const inviter = await prisma.user.findUnique({
 			where: { id: invitedById ?? undefined },
 		});
 		if (inviter) invitedByName = inviter.name;
 	}
+
 	const inviteLink = `${APP_URL}/invite?token=${token}`;
+
 	const emailHtml = await Promise.resolve(
 		render(InviteUserEmail({ name: name || "", inviteLink, invitedByName }))
 	);
+
 	await resend.emails.send({
-		from: `RentManager <${process.env.RESEND_FROM || "noreply@accounts.rentmanager.app"}>`,
+		from: `RentalsManager <${process.env.RESEND_FROM}>`,
 		to: email,
-		subject: "You're invited to join RentManager",
+		subject: "You're invited to join Rentals Manager",
 		html: emailHtml,
 	});
 }
 
 export async function resendInvitation(email: string) {
+
 	const invitation = await prisma.invitation.findUnique({ where: { email } });
+
 	if (!invitation) throw new Error("No invitation found for this email.");
+
 	if (invitation.acceptedAt)
 		throw new Error("This invitation has already been accepted.");
+
 	await sendInviteEmail({
-		name: invitation.name || undefined,
+		name: invitation.name || "there",
 		email: invitation.email,
 		token: invitation.token,
 		invitedById: invitation.invitedById,

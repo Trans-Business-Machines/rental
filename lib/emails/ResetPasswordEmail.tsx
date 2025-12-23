@@ -27,7 +27,7 @@ export function ResetPasswordEmail({
       <Head />
       <Preview>Reset your RentManager password</Preview>
       <Tailwind>
-        <Body className="bg-gray-100 font-sans">
+        <Body className="bg-gray-100 font-sans p-6">
           <Container className="bg-white max-w-lg mx-auto my-10 p-8 rounded-xl shadow-lg">
             {/* Header */}
             <Section className="text-center mb-6">

@@ -19,29 +19,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { z } from "zod";
 import { toast } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SubmitHandler, useForm } from "react-hook-form";
+import {
+  userInvitationSchema,
+  type UserInvitationType,
+} from "@/lib/schemas/invitations";
+import { authClient } from "@/lib/auth-client";
 
 interface InviteUserDialogProps {
   children: React.ReactNode;
 }
 
-const userRoleSchema = z.object({
-  name: z.string().min(3, "Name should have at least 3 characters."),
-  email: z.string().email("Please enter a valid email address."),
-  role: z.enum(["user", "admin"], {
-    required_error: "Please select a role.",
-    invalid_type_error: "Role must either be an admin or user.",
-  }),
-});
-
-type UserRoleFields = z.infer<typeof userRoleSchema>;
-
 function InviteUserDialog({ children }: InviteUserDialogProps) {
   // Define state to control the dialog open state
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+
+  // Get hold of the currently logged in user session
+  const { data: session, error, isPending, refetch } = authClient.useSession();
 
   // React hook form management.
   const {
@@ -51,24 +47,59 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
     reset,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<UserRoleFields>({
+  } = useForm<UserInvitationType>({
     mode: "all",
-    resolver: zodResolver(userRoleSchema),
+    resolver: zodResolver(userInvitationSchema),
     defaultValues: {
       role: "user",
+      invitedById: session?.user.id || "",
     },
   });
+
+  // Show a loading state
+  if (isPending) {
+    <div className="flex flex-col gap-4">
+      <div className="h-6 w-full animate-pulse rounded-lg" />
+      <div className="h-12 w-full animate-pulse rounded-lg" />
+      <div className="h-12 w-full animate-pulse rounded-lg" />
+      <div className="h-12 w-full animate-pulse rounded-lg" />
+    </div>;
+  }
+
+  if (error && error.message) {
+    return (
+      <div className="bg-red-50 p-10">
+        <p className="text-sm md:text-base text-red-400 font-semibold">
+          {error.message}
+        </p>
+        <Button size="sm" onClick={() => refetch()}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   // watch the role value to control the select component
   const selectedRole = watch("role");
 
-  const onSubmit: SubmitHandler<UserRoleFields> = async (values) => {
+  const onSubmit: SubmitHandler<UserInvitationType> = async (values) => {
     try {
-      await fetch("/api/invitations", {
+      const response = await fetch("/api/invitations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
+
+      if (!response.ok) {
+        throw new Error("Invite failed!");
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        console.log(result);
+        throw new Error("Invite failed, try again!");
+      }
 
       // Reset from and show toast upon successfull invitation
       reset();
