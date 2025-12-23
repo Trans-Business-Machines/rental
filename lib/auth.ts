@@ -4,7 +4,6 @@ import { admin } from "better-auth/plugins";
 import { prisma } from "./prisma";
 import { sendPasswordResetEmail } from "./services/email"
 
-export const runtime = "nodejs";
 
 export const auth = betterAuth({
 	database: prismaAdapter(prisma, {
@@ -26,4 +25,10 @@ export const auth = betterAuth({
 			defaultRole: "admin",
 		}),
 	],
+	trustedOrigins: [
+		"https://rentalsmanager.app",
+		"https://www.rentalsmanager.app",
+		"https://rental-six-xi.vercel.app",
+		"http://localhost:3000",
+	]
 });
