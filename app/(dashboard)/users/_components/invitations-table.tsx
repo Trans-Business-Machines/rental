@@ -1,3 +1,6 @@
+import { Loader } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableHeader,
@@ -6,8 +9,6 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import type { InvitationCardAndTableProps } from "@/lib/types/types";
 
 const getRoleBadgeColor = (role: string) => {
@@ -24,6 +25,9 @@ const getRoleBadgeColor = (role: string) => {
 function InvitationsTable({
   invitations,
   handleResendInvite,
+  isResendPending,
+  resendEmail,
+  setResendEmail,
 }: InvitationCardAndTableProps) {
   return (
     <div className="rounded-lg border border-border overflow-hidden pb-12">
@@ -58,9 +62,22 @@ function InvitationsTable({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleResendInvite(i.email)}
+                    disabled={isResendPending && i.email === resendEmail}
+                    onClick={async () => {
+                      setResendEmail(i.email);
+                      await handleResendInvite(i.email);
+                      setResendEmail("");
+                    }}
+                    className="cursor-pointer"
                   >
-                    Resend Invite
+                    {isResendPending && i.email === resendEmail ? (
+                      <span className="flex item-center gap-2">
+                        <Loader className="animate-spin" />
+                        Resending
+                      </span>
+                    ) : (
+                      "Resend Invite"
+                    )}
                   </Button>
                 </TableCell>
               </TableRow>

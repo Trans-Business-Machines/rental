@@ -188,7 +188,10 @@ export interface InvitationResponse {
 
 export interface InvitationCardAndTableProps {
     invitations: Invitation[],
-    handleResendInvite: (email: string) => void
+    resendEmail: string,
+    isResendPending: boolean,
+    setResendEmail: (email: string) => void,
+    handleResendInvite: (email: string) => Promise<void>
 }
 
 export interface CreateBookingData {

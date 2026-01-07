@@ -24,8 +24,9 @@ interface InvitationsProps {
   hasNext: boolean;
   hasPrev: boolean;
   currentPage: number;
+  isResendPending: boolean;
   handleInvitationPageChange: (page: number) => void;
-  handleResendInvite: (email: string) => void;
+  handleResendInvite: (email: string) => Promise<void>;
 }
 
 function Invitations({
@@ -34,6 +35,7 @@ function Invitations({
   hasPrev,
   totalPages,
   currentPage,
+  isResendPending,
   handleResendInvite,
   handleInvitationPageChange,
 }: InvitationsProps) {
@@ -43,6 +45,8 @@ function Invitations({
   const [selectFilters, setSelectFilters] = useState({
     role: "all",
   });
+
+  const [resendEmail, setResendEmail] = useState("");
 
   const filteredInvitations = useFilter<Invitation>({
     items: invitations,
@@ -114,11 +118,17 @@ function Invitations({
         <InvitationsTable
           invitations={filteredInvitations}
           handleResendInvite={handleResendInvite}
+          isResendPending={isResendPending}
+          resendEmail={resendEmail}
+          setResendEmail={setResendEmail}
         />
       ) : (
         <InvitationsCards
           invitations={filteredInvitations}
+          isResendPending={isResendPending}
           handleResendInvite={handleResendInvite}
+          resendEmail={resendEmail}
+          setResendEmail={setResendEmail}
         />
       )}
 

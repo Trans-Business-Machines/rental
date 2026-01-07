@@ -15,13 +15,6 @@ export async function sendPasswordResetEmail(
         name,
     }: SendPasswordResetEmailParams) {
 
-    console.log("=== Password Reset Email Debug ===");
-    console.log("RESEND_API_KEY exists:", !!process.env.RESEND_API_KEY);
-    console.log("EMAIL_FROM:", process.env.EMAIL_FROM);
-    console.log("To:", email);
-    console.log("Reset Link:", resetLink);
-    console.log("==================================");
-
     if (!process.env.RESEND_API_KEY) {
         throw new Error("RESEND_API_KEY is not configured");
     }

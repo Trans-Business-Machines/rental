@@ -34,10 +34,10 @@ function UsersPageContent() {
   });
 
   // Get the Resend Invite mutation from useResendInvite hook.
-  const { resendInvite } = useResendInvite();
+  const { resendInvite, isPending } = useResendInvite();
 
-  const handleResendInvite = (email: string) => {
-    resendInvite(email);
+  const handleResendInvite = async (email: string) => {
+    await resendInvite(email);
   };
 
   const handleInvitationPageChange = (page: number) => {
@@ -152,6 +152,7 @@ function UsersPageContent() {
                 totalPages={invitationsData.totalPages}
                 currentPage={invitationsData.currentPage}
                 handleResendInvite={handleResendInvite}
+                isResendPending={isPending}
                 handleInvitationPageChange={handleInvitationPageChange}
               />
             </TabsContent>
