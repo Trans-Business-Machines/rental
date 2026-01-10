@@ -61,9 +61,12 @@ export type BadgeVariant =
     | "listing"
     | "details";
 
+export type Role = "user" | "admin" | "superAdmin"
+
 /* ---------------- Interface Definitions ---------------- */
 export interface BookingsTableAndCardsProps {
     bookings: Booking[];
+    handleClick: (bookingId: number) => void;
     setEditBooking: (booking: Booking) => void;
     setIsDialogOpen: (open: boolean) => void;
 }
