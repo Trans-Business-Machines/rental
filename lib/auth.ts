@@ -1,8 +1,9 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { admin } from "better-auth/plugins";
+import { admin as adminPlugin } from "better-auth/plugins";
 import { prisma } from "./prisma";
 import { sendPasswordResetEmail } from "./services/email"
+import { ac, admin, superAdmin, user } from "@/lib/permissions"
 
 
 export const auth = betterAuth({
@@ -21,8 +22,14 @@ export const auth = betterAuth({
 		},
 	},
 	plugins: [
-		admin({
-			defaultRole: "admin",
+		adminPlugin({
+			ac,
+			roles: {
+				user,
+				admin,
+				superAdmin
+			},
+			defaultRole: "user",
 		}),
 	],
 	trustedOrigins: [
