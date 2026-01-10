@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, unstable_cache, revalidateTag } from "next/cache";
 import { evaluateUnitStatus } from "@/lib/utils"
+import { requirePermission } from "@/lib/check-permissions"
 import type { BookingStatus, CreateBookingData, } from "@/lib/types/types"
 
 export async function getBookings(page: number = 1) {
@@ -11,6 +12,9 @@ export async function getBookings(page: number = 1) {
 		const LIMIT = 6;
 
 		const bookings = await prisma.booking.findMany({
+			where: {
+				deletedAt: null
+			},
 			include: {
 				guest: true,
 				property: true,
@@ -49,10 +53,33 @@ export async function getBookings(page: number = 1) {
 	}
 }
 
+export async function getSoftDeletedBookings() {
+	try {
+		const bookings = await prisma.booking.findMany({
+			where: {
+				deletedAt: {
+					not: null
+				}
+			},
+			include: {
+				guest: true,
+				property: true,
+				unit: true,
+			},
+		})
+
+		return bookings
+
+	} catch (error) {
+		console.log("Error getting soft deleted bookings.")
+		throw error
+	}
+}
+
 export async function getBookingById(id: number) {
 	try {
 		const booking = await prisma.booking.findUnique({
-			where: { id },
+			where: { id, deletedAt: null },
 			include: {
 				guest: true,
 				property: true,
@@ -68,6 +95,10 @@ export async function getBookingById(id: number) {
 
 export async function createBooking(booking: CreateBookingData) {
 	try {
+
+		// Confirm that the current session user has permission to create a booking
+		await requirePermission("booking", "create")
+
 		// Prevent double booking: check if any booking exists for this property with checkInDate on the same day
 		const startOfDay = new Date(booking.checkInDate);
 		startOfDay.setHours(0, 0, 0, 0);
@@ -152,6 +183,9 @@ export async function updateBooking(
 ) {
 	try {
 
+		// Confirm that the current session user has permission to create a booking
+		await requirePermission("booking", "update")
+
 		//  Get the corresponding unit status based on booking status
 		const unitStatus = evaluateUnitStatus(data.status)
 
@@ -197,31 +231,99 @@ export async function updateBooking(
 	}
 }
 
+export async function softDeleteBooking(id: number) {
+	try {
+		// confirm that the current session user can soft delete booking
+		await requirePermission("booking", "update")
+
+		await prisma.booking.update({
+			where: {
+				id
+			},
+			data: {
+				deletedAt: new Date()
+			}
+		})
+
+		revalidatePath("/bookings");
+		revalidatePath("/dashboard");
+
+		return {
+			success: true,
+		}
+
+
+	} catch (error) {
+		console.error("Error soft deleting booking:", error);
+		throw error
+	}
+
+}
+
 export async function deleteBooking(id: number) {
 	try {
+		// confirm that the current session user can hard delete booking
+		await requirePermission("booking", "delete")
+
+
 		await prisma.booking.delete({
 			where: { id },
 		});
+
 		revalidatePath("/bookings");
 		revalidatePath("/dashboard");
-		return true;
+
+		return {
+			success: true,
+		}
+
 	} catch (error) {
-		console.error("Error deleting booking:", error);
+		console.error("Error hard deleting booking:", error);
 		throw error;
+	}
+}
+
+export async function restoreBooking(id: number) {
+	try {
+		// confirm that the current session user can restore a deleted booking
+		await requirePermission("booking", "restore");
+
+		await prisma.booking.update({
+			where: {
+				id
+			},
+			data: {
+				deletedAt: null
+			}
+		})
+
+		revalidatePath("/bookings");
+		revalidatePath("/dashboard");
+
+		return {
+			success: true
+		}
+	} catch (error) {
+		console.error("Error occured when restoring booking: ", error)
+		throw error
 	}
 }
 
 export async function getBookingStats() {
 	try {
-		const totalBookings = await prisma.booking.count();
+		const totalBookings = await prisma.booking.count({
+			where: {
+				deletedAt: null
+			}
+		});
 		const pendingBookings = await prisma.booking.count({
-			where: { status: "pending" },
+			where: { status: "pending", deletedAt: null },
 		});
 		const checkedInBookings = await prisma.booking.count({
-			where: { status: "checked_in" },
+			where: { status: "checked_in", deletedAt: null },
 		});
 		const reservedBookings = await prisma.booking.count({
-			where: { status: "reserved" },
+			where: { status: "reserved", deletedAt: null },
 		});
 
 		return {
@@ -247,7 +349,8 @@ export const getBookingFormData = unstable_cache(
 		const [guests, properties] = await Promise.all([
 			prisma.guest.findMany({
 				where: {
-					verificationStatus: "verified"
+					verificationStatus: "verified",
+					deletedAt:null
 				},
 				select: {
 					id: true,
