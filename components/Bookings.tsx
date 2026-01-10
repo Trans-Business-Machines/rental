@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { BookingCards } from "./BookingCards";
-import { BookingsTable } from "./BookingsTable";
 import { Calendar } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Input } from "@/components/ui/input";
@@ -20,7 +18,10 @@ import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "./SearchNotFound";
 import { ItemsNotFound } from "./ItemsNotFound";
 import { useSearchParams, useRouter } from "next/navigation";
-import Pagination from "./Pagination";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ArchivedBookingsTable } from "./ArchivedBookings";
+import { BookingListings } from "./BookingListings";
+import { cn } from "@/lib/utils";
 import type { Booking, PropertyNames } from "@/lib/types/types";
 
 interface BookingsProps {
@@ -41,8 +42,13 @@ function Bookings({
   // Get table mode context from useTableMode Hook
   const { tableMode, setTableMode } = useTableMode();
 
+  // Get the current session user role
+  const { isSuperAdmin } = usePermissions();
+
   // Define state to control the Booking Edit Dialog Box
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const [showArchived, setShowArchived] = useState(false);
 
   // Define state to hold the booking to edit
   const [editBooking, setEditBooking] = useState<Booking | null>(null);
@@ -97,7 +103,7 @@ function Bookings({
   return (
     <>
       {/* Search and Filters */}
-      <div className="flex items-center space-x-4">
+      <article className="flex items-center space-x-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
@@ -146,48 +152,58 @@ function Bookings({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </article>
 
-      <div>
-        <div className="flex items-center gap-2 mb-2 text-muted-foreground/90 text-sm">
-          <Switch
-            checked={tableMode}
-            onCheckedChange={setTableMode}
-            className="cursor-pointer"
-          />
-          <span>Table mode</span>
+      <section>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 mb-2 text-muted-foreground text-sm">
+            <Switch
+              checked={tableMode}
+              disabled={showArchived}
+              onCheckedChange={setTableMode}
+              className="cursor-pointer"
+            />
+            <span>Table mode</span>
+          </div>
+
+          {isSuperAdmin && (
+            <div className="flex items-center gap-2 mb-2 text-muted-foreground text-sm">
+              <Switch
+                checked={showArchived}
+                onCheckedChange={setShowArchived}
+                className="cursor-pointer"
+              />
+              <span className={cn(showArchived ? "font-bold text-black" : "font-normal")}>
+                Show Archived
+              </span>
+            </div>
+          )}
         </div>
 
-        {filteredBookings.length === 0 ? (
-          <SearchNotFound
-            title="No booking matches the search criteria."
-            icon={Calendar}
-          />
-        ) : tableMode ? (
-          <BookingsTable
-            bookings={filteredBookings}
-            setEditBooking={setEditBooking}
-            setIsDialogOpen={setIsDialogOpen}
-          />
-        ) : (
-          <BookingCards
-            bookings={filteredBookings}
-            setEditBooking={setEditBooking}
-            setIsDialogOpen={setIsDialogOpen}
-          />
-        )}
-      </div>
-
-      {/* Pagination */}
-      <footer className="flex items-center justify-between pt-4 w-full">
-        <Pagination
-          currentPage={currentPage}
-          handlePageChange={handlePageChange}
-          totalPages={totalPages}
-          hasNext={hasNext}
-          hasPrev={hasPrev}
-        />
-      </footer>
+        <>
+          {showArchived ? (
+            <div>
+              <ArchivedBookingsTable />
+            </div>
+          ) : filteredBookings.length === 0 ? (
+            <SearchNotFound
+              title="No booking matches the search criteria."
+              icon={Calendar}
+            />
+          ) : (
+            <BookingListings
+              currentPage={currentPage}
+              filteredBookings={filteredBookings}
+              handlePageChange={handlePageChange}
+              hasNext={hasNext}
+              hasPrev={hasPrev}
+              setEditBooking={setEditBooking}
+              setIsDialogOpen={setIsDialogOpen}
+              totalPages={totalPages}
+            />
+          )}
+        </>
+      </section>
 
       {isDialogOpen && editBooking && (
         <BookingEditDialog

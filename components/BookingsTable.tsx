@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { format, differenceInDays } from "date-fns";
@@ -9,7 +8,7 @@ import {
   Eye,
   SquarePen,
   ClipboardPaste,
-  Trash2,
+  Archive,
 } from "lucide-react";
 import {
   Table,
@@ -31,9 +30,6 @@ import type {
   BookingStatus,
 } from "@/lib/types/types";
 import { useRouter } from "next/navigation";
-import { deleteBooking } from "@/lib/actions/bookings";
-import { DeleteDialog } from "@/components/BookingDeleteDialog";
-import { toast } from "sonner";
 import Link from "next/link";
 
 export const getStatusColor = (status: BookingStatus): string => {
@@ -57,30 +53,9 @@ function BookingsTable({
   bookings,
   setEditBooking,
   setIsDialogOpen,
+  handleClick,
 }: BookingsTableAndCardsProps) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bookingToDelete, setBookingToDelete] = useState<number | null>(null);
   const router = useRouter();
-
-  const handleDeleteClick = (bookingId: number) => {
-    setBookingToDelete(bookingId);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (bookingToDelete) {
-      try {
-        await deleteBooking(bookingToDelete);
-        toast.success("Booking deleted successfully.");
-      } catch (error) {
-        console.log("Error deleting booking: ", error);
-        toast.error("Delete booking failed, try again.");
-      } finally {
-        setDeleteDialogOpen(false);
-        setBookingToDelete(null);
-      }
-    }
-  };
 
   return (
     <>
@@ -209,19 +184,20 @@ function BookingsTable({
                       )}
 
                       <DropdownMenuSeparator />
+                      
                       <DropdownMenuItem
-                        onClick={() => handleDeleteClick(booking.id)}
+                        onClick={() => handleClick(booking.id)}
                         disabled={
                           booking.status === "pending" ||
                           booking.status === "reserved" ||
                           booking.status === "checked_in"
                         }
-                        className="hover:bg-destructive/30 focus:bg-destructive/30 cursor-pointer"
+                        className="hover:bg-orange-500/20 focus:bg-orange-500/20 cursor-pointer"
                       >
                         <div className="flex gap-2 items-center">
-                          <Trash2 className="size-4 text-destructive" />
-                          <span className="text-destructive">
-                            Delete booking
+                          <Archive className="size-4 text-orange-500" />
+                          <span className="text-orange-500">
+                            Archive booking
                           </span>
                         </div>
                       </DropdownMenuItem>
@@ -233,12 +209,6 @@ function BookingsTable({
           </TableBody>
         </Table>
       </div>
-
-      <DeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleConfirmDelete}
-      />
     </>
   );
 }
