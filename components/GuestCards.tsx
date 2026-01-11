@@ -4,16 +4,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, Mail, Phone, Calendar } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  Edit,
+  Eye,
+  Mail,
+  Phone,
+  Pencil,
+  Calendar,
+  MoreHorizontal,
+  Archive,
+} from "lucide-react";
 import { formatDate } from "date-fns";
+import { cn, shouldDisableDelete } from "@/lib/utils";
 import Link from "next/link";
-import type { Guest } from "@/lib/types/types";
-
-interface GuestCardsProps {
-  guests: Guest[];
-  setIsDialogOpen: (open: boolean) => void;
-  setEditGuest: (guest: Guest) => void;
-}
+import type { GuestsTableAndCardsProps } from "@/lib/types/types";
 
 const getVerificationColor = (status: string) => {
   switch (status) {
@@ -32,7 +43,9 @@ function GuestCards({
   guests,
   setEditGuest,
   setIsDialogOpen,
-}: GuestCardsProps) {
+  handleClick,
+  isArchivePending,
+}: GuestsTableAndCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {guests.map((guest) => (
@@ -50,27 +63,82 @@ function GuestCards({
                   <CardTitle className="text-lg">
                     {guest.firstName} {guest.lastName}
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {guest.occupation || "Not specified"}
-                  </p>
+
+                  <div className="flex  items-center gap-1">
+                    <Badge
+                      variant={
+                        getVerificationColor(
+                          guest.verificationStatus || "pending"
+                        ) as "default" | "secondary" | "destructive" | "outline"
+                      }
+                    >
+                      {guest.verificationStatus || "pending"}
+                    </Badge>
+                    {guest.blacklisted && (
+                      <Badge variant="destructive" className="text-xs">
+                        Blacklisted
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-col items-end space-y-1">
-                <Badge
-                  variant={
-                    getVerificationColor(
-                      guest.verificationStatus || "pending"
-                    ) as "default" | "secondary" | "destructive" | "outline"
-                  }
-                >
-                  {guest.verificationStatus || "pending"}
-                </Badge>
-                {guest.blacklisted && (
-                  <Badge variant="destructive" className="text-xs">
-                    Blacklisted
-                  </Badge>
-                )}
-              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-8 cursor-pointer p-0"
+                  >
+                    <MoreHorizontal className="size-4 rotate-90" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    className="hover:bg-primary/30 focus:bg-primary/30 cursor-pointer"
+                    asChild
+                  >
+                    <Link
+                      href={`/guests/${guest.id}`}
+                      className="flex gap-2 items-center"
+                    >
+                      <Eye className="size-4 text-muted-foreground" />
+                      <span className="text-accent-foreground">
+                        View details
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setEditGuest(guest);
+                      setIsDialogOpen(true);
+                    }}
+                    className="hover:bg-primary/30 focus:bg-primary/30 cursor-pointer"
+                  >
+                    <div className="flex gap-2 items-center">
+                      <Pencil className="size-4 text-muted-foreground" />
+                      <span className="text-accent-foreground">Edit guest</span>
+                    </div>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem
+                    disabled={shouldDisableDelete(guest) || isArchivePending}
+                    className={cn(
+                      "hover:bg-orange-500/30 focus:bg-orange-5/30 cursor-pointer",
+                      isArchivePending && "cursor-not-allowed opacity-40"
+                    )}
+                    onClick={() => handleClick(guest.id)}
+                  >
+                    <div className="flex gap-2 items-center">
+                      <Archive className="size-4 text-orange-500" />
+                      <span className="text-orange-500">Archive guest</span>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -89,10 +157,10 @@ function GuestCards({
             {/* Statistics */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="text-center col-span-2 p-2 bg-muted rounded-lg">
+                <p className="text-muted-foreground">Total Stays</p>
                 <p className="font-semibold text-sm md:text-base">
                   {guest.totalStays || 0}
                 </p>
-                <p className="text-muted-foreground">Total Stays</p>
               </div>
             </div>
 

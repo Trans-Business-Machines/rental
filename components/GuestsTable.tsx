@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { format } from "date-fns";
-import { MoreHorizontal, Eye, Pencil, Mail, Phone, Trash2 } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, Mail, Phone, Archive } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -21,22 +20,8 @@ import {
   DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
 import Link from "next/link";
-import { useDeleteGuest } from "@/hooks/useGuests";
 import { cn, shouldDisableDelete } from "@/lib/utils";
-import { DeleteDialog } from "@/components/GuestDeleteDialog";
-import type { Guest } from "@/lib/types/types";
-
-interface GuestsTableProps {
-  guests: Guest[];
-  setIsDialogOpen: (open: boolean) => void;
-  setEditGuest: (guest: Guest) => void;
-}
-
-interface GuestToDelete {
-  id: number;
-  firstName: string;
-  lastName: string;
-}
+import type { GuestsTableAndCardsProps } from "@/lib/types/types";
 
 const getVerificationColor = (status: string) => {
   switch (status) {
@@ -54,26 +39,10 @@ const getVerificationColor = (status: string) => {
 function GuestsTable({
   guests,
   setEditGuest,
+  handleClick,
+  isArchivePending,
   setIsDialogOpen,
-}: GuestsTableProps) {
-  const deleteMutation = useDeleteGuest();
-
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [guestToDelete, setGuestToDelete] = useState<GuestToDelete | null>(
-    null
-  );
-
-  const handleDeleteClick = (guest: GuestToDelete) => {
-    setGuestToDelete(guest);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = () => {
-    if (guestToDelete) {
-      deleteMutation.mutate(guestToDelete.id);
-    }
-  };
-
+}: GuestsTableAndCardsProps) {
   return (
     <>
       <div className="rounded-lg border border-border overflow-hidden pb-6">
@@ -184,24 +153,17 @@ function GuestsTable({
 
                       <DropdownMenuItem
                         disabled={
-                          shouldDisableDelete(guest) || deleteMutation.isPending
+                          shouldDisableDelete(guest) || isArchivePending
                         }
                         className={cn(
-                          "hover:bg-chart-5/30 focus:bg-chart-5/30 cursor-pointer",
-                          deleteMutation.isPending &&
-                            "cursor-not-allowed opacity-40"
+                          "hover:bg-orange-500/30 focus:bg-orange-5/30 cursor-pointer",
+                          isArchivePending && "cursor-not-allowed opacity-40"
                         )}
-                        onClick={() =>
-                          handleDeleteClick({
-                            id: guest.id,
-                            firstName: guest.firstName,
-                            lastName: guest.lastName,
-                          })
-                        }
+                        onClick={() => handleClick(guest.id)}
                       >
                         <div className="flex gap-2 items-center">
-                          <Trash2 className="size-4 text-red-500" />
-                          <span className="text-red-500">Delete guest</span>
+                          <Archive className="size-4 text-orange-500" />
+                          <span className="text-orange-500">Archive guest</span>
                         </div>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -212,16 +174,6 @@ function GuestsTable({
           </TableBody>
         </Table>
       </div>
-
-      <DeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleConfirmDelete}
-        guest={{
-          firstName: guestToDelete?.firstName,
-          lastName: guestToDelete?.lastName,
-        }}
-      />
     </>
   );
 }
