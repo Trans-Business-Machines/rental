@@ -59,10 +59,12 @@ async function sendInviteEmail({
 	email,
 	token,
 	invitedById,
+	reminder = false
 }: {
 	name: string;
 	email: string;
 	token: string;
+	reminder?: boolean,
 	invitedById?: string | null;
 }) {
 	let invitedByName = "An admin";
@@ -83,7 +85,7 @@ async function sendInviteEmail({
 	await resend.emails.send({
 		from: `RentalsManager <${process.env.EMAIL_FROM}>`,
 		to: email,
-		subject: "You're invited to join Rentals Manager",
+		subject: reminder ? "Reminder- You're invited to join Rentals Manager" : "You're invited to join Rentals Manager",
 		html: emailHtml,
 	});
 }
@@ -102,6 +104,7 @@ export async function resendInvitation(email: string) {
 		email: invitation.email,
 		token: invitation.token,
 		invitedById: invitation.invitedById,
+		reminder: true,
 	});
 	return invitation;
 }

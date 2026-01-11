@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardHeader, CardContent } from "./ui/card";
 import {
   DropdownMenu,
@@ -17,7 +16,7 @@ import {
   Calendar,
   Eye,
   Edit,
-  Trash2,
+  Archive,
   MoreVertical,
   Clock,
   ClipboardPaste,
@@ -26,40 +25,15 @@ import { format, differenceInDays } from "date-fns";
 import type { BookingsTableAndCardsProps } from "@/lib/types/types";
 import { getStatusColor } from "./BookingsTable";
 import { useRouter } from "next/navigation";
-import { deleteBooking } from "@/lib/actions/bookings";
-import { DeleteDialog } from "@/components/BookingDeleteDialog";
-import { toast } from "sonner";
 import Link from "next/link";
 
 function BookingCards({
   bookings,
   setEditBooking,
   setIsDialogOpen,
+  handleClick,
 }: BookingsTableAndCardsProps) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bookingToDelete, setBookingToDelete] = useState<number | null>(null);
-
   const router = useRouter();
-
-  const handleDeleteClick = (bookingId: number) => {
-    setBookingToDelete(bookingId);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (bookingToDelete) {
-      try {
-        await deleteBooking(bookingToDelete);
-        toast.success("Booking deleted successfully.");
-      } catch (error) {
-        console.log("Error deleting booking: ", error);
-        toast.error("Delete booking failed, try again.");
-      } finally {
-        setDeleteDialogOpen(false);
-        setBookingToDelete(null);
-      }
-    }
-  };
 
   return (
     <>
@@ -151,18 +125,18 @@ function BookingCards({
 
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => handleDeleteClick(booking.id)}
+                        onClick={() => handleClick(booking.id)}
                         disabled={
                           booking.status === "pending" ||
                           booking.status === "reserved" ||
                           booking.status === "checked_in"
                         }
-                        className="hover:bg-destructive/30 focus:bg-destructive/30 cursor-pointer"
+                        className="hover:bg-orange-500/20 focus:bg-orange-500/20 cursor-pointer"
                       >
                         <div className="flex gap-2 items-center">
-                          <Trash2 className="size-4 text-destructive" />
-                          <span className="text-destructive">
-                            Delete booking
+                          <Archive className="size-4 text-orange-500" />
+                          <span className="text-orange-500">
+                            Archive booking
                           </span>
                         </div>
                       </DropdownMenuItem>
@@ -234,11 +208,6 @@ function BookingCards({
           );
         })}
       </div>
-      <DeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleConfirmDelete}
-      />
     </>
   );
 }

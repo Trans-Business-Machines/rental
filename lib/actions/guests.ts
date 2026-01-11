@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { requirePermission } from "@/lib/check-permissions"
 import type { GuestUpdateFormData, CreateNewGuest } from "@/lib/types/types"
 
 export async function getGuests(page: number = 1) {
@@ -9,6 +10,9 @@ export async function getGuests(page: number = 1) {
 	const LIMIT = 6;
 
 	const guests = await prisma.guest.findMany({
+		where: {
+			deletedAt: null
+		},
 		include: {
 			bookings: {
 				select: {
@@ -46,7 +50,7 @@ export async function getGuests(page: number = 1) {
 
 export async function getGuestById(id: number) {
 	return prisma.guest.findUnique({
-		where: { id }, include: {
+		where: { id, deletedAt: null }, include: {
 			bookings: {
 				select: {
 					id: true,
@@ -61,16 +65,42 @@ export async function getGuestById(id: number) {
 	});
 }
 
+export async function getSoftDeletedGuests() {
+	try {
+		const archivedGuests = await prisma.guest.findMany({
+			where: {
+				deletedAt: {
+					not: null
+				}
+			}
+		})
+
+		return archivedGuests
+	} catch (error) {
+		throw error
+	}
+
+}
+
 export async function createGuest(data: CreateNewGuest) {
+
+	// confirm that the current session user has the permission to create a guest
+	await requirePermission("guest", "create")
+
 	const guest = await prisma.guest.create({
 		data
 	});
+
 	revalidatePath("/guests");
+
 	return guest;
 }
 
 export async function updateGuest(id: number, data: GuestUpdateFormData) {
 	try {
+
+		await requirePermission("guest", "update")
+
 		const updatedGuest = await prisma.guest.update({ where: { id }, data });
 
 		// check if the updatedGuest has been verified
@@ -87,14 +117,71 @@ export async function updateGuest(id: number, data: GuestUpdateFormData) {
 	}
 }
 
-export async function deleteGuest(id: number) {
+export async function softDeleteGuest(id: number) {
 	try {
-		await prisma.guest.delete({ where: { id } });
+
+		// confirm that the current session user can soft delete booking
+		await requirePermission("guest", "update")
+
+		await prisma.guest.update({
+			where: {
+				id
+			},
+			data: {
+				deletedAt: new Date()
+			}
+		})
+
 		revalidateTag("booking-form-data");
 		revalidatePath("/guests");
+
+
+		return {
+			success: true,
+		}
+
+
+	} catch (error) {
+		console.error("Error soft deleting guest:", error);
+		throw error
+	}
+
+}
+
+export async function deleteGuest(id: number) {
+	try {
+		await requirePermission("guest", "delete")
+
+		await prisma.guest.delete({ where: { id } });
+
+		revalidateTag("booking-form-data");
+		revalidatePath("/guests");
+
 	} catch (error) {
 		console.error("Failed to delete guest:", error);
-		throw new Error("Failed to delete guest.")
+		throw error
+	}
+}
+
+export async function restoreGuest(id: number) {
+	try {
+		await requirePermission("guest", "restore")
+
+		await prisma.guest.update({
+			where: {
+				id
+			},
+			data: {
+				deletedAt: null
+			}
+		})
+
+		revalidateTag("booking-form-data");
+		revalidatePath("/guests");
+
+	} catch (error) {
+		console.error("Error restoring guest: ", error)
+		throw error
 	}
 }
 
@@ -119,15 +206,21 @@ export async function checkoutGuest(bookingId: number, checkoutData: any) {
 
 export async function getGuestStats() {
 	try {
-		const totalGuests = await prisma.guest.count();
+		const totalGuests = await prisma.guest.count({
+			where: {
+				deletedAt: null
+			}
+
+		});
+
 		const verifiedGuests = await prisma.guest.count({
-			where: { verificationStatus: "verified" },
+			where: { verificationStatus: "verified", deletedAt: null },
 		});
 		const pendingGuests = await prisma.guest.count({
-			where: { verificationStatus: "pending" },
+			where: { verificationStatus: "pending", deletedAt: null },
 		});
 		const blacklistedGuests = await prisma.guest.count({
-			where: { blacklisted: true },
+			where: { blacklisted: true, deletedAt: null },
 		});
 
 		return {
@@ -136,8 +229,7 @@ export async function getGuestStats() {
 			pending: pendingGuests,
 			blacklisted: blacklistedGuests,
 		};
-	} catch (error) {
-		console.error("Error fetching guest stats:", error);
+	} catch {
 		return {
 			total: 0,
 			verified: 0,

@@ -1,7 +1,13 @@
 import { createGuest, getGuests, getGuestStats } from "@/lib/actions/guests";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	updateGuest,
+	deleteGuest,
+	getSoftDeletedGuests,
+	softDeleteGuest,
+	restoreGuest
+} from "@/lib/actions/guests";
 import { toast } from "sonner";
-import { updateGuest, deleteGuest } from "@/lib/actions/guests";
 import type { Guest, CreateNewGuest, GuestsResponse, GuestUpdateFormData } from "@/lib/types/types"
 
 // Query keys
@@ -14,7 +20,6 @@ export const guestKeys = {
 	stats: () => [...guestKeys.all, "stats"] as const
 };
 
-
 // GET guests from the datababse
 export const useGuests = (page: number = 1) => {
 	return useQuery({
@@ -26,6 +31,17 @@ export const useGuests = (page: number = 1) => {
 		},
 	});
 };
+
+// GET soft deleted guests from the database
+export const useSoftDeletedGuests = () => {
+	return useQuery({
+		queryKey: ["soft-deleted-guests"],
+		queryFn: async () => {
+			const guests = await getSoftDeletedGuests()
+			return guests
+		}
+	})
+}
 
 // GET guests statistics
 export const useGuestStats = () => {
@@ -68,12 +84,17 @@ export const useCreateGuest = () => {
 			);
 		},
 		onError: (error) => {
-			toast.error("Failed to create guest");
-			console.error("Error creating guest:", error);
-		},
+			let errMsg = "Failed to create guest!"
+
+			if (error instanceof Error && error.message.includes("Unauthorized: Insufficent permissions."))
+				errMsg = "Unauthorized Insufficent permissions."
+
+			toast.error(errMsg, {
+				duration: 5000
+			})
+		}
 	});
 };
-
 
 // UPDATE a guest details mutation hook
 export const useUpdateGuest = ({
@@ -110,9 +131,15 @@ export const useUpdateGuest = ({
 			setOpen(false)
 
 		},
-		onError: () => {
-			// show toast message
-			toast.error("Guest Update failed, try again!")
+		onError: (error) => {
+			let errMsg = "Failed to update guest!"
+
+			if (error instanceof Error && error.message.includes("Unauthorized: Insufficent permissions."))
+				errMsg = "Unauthorized Insufficent permissions."
+
+			toast.error(errMsg, {
+				duration: 5000
+			})
 		}
 	})
 
@@ -120,8 +147,50 @@ export const useUpdateGuest = ({
 
 }
 
+// ARCHIVE soft delete a guest
+export const useSoftDeleteGuest = () => {
+	const queryClient = useQueryClient()
 
-// DELETE guest mutation hook
+	return useMutation({
+		mutationFn: async (id: number) => {
+			await softDeleteGuest(id)
+		},
+		onSuccess: async () => {
+
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: ["soft-deleted-guests"]
+				}),
+				queryClient.invalidateQueries({
+					queryKey: guestKeys.list()
+				}),
+				queryClient.invalidateQueries({
+					queryKey: ["booking-form-data"]
+				}),
+				queryClient.invalidateQueries({
+					queryKey: guestKeys.stats()
+				})
+			])
+
+
+			toast.success("Guest Archived successfully.")
+
+		},
+		onError: (error) => {
+			let errMsg = "Failed to archive guest"
+
+			if (error instanceof Error && error.message.includes("Unauthorized: Insufficent permissions."))
+				errMsg = "Unauthorized Insufficent permissions."
+
+			toast.error(errMsg, {
+				duration: 5000
+			})
+		}
+	})
+
+}
+
+// DELETE hard delete a guest
 export const useDeleteGuest = () => {
 	const queryClient = useQueryClient()
 
@@ -130,13 +199,20 @@ export const useDeleteGuest = () => {
 			await deleteGuest(guestId)
 		},
 		onSuccess: async () => {
-			// invalidate the guest list and booking form data
+
+			// invalidate the necessary cached queries
 			await Promise.all([
 				queryClient.invalidateQueries({
 					queryKey: guestKeys.list()
 				}),
 				queryClient.invalidateQueries({
 					queryKey: ["booking-form-data"]
+				}),
+				queryClient.invalidateQueries({
+					queryKey: ["soft-deleted-guests"]
+				}),
+				queryClient.invalidateQueries({
+					queryKey: guestKeys.stats()
 				})
 			])
 
@@ -144,10 +220,56 @@ export const useDeleteGuest = () => {
 
 		},
 		onError: (error) => {
-			console.error(`An error occurred deleting guest: ${error}`)
-			toast.error("Failed to delete guest")
+			let errMsg = "Failed to delete guest"
+
+			if (error instanceof Error && error.message.includes("Unauthorized: Insufficent permissions."))
+				errMsg = "Unauthorized Insufficent permissions."
+
+			toast.error(errMsg, {
+				duration: 5000
+			})
 		}
 
 	})
 
+}
+
+// RESTORE an archived guest
+export const useRestoreGuest = () => {
+
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: async (id: number) => {
+			await restoreGuest(id)
+		},
+
+		onSuccess: async () => {
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: guestKeys.list()
+				}),
+				queryClient.invalidateQueries({
+					queryKey: ["booking-form-data"]
+				}),
+				queryClient.invalidateQueries({
+					queryKey: ["soft-deleted-guests"]
+				}),
+				queryClient.invalidateQueries({
+					queryKey: guestKeys.stats()
+				})
+			])
+
+			toast.success("Guest has been successfully restored.")
+		}, onError: (error) => {
+			let errMsg = "Failed to restore guest"
+
+			if (error instanceof Error && error.message.includes("Unauthorized: Insufficent permissions."))
+				errMsg = "Unauthorized Insufficent permissions."
+
+			toast.error(errMsg, {
+				duration: 5000
+			})
+		}
+	})
 }

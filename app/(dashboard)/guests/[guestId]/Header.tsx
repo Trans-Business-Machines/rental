@@ -1,16 +1,35 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, SquarePen, Trash2 } from "lucide-react";
+import { ArrowLeft, SquarePen, Archive } from "lucide-react";
 import { GuestEditDialog } from "@/components/GuestEditDialog";
-import { useDeleteGuest } from "@/hooks/useGuests";
+import { useSoftDeleteGuest } from "@/hooks/useGuests";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AlertDialog } from "@/components/AlertDialog";
 import type { Guest } from "@/lib/types/types";
 
 function Header({ guest }: { guest: Guest }) {
-  const deleteMutation = useDeleteGuest();
+  const { mutateAsync, isPending } = useSoftDeleteGuest();
   const router = useRouter();
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [guestToArchive, setGuestToArchive] = useState<number | null>(null);
+
+  const handleClick = (id: number) => {
+    setGuestToArchive(id);
+    setDialogOpen(true);
+  };
+
+  const handleConfirm = async () => {
+    if (guestToArchive) {
+      await mutateAsync(guestToArchive);
+      setGuestToArchive(null);
+      setDialogOpen(false);
+      router.push("/guests");
+    }
+  };
 
   return (
     <header className="flex items-center justify-between py-2">
@@ -41,17 +60,24 @@ function Header({ guest }: { guest: Guest }) {
         <Button
           size="default"
           variant="destructive"
-          disabled={deleteMutation.isPending}
-          onClick={async () => {
-            await deleteMutation.mutateAsync(guest.id);
-            router.push("/guests");
-          }}
-          className="flex items-center gap-2 cursor-pointer hover:bg-red-500"
+          disabled={isPending}
+          onClick={() => handleClick(guest.id)}
+          className="bg-orange-500 hover:bg-orange-600 flex items-center gap-2 cursor-pointer"
         >
-          <Trash2 className="size-4" />
-          <span> Delete Guest</span>
+          <Archive className="size-4" />
+          <span> Archive Guest</span>
         </Button>
       </div>
+
+      <AlertDialog
+        action="archive"
+        item="guest"
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        actionFn={handleConfirm}
+        statement="Once a guest is archived only a super admin can restore this guest."
+        isLoading={isPending}
+      />
     </header>
   );
 }

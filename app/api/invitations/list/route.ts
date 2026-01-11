@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
 	// Define the limit for invitations.
 	// TODO: change limit to 6 later
-	const LIMIT = 1;
+	const LIMIT = 6;
 
 	// Get paginated invites from the DB.
 	const invitations = await prisma.invitation.findMany({

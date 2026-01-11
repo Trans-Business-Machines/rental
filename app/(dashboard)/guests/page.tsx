@@ -20,8 +20,10 @@ import { useFilter } from "@/hooks/useFilter";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
 import { useSearchParams, useRouter } from "next/navigation";
 import GuestListings from "@/components/GuestListings";
-import Pagination from "@/components/Pagination";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { ArchivedGuestsTable } from "@/components/ArchivedGuestsTable";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { Guest } from "@/lib/types/types";
 
 export default function GuestsPage() {
@@ -30,6 +32,12 @@ export default function GuestsPage() {
 
   // Get table mode context from useTableMode Hook
   const { tableMode, setTableMode } = useTableMode();
+
+  // Define the state for toggling archived
+  const [showArchived, setShowArchived] = useState(false);
+
+  // Get role of the current session user
+  const { isSuperAdmin } = usePermissions();
 
   // Get URL search params and router object
   const searchParams = useSearchParams();
@@ -159,7 +167,7 @@ export default function GuestsPage() {
       <StatCards stats={stats} />
 
       {/* Search and Filters */}
-      <div className="flex items-center space-x-4 ">
+      <article className="flex items-center space-x-4 ">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
@@ -171,15 +179,37 @@ export default function GuestsPage() {
             autoFocus
           />
         </div>
-        <div className="self-center flex items-center gap-2">
-          <Switch
-            checked={tableMode}
-            onCheckedChange={setTableMode}
-            className="cursor-pointer"
-          />
-          <span className="text-muted-foreground text-sm">Table mode</span>
+
+        <div className="self-center flex items-center gap-3">
+          <div className=" flex items-center gap-2">
+            <Switch
+              checked={tableMode}
+              disabled={showArchived}
+              onCheckedChange={setTableMode}
+              className="cursor-pointer"
+            />
+            <span className="text-muted-foreground text-sm">Table mode</span>
+          </div>
+
+          {isSuperAdmin && (
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={showArchived}
+                onCheckedChange={setShowArchived}
+                className="cursor-pointer"
+              />
+              <span
+                className={cn(
+                  "text-muted-foreground text-sm",
+                  showArchived && "font-bold text-black"
+                )}
+              >
+                Show Archived
+              </span>
+            </div>
+          )}
         </div>
-      </div>
+      </article>
 
       {/* Loading State */}
       {isLoading && !guestsResponse && (
@@ -189,21 +219,21 @@ export default function GuestsPage() {
         </div>
       )}
 
-      {/* Guests Grid */}
-      {!isLoading && (
-        <GuestListings guests={filteredGuests} tableMode={tableMode} />
+      {showArchived ? (
+        <ArchivedGuestsTable />
+      ) : (
+        !isLoading && (
+          <GuestListings
+            guests={filteredGuests}
+            tableMode={tableMode}
+            currentPage={currentPage}
+            handlePageChange={handlePageChange}
+            hasNext={guestsResponse?.hasNext || false}
+            hasPrev={guestsResponse?.hasPrev || false}
+            totalPages={guestsResponse?.totalPages || 1}
+          />
+        )
       )}
-
-      {/* Pagination */}
-      <footer className="flex items-center justify-between pt-4 w-full">
-        <Pagination
-          currentPage={currentPage}
-          handlePageChange={handlePageChange}
-          hasNext={guestsResponse?.hasNext || false}
-          hasPrev={guestsResponse?.hasPrev || false}
-          totalPages={guestsResponse?.totalPages || 1}
-        />
-      </footer>
     </section>
   );
 }

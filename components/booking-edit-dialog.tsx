@@ -40,20 +40,21 @@ export function BookingEditDialog({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
 }: BookingEditDialogProps) {
-  // Detect if this Dialog is controlled or not.
-  const isControlled =
-    controlledOpen !== undefined && controlledOnOpenChange !== undefined;
-
   // Get the query client
   const queyClient = useQueryClient();
 
   // Define state to control dialog if its an uncontrolled dialog box
   const [internalOpen, setInternalOpen] = useState(false);
 
+  // Detect if this Dialog is controlled or not.
+  const isControlled =
+    controlledOpen !== undefined && controlledOnOpenChange !== undefined;
+
   // Fallback to internal state if not controlled
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? controlledOnOpenChange : setInternalOpen;
 
+  // Define state to hold form state
   const [formData, setFormData] = useState({
     checkInDate: new Date(booking.checkInDate).toISOString().split("T")[0],
     checkOutDate: new Date(booking.checkOutDate).toISOString().split("T")[0],
@@ -110,7 +111,17 @@ export function BookingEditDialog({
       setOpen(false);
     } catch (error) {
       console.error(`An error occured when updating booking: ${error}`);
-      toast.error("Update failed, try again!");
+
+      if (
+        error instanceof Error &&
+        error.message.includes("Unauthorized: Insufficent permissions.")
+      ) {
+        toast.warning(
+          "Unauthorized: Insufficent permissions to update booking."
+        );
+      } else {
+        toast.error("Update failed, try again!");
+      }
     }
 
     setOpen(false);

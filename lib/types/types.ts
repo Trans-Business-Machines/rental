@@ -61,11 +61,22 @@ export type BadgeVariant =
     | "listing"
     | "details";
 
+export type Role = "user" | "admin" | "superAdmin"
+
 /* ---------------- Interface Definitions ---------------- */
 export interface BookingsTableAndCardsProps {
     bookings: Booking[];
+    handleClick: (bookingId: number) => void;
     setEditBooking: (booking: Booking) => void;
     setIsDialogOpen: (open: boolean) => void;
+}
+
+export interface GuestsTableAndCardsProps {
+    guests: Guest[];
+    isArchivePending: boolean,
+    setIsDialogOpen: (open: boolean) => void;
+    setEditGuest: (guest: Guest) => void;
+    handleClick: (guestId: number) => void
 }
 
 export interface Unit {
@@ -132,8 +143,6 @@ export interface UsersTableAndCardsProps {
     handleDeleteUser: (userId: string) => void;
     setSelectedUser: (user: User) => void;
     setBanDialogOpen: (open: boolean) => void
-
-
 }
 
 export interface CreateUserData {
@@ -188,7 +197,10 @@ export interface InvitationResponse {
 
 export interface InvitationCardAndTableProps {
     invitations: Invitation[],
-    handleResendInvite: (email: string) => void
+    resendEmail: string,
+    isResendPending: boolean,
+    setResendEmail: (email: string) => void,
+    handleResendInvite: (email: string) => Promise<void>
 }
 
 export interface CreateBookingData {

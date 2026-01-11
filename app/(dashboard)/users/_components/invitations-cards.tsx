@@ -1,3 +1,4 @@
+import { Loader } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,9 @@ const getRoleBadgeColor = (role: string) => {
 function InvitationsCards({
   invitations,
   handleResendInvite,
+  isResendPending,
+  resendEmail,
+  setResendEmail,
 }: InvitationCardAndTableProps) {
   return (
     <div className="h-48 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -30,7 +34,9 @@ function InvitationsCards({
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-lg">{invite.name}</CardTitle>
+                  <CardTitle className="text-sm md:text-base">
+                    {invite.name}
+                  </CardTitle>
                   <p className="text-sm text-muted-foreground">
                     {invite.email}
                   </p>
@@ -44,9 +50,22 @@ function InvitationsCards({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleResendInvite(invite.email)}
+                  disabled={isResendPending && invite.email === resendEmail}
+                  onClick={async () => {
+                    setResendEmail(invite.email);
+                    await handleResendInvite(invite.email);
+                    setResendEmail("");
+                  }}
+                  className="cursor-pointer"
                 >
-                  Resend Invite
+                  {isResendPending && invite.email === resendEmail ? (
+                    <span className="flex item-center gap-2">
+                      <Loader className="animate-spin" />
+                      Resending
+                    </span>
+                  ) : (
+                    "Resend Invite"
+                  )}
                 </Button>
               </div>
             </CardHeader>

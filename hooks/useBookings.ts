@@ -1,7 +1,14 @@
-import { createBooking, getBookings } from "@/lib/actions/bookings";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { unitKeys } from "./useUnitDetails"
+import {
+	createBooking,
+	getBookings,
+	restoreBooking,
+	softDeleteBooking,
+	deleteBooking,
+	getSoftDeletedBookings
+} from "@/lib/actions/bookings";
 import type { CreateBookingData } from "@/lib/types/types"
 
 interface Booking {
@@ -58,6 +65,43 @@ export const useBookings = () => {
 	});
 };
 
+// Get soft Deleted bookings
+export const useSoftDeletedBookings = () => {
+	return useQuery({
+		queryKey: ["soft-deleted", "bookings"],
+		queryFn: async () => {
+			return await getSoftDeletedBookings();
+		},
+	});
+}
+
+// Soft Delete a booking
+export const useSoftDeleteBooking = () => {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: async (id: number) => {
+			await softDeleteBooking(id)
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({
+				queryKey: ["soft-deleted", "bookings"]
+			})
+
+			toast.success("Booking archived successfully.")
+		},
+
+		onError: (error) => {
+			let errMsg = "Failed to archive booking"
+
+			if (error instanceof Error && error.message.includes("Unauthorized: Insufficent permissions."))
+				errMsg = "Unauthorized Insufficent permissions."
+
+			toast.error(errMsg)
+		}
+	})
+}
+
 // Create booking
 export const useCreateBooking = () => {
 	const queryClient = useQueryClient();
@@ -98,6 +142,13 @@ export const useCreateBooking = () => {
 				)
 			) {
 				toast.error(error.message);
+			} else if (error instanceof Error &&
+				error.message.includes(
+					"Unauthorized: Insufficent permissions."
+				)) {
+
+				toast.warning("Unauthorized: Insufficent permissions.")
+
 			} else {
 				toast.error("Failed to create booking");
 			}
@@ -105,3 +156,59 @@ export const useCreateBooking = () => {
 		},
 	});
 };
+
+// Restore a booking
+export const useRestoreBooking = () => {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: async (bookingId: number) => {
+			await restoreBooking(bookingId)
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({
+				queryKey: ["soft-deleted", "bookings"],
+			})
+
+			toast.success("Booking was restored successfully.")
+		},
+		onError: (error) => {
+			let errMsg = "Failed to restore booking"
+
+			if (error instanceof Error && error.message.includes("Unauthorized: Insufficent permissions."))
+				errMsg = "Unauthorized Insufficent permissions."
+
+			toast.error(errMsg, {
+				duration: 5000
+			})
+		}
+	})
+}
+
+// Permanently delete a booking
+export const useDeleteBooking = () => {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: async (bookingId: number) => {
+			await deleteBooking(bookingId)
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({
+				queryKey: ["soft-deleted", "bookings"],
+			})
+
+			toast.success("Booking was deleted successfully.")
+		},
+		onError: (error) => {
+			let errMsg = "Failed to delete booking"
+
+			if (error instanceof Error && error.message.includes("Unauthorized: Insufficent permissions."))
+				errMsg = "Unauthorized Insufficent permissions."
+
+			toast.error(errMsg, {
+				duration: 5000
+			})
+		}
+	})
+}

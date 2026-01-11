@@ -2,8 +2,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { InvitationResponse } from "@/lib/types/types";
 
-
-
 export function useInvitations({ currentPage }: { currentPage: number }) {
     const {
         data,
@@ -23,9 +21,9 @@ export function useInvitations({ currentPage }: { currentPage: number }) {
 }
 
 export function useResendInvite() {
-    const { mutate, isPending, isSuccess, error } = useMutation({
+    const { mutateAsync, isPending, } = useMutation({
         mutationFn: async (email: string) => {
-            const res = await fetch("/api/invitation", {
+            const res = await fetch("/api/invitations", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
@@ -47,5 +45,5 @@ export function useResendInvite() {
 
     })
 
-    return { resendInvite: mutate, isPending, isSuccess, error }
+    return { resendInvite: mutateAsync, isPending, }
 }
