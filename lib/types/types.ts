@@ -71,6 +71,14 @@ export interface BookingsTableAndCardsProps {
     setIsDialogOpen: (open: boolean) => void;
 }
 
+export interface GuestsTableAndCardsProps {
+    guests: Guest[];
+    isArchivePending: boolean,
+    setIsDialogOpen: (open: boolean) => void;
+    setEditGuest: (guest: Guest) => void;
+    handleClick: (guestId: number) => void
+}
+
 export interface Unit {
     name: string;
     id: number;
@@ -135,8 +143,6 @@ export interface UsersTableAndCardsProps {
     handleDeleteUser: (userId: string) => void;
     setSelectedUser: (user: User) => void;
     setBanDialogOpen: (open: boolean) => void
-
-
 }
 
 export interface CreateUserData {
