@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { ac, admin, superAdmin, user } from "@/lib/permissions"
 
 export const authClient = createAuthClient({
-	baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
 	plugins: [adminClient({
 		ac,
 		roles: {
