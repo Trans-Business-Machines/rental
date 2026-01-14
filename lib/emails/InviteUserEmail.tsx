@@ -32,9 +32,9 @@ export function InviteUserEmail({
               {invitedByName} has invited you to join Rentals Manager. Click the
               button below to set your password and activate your account.
             </Text>
-            <Text>
+            <Text className="mb-4 text-gray-700">
               You have been assigned the{" "}
-              <Text className="font-bold">{role}</Text> role
+              <span className="font-bold">{role}</span> role
             </Text>
             <div className="my-6 text-center">
               <Link
