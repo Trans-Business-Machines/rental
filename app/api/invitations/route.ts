@@ -1,13 +1,22 @@
 import { createInvitation, resendInvitation } from "@/lib/actions/users";
 import { NextRequest, NextResponse } from "next/server";
 import { userInvitationSchema } from "@/lib/schemas/invitations"
+import { getServerSession } from "@/lib/check-permissions"
+import type { Role } from "@/lib/types/types"
 import z from "zod"
 
 export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json();
 
+		const session = await getServerSession()
+		const currentUserRole = (session?.user?.role as Role) || "user"
+
 		const { email, invitedById, role, name } = userInvitationSchema.parse(body)
+
+		if (currentUserRole === "admin" && ["admin", "superAdmin"].includes(role)) {
+			throw new Error("An admin can only invite regular users.")
+		}
 
 		const invitation = await createInvitation({ email, role, invitedById, name });
 
@@ -32,7 +41,6 @@ export async function POST(req: NextRequest) {
 			);
 
 		}
-
 
 		return NextResponse.json(
 			{ success: false, error: error.message },

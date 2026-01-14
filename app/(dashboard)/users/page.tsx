@@ -23,8 +23,10 @@ function UsersPageContent() {
     Number(searchParams.get("invitationspage")) || 1;
   const UsersCurrentPage = Number(searchParams.get("userspage")) || 1;
 
-  // Get usersStats, users, and invitations via custom hooks
+  // Get usersStats from the DB
   const { userStats } = useUserStats();
+
+  // Get users from the DB
   const { data: usersData, error } = useUsers({
     page: UsersCurrentPage,
   });

@@ -1,44 +1,23 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { authClient } from "@/lib/auth-client";
 import { AlertTriangle } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { usePermissions } from "@/hooks/usePermissions";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface AdminOnlyProps {
   children: React.ReactNode;
 }
 
 export default function AdminOnly({ children }: AdminOnlyProps) {
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { data: session, error } = authClient.useSession();
+  const { isAdmin, isSuperAdmin, isSessionPending } = usePermissions();
 
-  useEffect(() => {
-      const checkAdminPermission = async () => {
-        if (error) {
-            console.error("Error checking admin permission:", error);
-            toast.error("Error checking admin permission");
-          setIsAdmin(false);
-          setLoading(false);
-          return;
-        }
-      try {        
-        const userRole = session?.user?.role;
-        setIsAdmin(userRole === "admin");
-      } catch (error) {
-        console.error("Error checking admin permission:", error);
-        setIsAdmin(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAdminPermission();
-  }, [error, session]);
-
-  if (loading) {
+  if (isSessionPending) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -46,7 +25,7 @@ export default function AdminOnly({ children }: AdminOnlyProps) {
     );
   }
 
-  if (!isAdmin) {
+  if (!(isAdmin || isSuperAdmin)) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="w-full max-w-md">
@@ -56,7 +35,8 @@ export default function AdminOnly({ children }: AdminOnlyProps) {
             </div>
             <CardTitle>Access Denied</CardTitle>
             <CardDescription>
-              You don&apos;t have permission to access this page. Only administrators can manage users.
+              You don&apos;t have permission to access this page. Only
+              administrators can manage users.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
@@ -70,4 +50,4 @@ export default function AdminOnly({ children }: AdminOnlyProps) {
   }
 
   return <>{children}</>;
-} 
+}

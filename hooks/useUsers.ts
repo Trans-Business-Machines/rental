@@ -103,9 +103,9 @@ export const useCreateUser = () => {
 			const result = await authClient.admin.createUser(userData);
 			return result;
 		},
-		onSuccess: () => {
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: userKeys.list() });
 			toast.success("User created successfully");
-			queryClient.invalidateQueries({ queryKey: userKeys.list() });
 		},
 		onError: (error) => {
 			toast.error("Failed to create user");
@@ -127,9 +127,9 @@ export const useBanUser = () => {
 			});
 			return result;
 		},
-		onSuccess: () => {
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: userKeys.list() });
 			toast.success("User banned successfully");
-			queryClient.invalidateQueries({ queryKey: userKeys.list() });
 		},
 		onError: (error) => {
 			toast.error("Failed to ban user");
@@ -147,9 +147,9 @@ export const useUnbanUser = () => {
 			const result = await authClient.admin.unbanUser({ userId });
 			return result;
 		},
-		onSuccess: () => {
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: userKeys.list() });
 			toast.success("User unbanned successfully");
-			queryClient.invalidateQueries({ queryKey: userKeys.list() });
 		},
 		onError: (error) => {
 			toast.error("Failed to unban user");

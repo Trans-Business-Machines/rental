@@ -14,11 +14,17 @@ export const auth = betterAuth({
 		enabled: true,
 		disableSignUp: true,
 		sendResetPassword: async ({ user, url }) => {
-			await sendPasswordResetEmail({
-				email: user.email,
-				resetLink: url,
-				name: user.name || "there",
-			});
+			try {
+				await sendPasswordResetEmail({
+					email: user.email,
+					resetLink: url,
+					name: user.name || "there",
+				});
+
+			} catch (error) {
+				console.error('Failed to send password reset email:', error);
+				throw error;
+			}
 		},
 	},
 	plugins: [

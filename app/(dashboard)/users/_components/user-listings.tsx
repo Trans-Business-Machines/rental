@@ -1,23 +1,48 @@
+import { useState } from "react";
 import { UserCards } from "./user-cards";
 import { UsersTable } from "./users-table";
 import { Switch } from "@/components/ui/switch";
 import { useTableMode } from "@/hooks/useTableMode";
-import type { UsersTableAndCardsProps } from "@/lib/types/types";
+import { useDeleteUser } from "@/hooks/useUsers";
+import { AlertDialog } from "@/components/AlertDialog";
+import type { Role, User } from "@/lib/types/types";
+
+interface UserListingsProps {
+  users: User[];
+  unbanUserMutationPending: boolean;
+  handleUnBanUserClick: (userId: string) => void;
+  setSelectedUser: (user: User) => void;
+  setBanDialogOpen: (open: boolean) => void;
+}
 
 function UserListings({
   users,
-  deleteUserMutationPending,
-  revokeSessionsMutationPending,
   unbanUserMutationPending,
-  userRoleMutationPending,
-  handleDeleteUser,
-  handleRevokeAllSessions,
-  handleSetRole,
   setBanDialogOpen,
   setSelectedUser,
-  handleUnbanUser,
-}: UsersTableAndCardsProps) {
+  handleUnBanUserClick,
+}: UserListingsProps) {
   const { tableMode, setTableMode } = useTableMode();
+  const deleteMutation = useDeleteUser();
+
+  const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
+  const [userData, setUserData] = useState<{
+    userId: string;
+    role: Role;
+  } | null>(null);
+
+  const handleClick = (userInfo: { userId: string; role: Role }) => {
+    setUserData(userInfo);
+    setIsAlertDialogOpen(true);
+  };
+
+  const handleConfirm = async () => {
+    if (userData !== null) {
+      await deleteMutation.mutateAsync(userData);
+      setUserData(null);
+      setIsAlertDialogOpen(false);
+    }
+  };
 
   return (
     <section className="space-y-4">
@@ -33,32 +58,32 @@ function UserListings({
       {tableMode ? (
         <UsersTable
           users={users}
-          handleDeleteUser={handleDeleteUser}
-          handleRevokeAllSessions={handleRevokeAllSessions}
-          handleSetRole={handleSetRole}
-          handleUnbanUser={handleUnbanUser}
+          handleClick={handleClick}
+          handleUnBanUserClick={handleUnBanUserClick}
           setBanDialogOpen={setBanDialogOpen}
           setSelectedUser={setSelectedUser}
-          deleteUserMutationPending={deleteUserMutationPending}
-          revokeSessionsMutationPending={revokeSessionsMutationPending}
           unbanUserMutationPending={unbanUserMutationPending}
-          userRoleMutationPending={userRoleMutationPending}
         />
       ) : (
         <UserCards
           users={users}
-          handleDeleteUser={handleDeleteUser}
-          handleRevokeAllSessions={handleRevokeAllSessions}
-          handleSetRole={handleSetRole}
-          handleUnbanUser={handleUnbanUser}
+          handleClick={handleClick}
+          handleUnBanUserClick={handleUnBanUserClick}
           setBanDialogOpen={setBanDialogOpen}
           setSelectedUser={setSelectedUser}
-          deleteUserMutationPending={deleteUserMutationPending}
-          revokeSessionsMutationPending={revokeSessionsMutationPending}
           unbanUserMutationPending={unbanUserMutationPending}
-          userRoleMutationPending={userRoleMutationPending}
         />
       )}
+
+      <AlertDialog
+        open={isAlertDialogOpen}
+        onOpenChange={setIsAlertDialogOpen}
+        action="delete"
+        actionFn={handleConfirm}
+        isLoading={deleteMutation.isPending}
+        item="user"
+        statement="This action can't be undone and will permanently remove this user from the application."
+      />
     </section>
   );
 }

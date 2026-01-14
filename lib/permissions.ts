@@ -1,12 +1,13 @@
 import { createAccessControl } from "better-auth/plugins/access";
+import { defaultStatements, adminAc } from "better-auth/plugins/admin/access";
 
 // Define the statement object
 export const statement = {
+    ...defaultStatements,
     booking: ["create", "read", "update", "delete", "restore"],
     guest: ["create", "read", "update", "delete", "restore"],
     property: ["create", "read", "update", "delete", "restore"],
     unit: ["create", "read", "update", "delete", "restore"],
-    user: ["create", "read", "update", "delete", "ban", "setRole"],
 } as const
 
 
@@ -18,7 +19,8 @@ export const user = ac.newRole({
     booking: ["read"],
     guest: ["read"],
     property: ["read"],
-    unit: ["read"]
+    unit: ["read"],
+    user: ["set-password"]
 })
 
 // Define the admin role and its permissions
@@ -27,7 +29,7 @@ export const admin = ac.newRole({
     guest: ["create", "read", "update"],
     property: ["create", "read", "update"],
     unit: ["create", "read", "update",],
-    user: ["create", "read", "update", "ban",]
+    ...adminAc.statements,
 })
 
 // Define the superAdmin role and its permissions
@@ -36,5 +38,5 @@ export const superAdmin = ac.newRole({
     guest: ["create", "read", "update", "delete", "restore"],
     property: ["create", "read", "update", "delete", "restore"],
     unit: ["create", "read", "update", "delete", "restore"],
-    user: ["create", "read", "update", "delete", "ban", "setRole"],
+    ...adminAc.statements,
 })

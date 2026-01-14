@@ -64,8 +64,8 @@ export default function ForgotPasswordPage() {
             </div>
             <CardTitle className="text-2xl">Check Your Email</CardTitle>
             <CardDescription className="mt-2">
-              We&apos;ve sent a password reset link to:
-              <strong>{submittedEmail}</strong> if it exists in the system.
+              We&apos;ve sent a password reset link to:&nbsp;
+              <strong>{submittedEmail}</strong> <br/> if it exists in the system.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
