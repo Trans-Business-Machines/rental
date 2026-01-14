@@ -27,6 +27,7 @@ import {
   type UserInvitationType,
 } from "@/lib/schemas/invitations";
 import { authClient } from "@/lib/auth-client";
+import type { Role } from "@/lib/types/types";
 
 interface InviteUserDialogProps {
   children: React.ReactNode;
@@ -55,6 +56,9 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
       invitedById: session?.user.id || "",
     },
   });
+
+  // Get user role from the session user
+  const userRole = (session?.user?.role as Role) || "user";
 
   // Show a loading state
   if (isPending) {
@@ -105,11 +109,16 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
       reset();
       setInviteDialogOpen(false);
       toast.success("Invite sent successfully.");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (error: any) {
+      let errMsg = "Failed to invite user.";
 
-      // Optionally show error
-      console.error(err);
+      if (
+        error instanceof Error &&
+        error.message === "An admin can only invite regular users."
+      )
+        errMsg = "An admin can only invite regular users.";
+
+      toast.error(errMsg);
     }
   };
 
@@ -184,7 +193,7 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
               </Label>
               <Select
                 value={selectedRole}
-                onValueChange={(value: "user" | "admin") =>
+                onValueChange={(value: Role) =>
                   setValue("role", value, { shouldValidate: true })
                 }
               >
@@ -201,7 +210,12 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  {userRole === "superAdmin" && (
+                    <SelectItem value="admin">Admin</SelectItem>
+                  )}
+                  {userRole === "superAdmin" && (
+                    <SelectItem value="superAdmin">Super Admin</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
               {errors.role && (
