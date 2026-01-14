@@ -2,7 +2,14 @@ import { authClient } from "@/lib/auth-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getUserStats } from "@/lib/actions/user-stats"
 import { toast } from "sonner";
-import type { BanUserData, CreateUserData, UsersResponse, User } from "@/lib/types/types"
+import { usePermissions } from "@/hooks/usePermissions"
+import type { BanUserData, CreateUserData, UsersResponse, User, Role } from "@/lib/types/types"
+
+interface QuertObject {
+	filterField?: string,
+	filterValue?: string | number | boolean,
+	filterOperator?: "eq" | "ne" | "lt" | "lte" | "gt" | "gte"
+}
 
 // Query keys
 export const userKeys = {
@@ -16,11 +23,26 @@ export const userKeys = {
 
 // Fetch users
 export const useUsers = ({ page }: { page: number }) => {
+
+	const { role, userId } = usePermissions()
+
+	const queryObject: QuertObject = {}
+
+	if (role === "admin") {
+		queryObject.filterField = "role"
+		queryObject.filterValue = "user"
+		queryObject.filterOperator = "eq"
+	} else if (role === "superAdmin") {
+		queryObject.filterField = "id"
+		queryObject.filterValue = userId
+		queryObject.filterOperator = "ne"
+	}
+
 	return useQuery({
 		queryKey: userKeys.lists(page),
 		queryFn: async (): Promise<UsersResponse> => {
 			// Define the limit
-			const LIMIT = 4
+			const LIMIT = 6
 
 			// calculate the offset
 			const OFFSET = (page - 1) * LIMIT;
@@ -31,6 +53,7 @@ export const useUsers = ({ page }: { page: number }) => {
 					offset: OFFSET,
 					sortBy: "createdAt",
 					sortDirection: "desc",
+					...queryObject
 				},
 			});
 
@@ -138,19 +161,43 @@ export const useUnbanUser = () => {
 // Delete user
 export const useDeleteUser = () => {
 	const queryClient = useQueryClient();
+	const { role } = usePermissions();
 
 	return useMutation({
-		mutationFn: async (userId: string) => {
+		mutationFn: async ({ userId, role: deleteUserRole }: { userId: string, role: Role }) => {
+
+			if (role === "admin" && deleteUserRole !== "user") {
+				throw new Error("An admin can only delete regular users.")
+			}
+
+			if (role === "superAdmin" && deleteUserRole === "superAdmin") {
+				throw new Error("A super admin can't delete another super Admin")
+			}
+
 			const result = await authClient.admin.removeUser({ userId });
 			return result;
 		},
-		onSuccess: () => {
+		onSuccess: async () => {
+
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: userKeys.list() }),
+				queryClient.invalidateQueries({ queryKey: userKeys.stats() })
+			])
+
 			toast.success("User deleted successfully");
-			queryClient.invalidateQueries({ queryKey: userKeys.list() });
 		},
 		onError: (error) => {
-			toast.error("Failed to delete user");
 			console.error("Error deleting user:", error);
+
+			let errMsg = "Failed to delete user";
+
+			if (error instanceof Error && (error.message === "An admin can only delete regular users." || error.message === "A super admin can't delete another super Admin")) {
+				errMsg = error.message
+			}
+
+			toast.error(errMsg, {
+				duration: 5000
+			});
 		},
 	});
 };
@@ -165,14 +212,15 @@ export const useSetUserRole = () => {
 			role,
 		}: {
 			userId: string;
-			role: "user" | "admin";
+			role: Role;
 		}) => {
+			console.log(userId, role)
 			const result = await authClient.admin.setRole({ userId, role });
 			return result;
 		},
-		onSuccess: () => {
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: userKeys.list() });
 			toast.success("User role updated successfully");
-			queryClient.invalidateQueries({ queryKey: userKeys.list() });
 		},
 		onError: (error) => {
 			toast.error("Failed to update user role");
@@ -185,9 +233,11 @@ export const useSetUserRole = () => {
 export const useRevokeUserSessions = () => {
 	return useMutation({
 		mutationFn: async (userId: string) => {
+
 			const result = await authClient.admin.revokeUserSessions({
 				userId,
 			});
+
 			return result;
 		},
 		onSuccess: () => {
