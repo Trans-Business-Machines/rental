@@ -133,14 +133,9 @@ export interface UsersResponse {
 
 export interface UsersTableAndCardsProps {
     users: User[];
-    userRoleMutationPending: boolean;
-    revokeSessionsMutationPending: boolean;
     unbanUserMutationPending: boolean;
-    deleteUserMutationPending: boolean;
-    handleSetRole: (userId: string, role: "user" | "admin") => void;
-    handleRevokeAllSessions: (userId: string) => void;
-    handleUnbanUser: (userId: string) => void;
-    handleDeleteUser: (userId: string) => void;
+    handleUnBanUserClick: (userId: string) => void;
+    handleClick: ({ userId, role }: { userId: string, role: Role }) => void;
     setSelectedUser: (user: User) => void;
     setBanDialogOpen: (open: boolean) => void
 }
@@ -149,7 +144,7 @@ export interface CreateUserData {
     name: string;
     email: string;
     password: string;
-    role: "user" | "admin";
+    role: Role;
 }
 
 export interface BanUserData {
@@ -183,7 +178,7 @@ export interface GuestUpdateFormData {
 export interface Invitation {
     name: string;
     email: string;
-    role: "user" | "admin",
+    role: Role,
     acceptedAt: string | null;
 }
 

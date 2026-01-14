@@ -4,7 +4,7 @@ import { authClient } from "@/lib/auth-client"
 import type { Role } from "@/lib/types/types"
 
 export function usePermissions() {
-    const { data: session } = authClient.useSession()
+    const { data: session, isPending } = authClient.useSession()
     const userRole = (session?.user?.role as Role) || "user"
 
     const isSuperAdmin = userRole === "superAdmin"
@@ -52,6 +52,8 @@ export function usePermissions() {
 
     return {
         role: userRole,
+        isSessionPending: isPending,
+        userId: session?.user.id,
         isSuperAdmin,
         isAdmin,
         isUser,

@@ -1,12 +1,11 @@
 import { useState } from "react";
-import type { User } from "@/lib/types/types";
-import {
-  useBanUser,
-  useDeleteUser,
-  useRevokeUserSessions,
-  useSetUserRole,
-  useUnbanUser,
-} from "@/hooks/useUsers";
+import { Input } from "@/components/ui/input";
+import { Search, User as UserIcon } from "lucide-react";
+import { useFilter } from "@/hooks/useFilter";
+import { ItemsNotFound } from "@/components/ItemsNotFound";
+import { SearchNotFound } from "@/components/SearchNotFound";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useUnbanUser } from "@/hooks/useUsers";
 import {
   Select,
   SelectContent,
@@ -14,22 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Search, User as UserIcon } from "lucide-react";
+import { BanDialog } from "./ban-dialog";
+import { AlertDialog } from "./alert-dialog";
 import UserListings from "./user-listings";
 import Pagination from "@/components/Pagination";
-import { useFilter } from "@/hooks/useFilter";
-import { ItemsNotFound } from "@/components/ItemsNotFound";
-import { SearchNotFound } from "@/components/SearchNotFound";
+import type { User } from "@/lib/types/types";
 
 interface UsersProps {
   users: User[];
@@ -51,12 +39,8 @@ function Users({
   const [searchQuery, setSearchQuery] = useState("");
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
-  // Ban form state
-  const [banForm, setBanForm] = useState({
-    reason: "",
-    expiresIn: "7", // days
-  });
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [userToUnban, setUserToUnban] = useState<string | null>(null);
 
   // State for Select filters
   const [selectFilters, setSelectFilters] = useState({
@@ -64,11 +48,10 @@ function Users({
     status: "all",
   });
 
-  const banUserMutation = useBanUser();
+  // Get the current session user role
+  const { isSuperAdmin } = usePermissions();
+
   const unbanUserMutation = useUnbanUser();
-  const deleteUserMutation = useDeleteUser();
-  const setUserRoleMutation = useSetUserRole();
-  const revokeSessionsMutation = useRevokeUserSessions();
 
   const filteredUsers = useFilter<User>({
     items: users,
@@ -76,6 +59,22 @@ function Users({
     searchFields: ["name", "email"],
     selectFilters: { role: selectFilters.role, banned: selectFilters.status },
   });
+
+  const handleUnBanUserClick = (id: string) => {
+    setUserToUnban(id);
+    setAlertDialogOpen(true);
+  };
+
+  const handleConfirmUnbanUser = () => {
+    if (userToUnban) {
+      unbanUserMutation.mutate(userToUnban, {
+        onSuccess: () => {
+          setUserToUnban(null);
+          setAlertDialogOpen(false);
+        },
+      });
+    }
+  };
 
   if (!users || users.length === 0) {
     return (
@@ -86,51 +85,6 @@ function Users({
       />
     );
   }
-
-  const handleBanUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser) return;
-
-    const expiresIn = parseInt(banForm.expiresIn) * 24 * 60 * 60; // Convert days to seconds
-
-    banUserMutation.mutate(
-      {
-        userId: selectedUser.id,
-        reason: banForm.reason || undefined,
-        expiresIn,
-      },
-      {
-        onSuccess: () => {
-          setBanDialogOpen(false);
-          setBanForm({ reason: "", expiresIn: "7" });
-          setSelectedUser(null);
-        },
-      }
-    );
-  };
-
-  const handleUnbanUser = async (userId: string) => {
-    unbanUserMutation.mutate(userId);
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this user? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
-    deleteUserMutation.mutate(userId);
-  };
-
-  const handleRevokeAllSessions = async (userId: string) => {
-    revokeSessionsMutation.mutate(userId);
-  };
-
-  const handleSetRole = async (userId: string, role: "user" | "admin") => {
-    setUserRoleMutation.mutate({ userId, role });
-  };
 
   return (
     <section className="mt-2 space-y-4">
@@ -159,6 +113,9 @@ function Users({
             <SelectItem value="all">All Roles</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
             <SelectItem value="user">User</SelectItem>
+            {isSuperAdmin && (
+              <SelectItem value="super Admin">Super Admin</SelectItem>
+            )}
           </SelectContent>
         </Select>
 
@@ -189,16 +146,10 @@ function Users({
       ) : (
         <UserListings
           users={filteredUsers}
-          handleDeleteUser={handleDeleteUser}
-          handleRevokeAllSessions={handleRevokeAllSessions}
-          handleSetRole={handleSetRole}
-          handleUnbanUser={handleUnbanUser}
+          handleUnBanUserClick={handleUnBanUserClick}
           setBanDialogOpen={setBanDialogOpen}
           setSelectedUser={setSelectedUser}
-          deleteUserMutationPending={deleteUserMutation.isPending}
-          revokeSessionsMutationPending={revokeSessionsMutation.isPending}
           unbanUserMutationPending={unbanUserMutation.isPending}
-          userRoleMutationPending={setUserRoleMutation.isPending}
         />
       )}
 
@@ -212,68 +163,23 @@ function Users({
         />
       </footer>
 
+      {/* Alert Dialog for unban user */}
+      <AlertDialog
+        action="unban"
+        open={alertDialogOpen}
+        onOpenChange={setAlertDialogOpen}
+        actionFn={handleConfirmUnbanUser}
+        statement="This will restore the user's account access and allow them to log in to the system again."
+        isLoading={unbanUserMutation.isPending}
+      />
+
       {/* Ban User Dialog */}
-      <Dialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ban User</DialogTitle>
-            <DialogDescription>
-              Ban {selectedUser?.name} from accessing the system.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleBanUser} className="space-y-4">
-            <div>
-              <Label htmlFor="reason">Ban Reason (Optional)</Label>
-              <Input
-                id="reason"
-                value={banForm.reason}
-                onChange={(e) =>
-                  setBanForm((prev) => ({ ...prev, reason: e.target.value }))
-                }
-                placeholder="Enter reason for ban..."
-                disabled={banUserMutation.isPending}
-              />
-            </div>
-            <div>
-              <Label htmlFor="expiresIn">Ban Duration</Label>
-              <Select
-                value={banForm.expiresIn}
-                onValueChange={(value) =>
-                  setBanForm((prev) => ({ ...prev, expiresIn: value }))
-                }
-                disabled={banUserMutation.isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 Day</SelectItem>
-                  <SelectItem value="7">7 Days</SelectItem>
-                  <SelectItem value="30">30 Days</SelectItem>
-                  <SelectItem value="permanent">Permanent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setBanDialogOpen(false)}
-                disabled={banUserMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-                disabled={banUserMutation.isPending}
-              >
-                {banUserMutation.isPending ? "Banning..." : "Ban User"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <BanDialog
+        banDialogOpen={banDialogOpen}
+        setBanDialogOpen={setBanDialogOpen}
+        selectedUser={selectedUser}
+        setSelectedUser={setSelectedUser}
+      />
     </section>
   );
 }

@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getServerSession } from "@/lib/check-permissions"
 import type { NextRequest } from "next/server";
+import type { Role } from "@/lib/types/types";
 
 export async function GET(request: NextRequest) {
 
@@ -9,14 +11,23 @@ export async function GET(request: NextRequest) {
 
 	const page = Number(searchParams.get("page")) || 1;
 
+	// Get the role of the currently logged in user
+	const session = await getServerSession()
+	const currentUserRole = (session?.user?.role as Role) || "user"
+
+
+	const invitationWhere = {
+		acceptedAt: null,
+		...(currentUserRole === "admin" && { role: "user" }),
+	};
+
 	// Define the limit for invitations.
-	// TODO: change limit to 6 later
 	const LIMIT = 6;
 
 	// Get paginated invites from the DB.
 	const invitations = await prisma.invitation.findMany({
 		select: { name: true, role: true, email: true, acceptedAt: true },
-		where: { acceptedAt: null },
+		where: invitationWhere,
 		orderBy: { createdAt: "desc" },
 		take: LIMIT,
 		skip: (page - 1) * LIMIT

@@ -7,7 +7,9 @@ export async function getUserStats() {
         const totalUsers = await prisma.user.count()
         const adminUsers = await prisma.user.count({
             where: {
-                role: "admin"
+                role: {
+                    in: ["admin", "superAdmin"]
+                }
             }
         })
 

@@ -25,9 +25,9 @@ export function ResetPasswordEmail({
   return (
     <Html>
       <Head />
-      <Preview>Reset your RentManager password</Preview>
+      <Preview>Reset your Rentals Manager password</Preview>
       <Tailwind>
-        <Body className="bg-gray-100 font-sans p-6">
+        <Body className="bg-gray-100 font-sans p-6 rounded-xl">
           <Container className="bg-white max-w-lg mx-auto my-10 p-8 rounded-xl shadow-lg">
             {/* Header */}
             <Section className="text-center mb-6">
@@ -41,7 +41,7 @@ export function ResetPasswordEmail({
 
             {/* Main Content */}
             <Text className="text-gray-700 text-base mb-4">
-              We received a request to reset your password for your RentManager
+              We received a request to reset your password for your Rentals Manager
               account. Click the button below to create a new password.
             </Text>
 
@@ -77,7 +77,7 @@ export function ResetPasswordEmail({
             {/* Footer */}
             <Section className="border-t border-gray-200 mt-8 pt-6">
               <Text className="text-gray-500 text-xs text-center m-0">
-                This email was sent by RentManager. If you have any questions,
+                This email was sent by Rentals Manager. If you have any questions,
                 please contact our support team.
               </Text>
               <Text className="text-gray-400 text-xs text-center mt-2">

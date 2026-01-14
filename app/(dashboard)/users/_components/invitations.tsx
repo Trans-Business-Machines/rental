@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "@/components/SearchNotFound";
+import { usePermissions } from "@/hooks/usePermissions";
 import Pagination from "@/components/Pagination";
 import type { Invitation } from "@/lib/types/types";
 
@@ -55,6 +56,8 @@ function Invitations({
     selectFilters: { role: selectFilters.role },
   });
 
+  const { isSuperAdmin } = usePermissions();
+
   if (!invitations || invitations.length === 0) {
     return (
       <ItemsNotFound
@@ -92,8 +95,11 @@ function Invitations({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="user">User</SelectItem>
+              {isSuperAdmin && <SelectItem value="admin">Admin</SelectItem>}
+              {isSuperAdmin && (
+                <SelectItem value="superAdmin">Super Admin</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>

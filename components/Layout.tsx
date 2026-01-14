@@ -43,7 +43,7 @@ interface NavItem {
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
   items?: NavItem[];
-  role?: string;
+  roles?: string[];
 }
 
 const navigationConfig: NavItem[] = [
@@ -54,7 +54,7 @@ const navigationConfig: NavItem[] = [
   { id: "properties", label: "Properties", icon: Building2 },
   /*   { id: "payments", label: "Payments", icon: CreditCard }, */
   /*  { id: "maintenance", label: "Maintenance", icon: Wrench }, */
-  { id: "users", label: "Users", icon: User, role: "admin" },
+  { id: "users", label: "Users", icon: User, roles: ["admin", "superAdmin"] },
   /* {
     id: "amenities",
     label: "Amenities",
@@ -222,7 +222,7 @@ export function Layout({ children }: LayoutProps) {
 
   // Filter navigation items based on role
   const filteredNavigationConfig = navigationConfig.filter((item) => {
-    if (item.role && userRole !== item.role) {
+    if (item.roles && !item.roles.includes(userRole)) {
       return false;
     }
     return true;

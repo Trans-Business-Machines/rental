@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { auth } from "../auth";
 import { InviteUserEmail } from "../emails/InviteUserEmail";
 import { prisma } from "../prisma";
+import type { Role } from "@/lib/types/types"
 import resend from "../emailClient";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://rentalsmanager.app" as const;
@@ -15,7 +16,7 @@ export async function createInvitation({
 }: {
 	name: string,
 	email: string;
-	role: string;
+	role: Role;
 	invitedById?: string;
 }) {
 	// Check if invitation or user already exists
@@ -50,7 +51,7 @@ export async function createInvitation({
 	});
 
 	// Send invite email
-	await sendInviteEmail({ name, email, token, invitedById });
+	await sendInviteEmail({ name, email, token, invitedById, role });
 	return invitation;
 }
 
@@ -59,12 +60,14 @@ async function sendInviteEmail({
 	email,
 	token,
 	invitedById,
-	reminder = false
+	reminder = false,
+	role = "user"
 }: {
 	name: string;
 	email: string;
 	token: string;
-	reminder?: boolean,
+	reminder?: boolean;
+	role?: Role;
 	invitedById?: string | null;
 }) {
 	let invitedByName = "An admin";
@@ -79,7 +82,7 @@ async function sendInviteEmail({
 	const inviteLink = `${APP_URL}/invite?token=${token}`;
 
 	const emailHtml = await Promise.resolve(
-		render(InviteUserEmail({ name: name || "", inviteLink, invitedByName }))
+		render(InviteUserEmail({ name: name || "", inviteLink, invitedByName, role }))
 	);
 
 	await resend.emails.send({
