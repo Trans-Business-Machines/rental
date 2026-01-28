@@ -4,12 +4,7 @@ import { z } from "zod"
 export const CheckoutFormSchema = z.object({
     // step 1 Inspection details
     checkoutDate: z.string().min(1, "Checkout date is required"),
-    inspector: z
-        .string()
-        .min(3, "Inspector name must be at least 3 characters")
-        .max(100, "Inspector name is too long"),
     notes: z.string().optional(),
-
 
     // step 2 Inventory Checklist
     checkoutItems: z.array(
@@ -21,7 +16,6 @@ export const CheckoutFormSchema = z.object({
             notes: z.string().optional(),
         })
     ),
-
 
     // step 3 Final summary
     depositDeduction: z.coerce
