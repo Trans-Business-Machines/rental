@@ -46,5 +46,18 @@ export const auth = betterAuth({
 		"https://www.rentalsmanager.app",
 		"https://rental-six-xi.vercel.app",
 		"http://localhost:3000",
-	]
+	],
+	user: {
+		deleteUser: {
+			beforeDelete: async (user) => {
+				// Delete invitation before user is deleted
+				await prisma.invitation.deleteMany({
+					where: {
+						email: user.email
+					}
+				})
+
+			},
+		}
+	}
 });
