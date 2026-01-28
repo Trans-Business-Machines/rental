@@ -6,14 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { UseFormRegister, FieldErrors } from "react-hook-form";
 import { CheckoutFormData } from "@/lib/schemas/checkout";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Building2,
-  User,
-  Phone,
-  House,
-  Calendar,
-  ClipboardCheck,
-} from "lucide-react";
+import { Building2, User, Phone, House, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BookingsForCheckout } from "@/lib/types/types";
 
@@ -130,7 +123,7 @@ export function Step1InspectionDetails({
                 "h-11 border-2",
                 errors.checkoutDate
                   ? "border-red-500 focus-visible:ring-red-500"
-                  : "focus:border-chart-1"
+                  : "focus:border-chart-1",
               )}
             />
             {errors.checkoutDate && (
@@ -140,32 +133,6 @@ export function Step1InspectionDetails({
             )}
           </div>
 
-          {/* Inspector */}
-          <div className="space-y-2">
-            <Label
-              htmlFor="inspector"
-              className="text-base font-medium flex items-center gap-2"
-            >
-              <ClipboardCheck className="h-4 w-4 text-chart-2" />
-              Inspector Name
-              <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="inspector"
-              type="text"
-              placeholder="Enter inspector's full name"
-              {...register("inspector")}
-              className={cn(
-                "h-11 border-2",
-                errors.inspector && "border-red-500"
-              )}
-            />
-            {errors.inspector && (
-              <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
-                {errors.inspector.message}
-              </p>
-            )}
-          </div>
           {/* Overall inspection Notes  */}
           <div className="space-y-2">
             <Label htmlFor="notes" className="text-base font-medium">

@@ -24,6 +24,7 @@ import type {
   BookingsForCheckout,
   InventoryAssignmentForUnit,
 } from "@/lib/types/types";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Step3Props {
   selectedBooking: BookingsForCheckout[number] | null;
@@ -41,15 +42,16 @@ export function Step3FinancialSummary({
   errors,
 }: Step3Props) {
   const formData = watch();
+  const { currentUser } = usePermissions();
   const checkoutItems = formData.checkoutItems || [];
 
   const checkedItems = checkoutItems.filter((item) => item.checked);
 
   const damagedItems = checkedItems.filter(
-    (item) => item.condition === "damaged"
+    (item) => item.condition === "damaged",
   );
   const missingItems = checkedItems.filter(
-    (item) => item.condition === "missing"
+    (item) => item.condition === "missing",
   );
 
   const totalDamage = checkoutItems.reduce((total, item) => {
@@ -129,10 +131,12 @@ export function Step3FinancialSummary({
                   <ShieldUser className="text-chart-4 size-6" />
                 </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Inspector</p>
-                  <p className="font-medium">{formData.inspector}</p>
-                </div>
+                {currentUser?.name && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Inspector</p>
+                    <p className="font-medium">{currentUser.name}</p>
+                  </div>
+                )}
               </article>
 
               <article className="flex gap-3 items-start">
@@ -205,7 +209,7 @@ export function Step3FinancialSummary({
               <p className="font-medium text-sm">Damage Details:</p>
               {[...damagedItems, ...missingItems].map((item) => {
                 const assignment = assignments.find(
-                  (a) => a.id === item.assignmentId
+                  (a) => a.id === item.assignmentId,
                 );
                 if (!assignment) return null;
 
