@@ -17,7 +17,7 @@ async function AddUnitPage({ params }: AddUnitPageParams) {
         <Button
           asChild
           size="sm"
-          variant="outline"
+          variant="default"
           className="group hover:bg-blue-500 hover:border-blue-500 hover:text-white"
         >
           <Link

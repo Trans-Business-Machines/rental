@@ -2,7 +2,7 @@
 
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { format, differenceInDays } from "date-fns";
+import { format } from "date-fns";
 import {
   MoreHorizontal,
   Eye,
@@ -78,10 +78,10 @@ function BookingsTable({
               <TableHead className="font-semibold text-foreground">
                 Check-out
               </TableHead>
-              <TableHead className="font-semibold text-foreground">
-                total nights
+              <TableHead className="font-semibold text-center text-foreground">
+                total stays
               </TableHead>
-              <TableHead className="font-semibold text-foreground">
+              <TableHead className="font-semibold  text-foreground">
                 Status
               </TableHead>
               <TableHead className="font-semibold text-foreground">
@@ -103,11 +103,12 @@ function BookingsTable({
                 <TableCell>
                   {format(new Date(booking.checkOutDate), "dd/MM/yyyy")}
                 </TableCell>
-                <TableCell>
-                  {differenceInDays(
+                <TableCell className="grid place-items-center">
+                  {/* {differenceInDays(
                     new Date(booking.checkOutDate),
                     new Date(booking.checkInDate)
-                  )}
+                  )} */}
+                  {booking.guest.totalStays}
                 </TableCell>
                 <TableCell>
                   <Badge
@@ -184,7 +185,7 @@ function BookingsTable({
                       )}
 
                       <DropdownMenuSeparator />
-                      
+
                       <DropdownMenuItem
                         onClick={() => handleClick(booking.id)}
                         disabled={

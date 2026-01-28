@@ -4,10 +4,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardContent, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
-import { Home, Users, Bed, Bath, Eye } from "lucide-react";
-import type { UniqueProperty } from "@/lib/types/types";
+import { Home, Users, Eye } from "lucide-react";
 import Link from "next/link";
 import { propertyUnitKeys } from "@/hooks/useProperties";
+import { getOccupancyRate } from "@/lib/utils";
+import type { UniqueProperty } from "@/lib/types/types";
 
 function PropertyDetails({ property }: { property: UniqueProperty }) {
   const queryClient = useQueryClient();
@@ -17,7 +18,7 @@ function PropertyDetails({ property }: { property: UniqueProperty }) {
       queryKey: propertyUnitKeys.propertyUnitList(property.id, 1),
       queryFn: async () => {
         const response = await fetch(
-          `/api/properties/${property.id}/units?page=${1}`
+          `/api/properties/${property.id}/units?page=${1}`,
         );
 
         if (!response.ok) {
@@ -55,9 +56,9 @@ function PropertyDetails({ property }: { property: UniqueProperty }) {
         <div>
           <p className="text-foreground font-medium">{property.description}</p>
           <p className="text-2xl font-bold text-chart-2">
-            ${property.rent}
+            Ksh. {property.rent}
             <span className="text-base font-normal text-muted-foreground">
-              &nbsp; per month
+              &nbsp; / month
             </span>
           </p>
         </div>
@@ -91,22 +92,6 @@ function PropertyDetails({ property }: { property: UniqueProperty }) {
           </div>
         </div>
 
-        {/* Room Details */}
-        <div className="flex gap-4">
-          <div className="flex bg-muted/80 border border-gray-400/80 p-3 rounded-xl items-center gap-3">
-            <Bath className="size-4 text-muted-foreground" />
-            <span className="text-foreground text-sm">
-              {property.maxBathrooms} Bathroom
-            </span>
-          </div>
-          <div className="flex bg-muted/80 border border-gray-400/80 p-3 rounded-xl items-center gap-3">
-            <Bed className="size-4 text-muted-foreground" />
-            <span className="text-foreground text-sm">
-              {property.maxBedrooms} Bedrooms
-            </span>
-          </div>
-        </div>
-
         {/* Occupancy */}
         <div className="space-y-3 mt-2">
           <div className="flex items-center justify-between">
@@ -117,10 +102,15 @@ function PropertyDetails({ property }: { property: UniqueProperty }) {
               </span>
             </div>
             <span className="text-sm font-medium text-muted-foreground">
-              0/48 (0%)
+              {property.occupied}/{property.totalUnits || 0} (
+              {getOccupancyRate(property.occupied, property.totalUnits)}
+              %)
             </span>
           </div>
-          <Progress value={0} className="h-2" />
+          <Progress
+            value={getOccupancyRate(property.occupied, property.totalUnits)}
+            className="h-2"
+          />
         </div>
       </CardContent>
     </Card>

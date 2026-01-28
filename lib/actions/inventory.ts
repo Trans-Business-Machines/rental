@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getServerSession } from "@/lib/check-permissions"
 
 export async function getInventoryItems(page: number = 1) {
 	try {
@@ -163,65 +164,6 @@ export async function deleteInventoryItem(id: number) {
 	}
 }
 
-export async function searchInventoryItems(query: string) {
-	try {
-		const items = await prisma.inventoryItem.findMany({
-			where: {
-				OR: [
-					{
-						itemName: {
-							contains: query,
-						},
-					},
-					{
-						description: {
-							contains: query,
-						},
-					},
-					{
-						category: {
-							contains: query,
-						},
-					},
-					{
-						supplier: {
-							contains: query,
-						},
-					},
-				],
-			},
-			orderBy: {
-				createdAt: "desc",
-			},
-		});
-		return items;
-	} catch (error) {
-		console.error("Error searching inventory items:", error);
-		throw new Error("Failed to search inventory items");
-	}
-}
-
-// Note: getInventoryByProperty and getInventoryByUnit are no longer needed
-// as inventory items are now templates and assignments track actual placement
-
-export async function getRecentInventoryActivities(limit: number = 5) {
-	try {
-		const items = await prisma.inventoryItem.findMany({
-			where: {
-				status: "discontinued", // Only show discontinued items as "activities"
-			},
-			orderBy: {
-				updatedAt: "desc",
-			},
-			take: limit,
-		});
-		return items;
-	} catch (error) {
-		console.error("Error fetching recent inventory activities:", error);
-		return [];
-	}
-}
-
 export async function getInventoryStats() {
 	try {
 		const totalItems = await prisma.inventoryItem.count();
@@ -316,6 +258,10 @@ export async function createInventoryAssignment(data: {
 	serialNumber?: string;
 	notes?: string;
 }) {
+
+	const session = await getServerSession()
+	const currentUser = (session?.user?.name) || "system"
+
 	try {
 		// Use transaction to ensure atomicity
 		const result = await prisma.$transaction(async (tx) => {
@@ -352,7 +298,7 @@ export async function createInventoryAssignment(data: {
 					inventoryItemId: data.inventoryItemId,
 					fromUnitId: null, // From store
 					toUnitId: data.unitId || null,
-					movedBy: "system", // TODO: Get from auth context
+					movedBy: currentUser,
 					direction: "to_unit",
 					quantity: 1,
 					notes: `Assigned to ${data.unitId ? `unit ${data.unitId}` : "property"}`,
@@ -412,6 +358,9 @@ export async function returnInventoryAssignment(
 	assignmentId: number,
 	notes?: string
 ) {
+	const session = await getServerSession()
+	const currentUser = (session?.user?.name) || "system"
+
 	try {
 		// Use transaction to ensure atomicity
 		const result = await prisma.$transaction(async (tx) => {
@@ -462,7 +411,7 @@ export async function returnInventoryAssignment(
 					inventoryItemId: assignment.inventoryItemId,
 					fromUnitId: assignment.unitId,
 					toUnitId: null, // To store
-					movedBy: "system", // TODO: Get from auth context
+					movedBy: currentUser,
 					direction: "to_store",
 					quantity: 1,
 					notes: `Returned from ${assignment.unitId ? `unit ${assignment.unitId}` : "property"}`,

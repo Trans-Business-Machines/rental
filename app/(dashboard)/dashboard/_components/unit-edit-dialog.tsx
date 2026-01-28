@@ -72,7 +72,7 @@ export function UnitEditDialog({ unit, children }: UnitEditDialogProps) {
               <Input value={unit.status} disabled className="bg-muted" />
             </div>
             <div>
-              <Label className="text-sm font-medium">Monthly Rent ($)</Label>
+              <Label className="text-sm font-medium">Monthly Rent (ksh)</Label>
               <Input
                 type="number"
                 value={rent}

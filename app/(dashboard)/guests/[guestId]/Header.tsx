@@ -8,10 +8,11 @@ import { useSoftDeleteGuest } from "@/hooks/useGuests";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertDialog } from "@/components/AlertDialog";
+import { shouldDisableDelete } from "@/lib/utils";
 import type { Guest } from "@/lib/types/types";
 
 function Header({ guest }: { guest: Guest }) {
-  const { mutateAsync, isPending } = useSoftDeleteGuest();
+  const { mutateAsync, isPending: isArchivePending } = useSoftDeleteGuest();
   const router = useRouter();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -60,7 +61,7 @@ function Header({ guest }: { guest: Guest }) {
         <Button
           size="default"
           variant="destructive"
-          disabled={isPending}
+          disabled={shouldDisableDelete(guest) || isArchivePending}
           onClick={() => handleClick(guest.id)}
           className="bg-orange-500 hover:bg-orange-600 flex items-center gap-2 cursor-pointer"
         >
@@ -76,7 +77,7 @@ function Header({ guest }: { guest: Guest }) {
         onOpenChange={setDialogOpen}
         actionFn={handleConfirm}
         statement="Once a guest is archived only a super admin can restore this guest."
-        isLoading={isPending}
+        isLoading={isArchivePending}
       />
     </header>
   );

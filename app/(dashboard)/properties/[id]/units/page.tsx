@@ -70,7 +70,7 @@ export default function UnitsPage() {
       {/* Header */}
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <Button variant="ghost" asChild>
+          <Button variant="default" asChild>
             <Link
               href={`/properties/${propertyId}`}
               className="flex items-center gap-2"

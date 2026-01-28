@@ -70,7 +70,7 @@ export default function UnitInfo({ unit }: UnitInfoProps) {
 
         <div className="mb-4">
           <p className="text-2xl text-chart-2 font-bold">
-            ${unit.rent}
+            Ksh. {unit.rent}
             <span className="text-base font-normal text-muted-foreground">
               &nbsp;/ month
             </span>

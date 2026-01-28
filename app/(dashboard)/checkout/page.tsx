@@ -25,11 +25,14 @@ import {
   House,
 } from "lucide-react";
 import { format } from "date-fns";
+import { usePermissions } from "@/hooks/usePermissions";
+import { toast } from "sonner";
 import Link from "next/link";
 
 function CheckoutLandingPage() {
   const [selectedBookingId, setSelectedBookingId] = useState("");
   const { data: bookings, isLoading, isError, refetch } = useGuestCheckout();
+  const { canCheckOutGuest } = usePermissions();
   const router = useRouter();
 
   if (isLoading) {
@@ -57,10 +60,15 @@ function CheckoutLandingPage() {
   }
 
   const selectedBooking = bookings?.find(
-    (b) => b.id.toString() === selectedBookingId
+    (b) => b.id.toString() === selectedBookingId,
   );
 
   const handleContinue = () => {
+    if (!canCheckOutGuest) {
+      toast.error("Unauthorized, insufficient permissions");
+      return;
+    }
+
     if (selectedBooking) {
       router.push(`/checkout/${selectedBookingId}`);
     }
@@ -71,7 +79,7 @@ function CheckoutLandingPage() {
       <header className="flex flex-col items-start gap-3">
         <Button
           asChild
-          variant="outline"
+          variant="default"
           className="group hover:bg-blue-500 hover:border-blue-500 hover:text-white"
         >
           <Link href="/bookings" className="flex items-center gap-2">
@@ -186,7 +194,7 @@ function CheckoutLandingPage() {
                             <p className="font-semibold">
                               {format(
                                 new Date(selectedBooking.checkInDate),
-                                "PPP"
+                                "PPP",
                               )}
                             </p>
                           </div>
@@ -205,7 +213,7 @@ function CheckoutLandingPage() {
                             <p className="font-semibold">
                               {format(
                                 new Date(selectedBooking.checkOutDate),
-                                "PPP"
+                                "PPP",
                               )}
                             </p>
                           </div>
@@ -220,7 +228,9 @@ function CheckoutLandingPage() {
                               Number of Guests
                             </p>
                             <p className="font-semibold">
-                              {selectedBooking.numberOfGuests} guests
+                              {selectedBooking.numberOfGuests === 1
+                                ? `${selectedBooking.numberOfGuests} guest`
+                                : `${selectedBooking.numberOfGuests} guests`}
                             </p>
                           </div>
                         </div>

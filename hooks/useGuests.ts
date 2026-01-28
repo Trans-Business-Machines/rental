@@ -83,11 +83,11 @@ export const useCreateGuest = () => {
 				}
 			);
 		},
-		onError: (error) => {
+		onError: (error: any) => {
 			let errMsg = "Failed to create guest!"
 
 			if (error instanceof Error && error.message.includes("Unauthorized: Insufficent permissions."))
-				errMsg = "Unauthorized Insufficent permissions."
+				errMsg = "Unauthorized, Insufficent permissions."
 
 			toast.error(errMsg, {
 				duration: 5000

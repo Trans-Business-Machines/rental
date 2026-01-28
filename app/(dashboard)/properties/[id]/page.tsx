@@ -2,11 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, SquarePen, Plus } from "lucide-react";
 import { PropertyDetails } from "@/components/PropertyDetails";
-import { PropertyAmenities } from "@/components/PropertyAmenities";
+//import { PropertyAmenities } from "@/components/PropertyAmenities";
 import { PropertyGallery } from "@/components/PropertyGallery";
 import { getCachedProperty } from "@/lib/actions/properties";
 import { notFound } from "next/navigation";
-import { amenities } from "@/lib/data/properties";
+//import { amenities } from "@/lib/data/properties";
 import Link from "next/link";
 
 interface PropertyDetailsPageProps {
@@ -25,7 +25,7 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
   }
 
   return (
-    <section className="pb-6">
+    <section className="pb-6 lg:pb-8">
       <header className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between md:pb-3">
         <div className="flex gap-2">
           <Button asChild className="self-center" size="icon" variant="ghost">
@@ -72,7 +72,7 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
 
       <div className="flex flex-col md:flex-row gap-2">
         <PropertyDetails property={property} />
-        <PropertyAmenities amenities={amenities} propertyId={property.id} />
+       {/*  <PropertyAmenities amenities={amenities} propertyId={property.id} /> */}
       </div>
     </section>
   );

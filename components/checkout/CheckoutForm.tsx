@@ -12,7 +12,8 @@ import { Step2InventoryChecklist } from "@/components/checkout/Step2InventoryChe
 import { Step3FinancialSummary } from "@/components/checkout/Step3FinancialSummary";
 import { createCheckoutReport } from "@/lib/actions/checkout";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Loader } from "lucide-react";
 import type {
   BookingsForCheckout,
   InventoryAssignmentForUnit,
@@ -32,6 +33,7 @@ export function CheckoutForm({
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { currentUser } = usePermissions();
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -51,7 +53,6 @@ export function CheckoutForm({
     resolver: zodResolver(CheckoutFormSchema),
     defaultValues: {
       checkoutDate: today,
-      inspector: "",
       notes: "",
       checkoutItems: [],
       depositDeduction: 0,
@@ -63,7 +64,7 @@ export function CheckoutForm({
 
   // Define which fields to validate per step
   const stepFields: Record<number, (keyof CheckoutFormData)[]> = {
-    1: ["checkoutDate", "inspector"],
+    1: ["checkoutDate"],
     2: ["checkoutItems"],
     3: ["depositDeduction"],
   };
@@ -100,7 +101,7 @@ export function CheckoutForm({
         (item) =>
           item.checked &&
           item.condition === "damaged" &&
-          (!item.damageCost || item.damageCost === 0)
+          (!item.damageCost || item.damageCost === 0),
       );
 
       if (damagedWithoutCost.length > 0) {
@@ -145,10 +146,10 @@ export function CheckoutForm({
         bookingId: selectedBooking.id,
         guestId: selectedBooking.guestId,
         checkoutDate: new Date(data.checkoutDate),
-        inspector: data.inspector,
+        inspector: currentUser?.name || "system",
         totalDamageCost: checkedItems.reduce(
           (sum, item) => sum + item.damageCost,
-          0
+          0,
         ),
         depositDeduction: data.depositDeduction,
         notes: data.notes,
@@ -160,8 +161,17 @@ export function CheckoutForm({
       toast.success("Checkout completed successfully!");
       router.push("/bookings");
     } catch (error) {
-      console.error("Checkout error:", error);
-      toast.error("Failed to complete checkout. Please try again.");
+      let errMsg = "Failed to complete checkout. Please try again.";
+
+      if (
+        error instanceof Error &&
+        error.message.includes("Unauthorized: Insufficent permissions.")
+      ) {
+        errMsg = "Unauthorized, Insufficent permissions.";
+      }
+      toast.error(errMsg, {
+        duration: 5000,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -244,7 +254,7 @@ export function CheckoutForm({
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
                       <span className="hidden sm:inline">Checking out...</span>
                     </>
                   ) : (

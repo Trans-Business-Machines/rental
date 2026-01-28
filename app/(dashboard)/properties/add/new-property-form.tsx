@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { useMutation } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { X, Loader } from "lucide-react";
 import { toast } from "sonner";
 import {
   ClientMediaService,
@@ -30,6 +30,7 @@ import {
   NewPropertySchema,
 } from "@/lib/schemas/properties";
 import Image from "next/image";
+import { usePermissions } from "@/hooks/usePermissions";
 
 function NewPropertyForm() {
   const router = useRouter();
@@ -37,6 +38,7 @@ function NewPropertyForm() {
   const [imageError, setImageError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
+  const { canCreateProperty } = usePermissions();
 
   const {
     register,
@@ -102,9 +104,18 @@ function NewPropertyForm() {
         await ClientMediaService.deleteFromSupabase(fileNames);
       }
 
-      const errMsg =
-        error instanceof Error ? error.message : "Failed to create property.";
-      toast.error(errMsg);
+      let errMsg = "Failed to create property.";
+
+      if (
+        error instanceof Error &&
+        error.message.includes("Unauthorized: Insufficent permissions.")
+      ) {
+        errMsg = "Unauthorized, Insufficent permissions.";
+      }
+
+      toast.error(errMsg, {
+        duration: 5000,
+      });
     },
   });
 
@@ -139,7 +150,7 @@ function NewPropertyForm() {
     if (duplicateFiles.length > 0) {
       toast.warning(
         `Skipped duplicate image(s): ${duplicateFiles.join(", ")}`,
-        { duration: 4000 }
+        { duration: 4000 },
       );
     }
 
@@ -148,7 +159,7 @@ function NewPropertyForm() {
 
     if (totalAfterAdd > 10) {
       setImageError(
-        `Maximum 10 images allowed. You currently have ${selectedImages.length} image(s).`
+        `Maximum 10 images allowed. You currently have ${selectedImages.length} image(s).`,
       );
       return;
     }
@@ -204,6 +215,14 @@ function NewPropertyForm() {
       return;
     }
 
+    if (!canCreateProperty) {
+      toast.error("Unauthorized, Insufficent permissions.", {
+        duration: 5000,
+      });
+
+      return;
+    }
+
     setIsUploading(true);
     let uploadedImages: UploadResult[] = [];
 
@@ -212,7 +231,7 @@ function NewPropertyForm() {
 
       uploadedImages = await ClientMediaService.processAndUploadImages(
         selectedImages,
-        "property"
+        "property",
       );
 
       toast.info("Creating property...", { duration: 5000 });
@@ -267,7 +286,7 @@ function NewPropertyForm() {
                   <SelectTrigger
                     className={cn(
                       "w-full",
-                      errors.type && "border border-red-400"
+                      errors.type && "border border-red-400",
                     )}
                   >
                     <SelectValue placeholder="Select type" />
@@ -405,7 +424,7 @@ function NewPropertyForm() {
                   : "border-muted-foreground/25 hover:border-muted-foreground/50",
                 (isLoading || createMutation.isPending) &&
                   "opacity-50 cursor-not-allowed",
-                imageError && "border-red-400"
+                imageError && "border-red-400",
               )}
             >
               <input
@@ -472,7 +491,7 @@ function NewPropertyForm() {
                 "text-xs",
                 selectedImages.length > 10
                   ? "text-red-500"
-                  : "text-muted-foreground"
+                  : "text-muted-foreground",
               )}
             >
               {selectedImages.length}/10 images selected
@@ -497,9 +516,14 @@ function NewPropertyForm() {
             disabled={!canSubmit}
             className="w-2/3 cursor-pointer font-semibold"
           >
-            {createMutation.isPending || isLoading
-              ? "Creating Property..."
-              : "Create Property"}
+            {createMutation.isPending || isLoading ? (
+              <span className="flex item-center gap-2">
+                <Loader className="animate-spin" />
+                <span>Creating property</span>
+              </span>
+            ) : (
+              "Create Property"
+            )}
           </Button>
         </div>
       </div>

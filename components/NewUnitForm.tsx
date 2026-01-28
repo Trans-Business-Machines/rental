@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { useMutation } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X, Loader } from "lucide-react";
 import Image from "next/image";
 import {
   ClientMediaService,
@@ -28,12 +28,14 @@ import {
   NewUnitFormData,
   NewUnitSchema,
 } from "@/lib/schemas/properties";
+import { usePermissions } from "@/hooks/usePermissions";
 
 function NewUnitForm({ propertyId }: { propertyId: number }) {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
+  const { canCreateUnit } = usePermissions();
 
   const {
     register,
@@ -79,7 +81,7 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
             ...data,
             images: uploadedImages,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -101,13 +103,22 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
       if (uploadedImages.length > 0) {
         console.log("Cleaning up uploaded images...");
         await ClientMediaService.deleteFromSupabase(
-          uploadedImages.map((img) => img.filename)
+          uploadedImages.map((img) => img.filename),
         );
       }
 
-      const errMsg =
-        error instanceof Error ? error.message : "Failed to create unit.";
-      toast.error(errMsg);
+      let errMsg = "Failed to create unit";
+
+      if (
+        error instanceof Error &&
+        error.message.includes("Unauthorized: Insufficent permissions.")
+      ) {
+        errMsg = "Unauthorized, Insufficent permissions.";
+      }
+
+      toast.error(errMsg, {
+        duration: 5000,
+      });
     },
   });
 
@@ -142,7 +153,7 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
     if (duplicateFiles.length > 0) {
       toast.warning(
         `Skipped duplicate image(s): ${duplicateFiles.join(", ")}`,
-        { duration: 4000 }
+        { duration: 4000 },
       );
     }
 
@@ -151,7 +162,7 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
 
     if (totalAfterAdd > 10) {
       setImageError(
-        `Maximum 10 images allowed. You currently have ${selectedImages.length} image(s).`
+        `Maximum 10 images allowed. You currently have ${selectedImages.length} image(s).`,
       );
       return;
     }
@@ -208,6 +219,14 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
       return;
     }
 
+    if (!canCreateUnit) {
+      toast.error("Unauthorized, Insufficent permissions.", {
+        duration: 5000,
+      });
+
+      return;
+    }
+
     setIsUploading(true);
     let uploadedImages: UploadResult[] = [];
 
@@ -216,7 +235,7 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
 
       uploadedImages = await ClientMediaService.processAndUploadImages(
         selectedImages,
-        "unit"
+        "unit",
       );
 
       toast.info("Creating unit...", { duration: 5000 });
@@ -232,10 +251,6 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
 
   const isLoading = isSubmitting || isUploading;
 
-  // Button is disabled only when:
-  // 1. Form is loading/submitting
-  // 2. Images exceed the limit (> 10)
-  // 3. There's an active image error (type/size validation)
   const isButtonDisabled =
     isLoading || createMutation.isPending || hasExceededLimit() || !!imageError;
 
@@ -276,7 +291,7 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
                   <SelectTrigger
                     className={cn(
                       "w-full",
-                      errors.type && "border border-red-400"
+                      errors.type && "border border-red-400",
                     )}
                   >
                     <SelectValue placeholder="Select type" />
@@ -396,7 +411,7 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
                   : "border-muted-foreground/25 hover:border-muted-foreground/50",
                 (isLoading || createMutation.isPending) &&
                   "opacity-50 cursor-not-allowed",
-                imageError && "border-red-400"
+                imageError && "border-red-400",
               )}
             >
               <input
@@ -462,7 +477,7 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
                 "text-xs",
                 selectedImages.length > 10
                   ? "text-red-500"
-                  : "text-muted-foreground"
+                  : "text-muted-foreground",
               )}
             >
               {selectedImages.length}/10 images selected
@@ -487,9 +502,14 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
             disabled={isButtonDisabled}
             className="w-2/3 cursor-pointer font-semibold"
           >
-            {createMutation.isPending || isLoading
-              ? "Creating Unit..."
-              : "Create Unit"}
+            {createMutation.isPending || isLoading ? (
+              <span className="flex item-center gap-2">
+                <Loader className="animate-spin" />
+                <span>Creating unit</span>
+              </span>
+            ) : (
+              "Create Unit"
+            )}
           </Button>
         </div>
       </div>

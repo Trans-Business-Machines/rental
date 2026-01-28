@@ -209,7 +209,7 @@ export function UnitAvailabilityTable({
                         "-"
                       )}
                     </TableCell>
-                    <TableCell>${unit.rent}</TableCell>
+                    <TableCell>Ksh. {unit.rent}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <UnitViewDialog unit={unit}>

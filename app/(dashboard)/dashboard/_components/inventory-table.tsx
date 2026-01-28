@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { InventoryDialog } from "@/components/InventoryDialog";
 import { InventoryEditDialog } from "@/components/InventoryEditDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Edit, Plus, Search, Package } from "lucide-react";
+import { Edit, Search, Package } from "lucide-react";
 import Pagination from "@/components/Pagination";
 import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "@/components/SearchNotFound";
@@ -183,21 +182,13 @@ export function InventoryTable({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <InventoryDialog>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="cursor-pointer"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </InventoryDialog>
                           <InventoryEditDialog item={item}>
                             <Button
                               variant="ghost"
                               size="icon"
                               className="cursor-pointer"
                             >
+                              <span>Edit</span>
                               <Edit className="h-4 w-4" />
                             </Button>
                           </InventoryEditDialog>

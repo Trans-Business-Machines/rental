@@ -4,7 +4,6 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTrigger,
   DialogTitle,
@@ -70,9 +69,6 @@ function ReturnNoteDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add a return note (optional).</DialogTitle>
-          <DialogDescription>
-            &quot;Returned via web interface&quot; will be used by default.
-          </DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>

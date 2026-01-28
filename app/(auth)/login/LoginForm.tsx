@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
-import { Building2 } from "lucide-react";
+import { Building2, Loader } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -143,7 +143,14 @@ export default function LoginForm() {
                 className="w-full h-11"
                 disabled={isLoading}
               >
-                {isLoading ? "Signing in..." : "Sign in"}
+                {isLoading ? (
+                  <span className="flex item-center gap-2">
+                    <Loader className="animate-spin" />
+                    <span>Signing in</span>
+                  </span>
+                ) : (
+                  "Sign in"
+                )}
               </Button>
             </form>
           </CardContent>

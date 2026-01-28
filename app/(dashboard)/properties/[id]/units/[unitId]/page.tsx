@@ -46,12 +46,12 @@ function UnitDetailsPage() {
     <section className="space-y-6">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" asChild>
+          <Button variant="default" asChild>
             <Link
               href={`/properties/${propertyId}/units`}
               className="flex items-center"
             >
-              <ArrowLeft className="size-4 text-muted-foreground" />
+              <ArrowLeft className="size-4 text-white" />
               <span className="text-base font-semibold"> Back to units</span>
             </Link>
           </Button>
