@@ -16,11 +16,11 @@ export const ac = createAccessControl(statement)
 
 // Define user role and its permissions
 export const user = ac.newRole({
-    booking: ["read"],
-    guest: ["read"],
-    property: ["read"],
-    unit: ["read"],
-    user: ["set-password"]
+    user: ["set-password"],
+    booking: ["create", "read", "update"],
+    guest: ["create", "read", "update", "check-out"],
+    property: ["create", "read", "update"],
+    unit: ["create", "read", "update",],
 })
 
 // Define the admin role and its permissions
