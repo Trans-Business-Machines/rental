@@ -51,45 +51,41 @@ export default async function InventoryDetailsPage({
   return (
     <section className="space-y-6">
       {/* Header and Navigation */}
-      <div className="flex items-center gap-2">
+      <header className="flex items-center gap-2">
         <div>
-          <Button variant="secondary" asChild>
+          <Button variant="default" asChild>
             <Link href="/inventory">
               <ArrowLeft className="size-4 flex items-center gap-2" />
               <span className="">Back to Inventory</span>
             </Link>
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* Hero Section */}
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-muted/50 to-white">
-        <CardContent className="flex items-center gap-6 py-4 md:py-6">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
+      <Card className="shadow-lg border border-gray-300 bg-gradient-to-tr from-muted/50 to-white">
+        <CardContent className="flex items-center gap-6 py-4 md:py-5">
+          <article className="flex-1">
+            <div className="flex flex-col justify-center gap-2 mb-2">
               <h1 className="text-3xl font-bold tracking-tight">
                 {item.itemName}
               </h1>
-              <Badge
-                variant={getStatusColor(item.status)}
-                className="uppercase"
-              >
-                {item.status}
-              </Badge>
-              <Badge variant="outline">Qty: {item.quantity}</Badge>
+
+              <div className="space-x-2">
+                <Badge
+                  variant={getStatusColor(item.status)}
+                  className="capitalize"
+                >
+                  {item.status}
+                </Badge>
+                <Badge variant="outline">Quantity: {item.quantity}</Badge>
+              </div>
             </div>
+
             <div className="text-muted-foreground text-lg my-4">
               {item.description}
             </div>
-            <div className="flex gap-2 mt-2">
-              <Button size="sm" variant="outline">
-                Edit
-              </Button>
-              <Button size="sm" variant="secondary">
-                Move/Assign
-              </Button>
-            </div>
-          </div>
+          </article>
         </CardContent>
       </Card>
 
@@ -98,11 +94,13 @@ export default async function InventoryDetailsPage({
         <Card className="p-4 flex items-center gap-3">
           <MapPin className="h-5 w-5 text-muted-foreground" />
           <div>
-            <div className="text-xs text-muted-foreground">Category</div>
+            <div className="text-xs text-center text-muted-foreground">
+              Category
+            </div>
             <div className="font-medium">{item.category}</div>
           </div>
         </Card>
-        <Card className="p-4 flex items-center gap-3">
+        <Card className="p-4 flex text-center items-center gap-3">
           <Home className="h-5 w-5 text-muted-foreground" />
           <div>
             <div className="text-xs text-muted-foreground">Quantity</div>
@@ -130,7 +128,9 @@ export default async function InventoryDetailsPage({
         <Card className="p-4 flex items-center gap-3">
           <User className="h-5 w-5 text-muted-foreground" />
           <div>
-            <div className="text-xs text-muted-foreground">Supplier</div>
+            <div className="text-xs text-center text-muted-foreground">
+              Supplier
+            </div>
             <div className="font-medium">
               {item.supplier || "Not specified"}
             </div>
@@ -139,7 +139,9 @@ export default async function InventoryDetailsPage({
         <Card className="p-4 flex items-center gap-3">
           <UtensilsCrossed className="h-5 w-5 text-muted-foreground" />
           <div>
-            <div className="text-xs text-muted-foreground">Status</div>
+            <div className="text-xs text-center text-muted-foreground">
+              Status
+            </div>
             <div className="font-medium capitalize">{item.status}</div>
           </div>
         </Card>

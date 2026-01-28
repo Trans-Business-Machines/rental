@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, Home, Wrench } from "lucide-react";
+import { Home, Wrench } from "lucide-react";
 import { InventoryTable } from "./_components/inventory-table";
 import { RecentBookingsTable } from "./_components/recent-bookings-table";
 import { UnitAvailabilityTable } from "./_components/unit-availability-table";
@@ -85,13 +85,6 @@ export default async function DashboardPage({
       subtitle: "Ready for booking",
       icon: Home,
       color: "orange",
-    },
-    {
-      title: "Monthly revenue",
-      value: `$0`,
-      subtitle: "+12% increase from last month",
-      icon: DollarSign,
-      color: "green",
     },
     {
       title: "Maintenance",

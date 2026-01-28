@@ -82,7 +82,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-4 lg:space-y-5">
       <Header booking={booking} />
 
       {/* Booking status banner */}
@@ -116,7 +116,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
           <div className="text-right">
             <p className="text-sm text-muted-foreground">Total Amount</p>
             <p className="text-2xl font-bold text-foreground">
-              ${(booking.unit.rent * nights).toLocaleString()}
+              Ksh. {(booking.unit.rent * nights).toLocaleString()}
             </p>
           </div>
         </CardContent>
@@ -284,7 +284,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                 <div className="text-center p-3 rounded-lg bg-muted/60">
                   <Banknote className="size-5 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm font-medium text-foreground">
-                    ${booking.unit.rent}
+                    Ksh. {booking.unit.rent}
                   </p>
                   <p className="text-xs text-muted-foreground">Per Night</p>
                 </div>
@@ -356,8 +356,8 @@ async function BookingDetails({ params }: BookingDetailsPros) {
               <Separator />
 
               <div className="p-3 rounded-lg bg-muted/60 text-center">
-                <p className="text-2xl font-bold text-foreground">{nights}</p>
                 <p className="text-sm text-muted-foreground">Total Nights</p>
+                <p className="text-2xl font-bold text-foreground">{nights}</p>
               </div>
             </CardContent>
           </Card>
@@ -401,10 +401,10 @@ async function BookingDetails({ params }: BookingDetailsPros) {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    ${booking.unit.rent} &#x78; {nights} nights
+                    Ksh.{booking.unit.rent} &#x78; {nights} nights
                   </span>
                   <span className="text-foreground">
-                    ${(booking.unit.rent * nights).toLocaleString()}
+                    Ksh. {(booking.unit.rent * nights).toLocaleString()}
                   </span>
                 </div>
                 <Separator />
@@ -413,7 +413,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                     Total Amount
                   </span>
                   <span className="text-xl font-bold text-foreground">
-                    ${(booking.unit.rent * nights).toLocaleString()}
+                    Ksh. {(booking.unit.rent * nights).toLocaleString()}
                   </span>
                 </div>
               </div>

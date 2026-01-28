@@ -243,7 +243,7 @@ export function UnitListing({ units }: UnitListingProps) {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-lg  text-foreground">
-                      ${unit.rent}
+                      Ksh. {unit.rent}
                     </p>
                     <p className="text-xs text-muted-foreground">per month</p>
                   </div>

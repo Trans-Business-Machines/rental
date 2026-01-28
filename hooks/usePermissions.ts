@@ -6,6 +6,7 @@ import type { Role } from "@/lib/types/types"
 export function usePermissions() {
     const { data: session, isPending } = authClient.useSession()
     const userRole = (session?.user?.role as Role) || "user"
+    const currentUser = session?.user
 
     const isSuperAdmin = userRole === "superAdmin"
     const isAdmin = userRole === "admin"
@@ -19,6 +20,7 @@ export function usePermissions() {
     // Guest permissions
     const canCreateGuest = isAdmin || isSuperAdmin
     const canUpdateGuest = isAdmin || isSuperAdmin
+    const canCheckOutGuest = isAdmin || isSuperAdmin
     const canDeleteGuest = isSuperAdmin
 
     // Property permissions
@@ -31,6 +33,8 @@ export function usePermissions() {
     const canCreateUnit = isAdmin || isSuperAdmin
     const canUpdateUnit = isAdmin || isSuperAdmin
     const canDeleteUnit = isSuperAdmin
+
+
 
     // Check specific permission of the current session user
     const checkPermission = async (resource: string, action: string): Promise<boolean> => {
@@ -54,6 +58,7 @@ export function usePermissions() {
         role: userRole,
         isSessionPending: isPending,
         userId: session?.user.id,
+        currentUser,
         isSuperAdmin,
         isAdmin,
         isUser,
@@ -62,6 +67,7 @@ export function usePermissions() {
         canDeleteBooking,
         canCreateGuest,
         canUpdateGuest,
+        canCheckOutGuest,
         canDeleteGuest,
         canCreateProperty,
         canUpdateProperty,

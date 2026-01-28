@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requirePermission } from "@/lib/check-permissions"
 import z from "zod";
 
 // Define a schema for uploaded image data 
@@ -27,6 +28,10 @@ const propertySchema = z.object({
 
 export async function POST(request: NextRequest) {
     try {
+
+        // Check if current user has permission to create a property
+        await requirePermission("property", "create")
+
         // Get the request body
         const body = await request.json();
 

@@ -8,6 +8,7 @@ import { useCreateBooking } from "@/hooks/useBookings";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getBookingFormData } from "@/lib/actions/bookings";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
@@ -19,46 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Info } from "lucide-react";
-import z from "zod";
-
-const BookingFormSchema = z
-  .object({
-    guestId: z.string().min(1, "Guest is required."),
-    propertyId: z.string().min(1, "Property is required."),
-    unitId: z.string().min(1, "Unit is required."),
-    numberOfGuests: z.coerce
-      .number({
-        required_error: "Number of guests is required.",
-        invalid_type_error: "Must be a number",
-      })
-      .positive("Must be a positive number")
-      .int("Must be a whole number"),
-    checkInDate: z
-      .string()
-      .min(1, "Check-in date is required.")
-      .refine(
-        (dateString) =>
-          new Date(dateString) >=
-          new Date(new Date().toISOString().split("T")[0]),
-        "Check-in date cannot be in the past."
-      ),
-    checkOutDate: z.string().min(1, "Check-out date is required."),
-    paymentMethod: z.string().min(1, "Payment method is required."),
-    status: z.enum([
-      "pending",
-      "reserved",
-      "checked_in",
-      "checked_out",
-      "cancelled",
-    ]),
-  })
-  .refine((data) => new Date(data.checkOutDate) > new Date(data.checkInDate), {
-    message: "Check-out date must be after check-in date.",
-    path: ["checkOutDate"],
-  });
-
-type BookingFormData = z.infer<typeof BookingFormSchema>;
+import { Info, Loader } from "lucide-react";
+import { BookingFormSchema, type BookingFormData } from "@/lib/schemas/booking";
 
 interface BookingFormProps {
   onSuccess?: () => void;
@@ -106,6 +69,7 @@ export function BookingForm({
       numberOfGuests: undefined,
       paymentMethod: "",
       status: "pending",
+      specialRequests: "",
     },
   });
 
@@ -116,13 +80,13 @@ export function BookingForm({
   const selectedProperty = formDataCache?.properties.find(
     (p) =>
       p.id.toString() ===
-      (preselectedPropertyId?.toString() || formData.propertyId)
+      (preselectedPropertyId?.toString() || formData.propertyId),
   );
 
   // Derived unit state from property selections
   const selectedUnit = selectedProperty?.units.find(
     (u) =>
-      u.id.toString() === (preselectedUnitId?.toString() || formData.unitId)
+      u.id.toString() === (preselectedUnitId?.toString() || formData.unitId),
   );
 
   // Validation flags for cascading enables/disables
@@ -154,7 +118,7 @@ export function BookingForm({
   const onSubmit: SubmitHandler<BookingFormData> = (data) => {
     const daysToStay = differenceInDays(
       new Date(data.checkOutDate),
-      new Date(data.checkInDate)
+      new Date(data.checkInDate),
     );
 
     const charges = selectedUnit ? selectedUnit.rent * daysToStay : 0;
@@ -171,6 +135,7 @@ export function BookingForm({
       purpose: "personal" as const,
       paymentMethod: data.paymentMethod,
       status: data.status,
+      specialRequests: data.specialRequests,
     };
 
     createBookingMutation.mutate(newBooking, {
@@ -205,16 +170,16 @@ export function BookingForm({
       <div className="space-y-4">
         <div className="animate-pulse space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="h-12  md:h-24 bg-gray-200 rounded"></div>
-            <div className="h-12  md:h-24 bg-gray-200 rounded"></div>
+            <div className="h-12  md:h-16 bg-gray-200 rounded"></div>
+            <div className="h-12  md:h-16 bg-gray-200 rounded"></div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="h-12  md:h-24 bg-gray-200 rounded"></div>
-            <div className="h-12  md:h-24 bg-gray-200 rounded"></div>
+            <div className="h-12  md:h-16 bg-gray-200 rounded"></div>
+            <div className="h-12  md:h-16 bg-gray-200 rounded"></div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="h-12  md:h-24 bg-gray-200 rounded"></div>
-            <div className="h-12  md:h-24 bg-gray-200 rounded"></div>
+            <div className="h-12  md:h-16 bg-gray-200 rounded"></div>
+            <div className="h-12  md:h-16 bg-gray-200 rounded"></div>
           </div>
         </div>
       </div>
@@ -260,7 +225,7 @@ export function BookingForm({
                 <SelectTrigger
                   className={cn(
                     "w-full",
-                    errors.propertyId && "border-red-400"
+                    errors.propertyId && "border-red-400",
                   )}
                 >
                   <SelectValue placeholder="Select property" />
@@ -306,7 +271,7 @@ export function BookingForm({
                     <SelectTrigger
                       className={cn(
                         "w-full",
-                        errors.unitId && "border-red-400"
+                        errors.unitId && "border-red-400",
                       )}
                     >
                       <SelectValue placeholder="Select unit" />
@@ -318,7 +283,7 @@ export function BookingForm({
                           value={unit.id.toString()}
                           className={cn(
                             unit.status !== "available" &&
-                              "cursor-not-allowed opacity-50"
+                              "cursor-not-allowed opacity-50",
                           )}
                         >
                           {unit.name}{" "}
@@ -435,7 +400,7 @@ export function BookingForm({
                 <SelectTrigger
                   className={cn(
                     "w-full",
-                    errors.paymentMethod && "border-red-400"
+                    errors.paymentMethod && "border-red-400",
                   )}
                 >
                   <SelectValue placeholder="Select payment method" />
@@ -489,6 +454,22 @@ export function BookingForm({
           )}
         </article>
 
+        <article className="space-y-2">
+          <Label htmlFor="notes">Specail Requests (optional)</Label>
+          <Textarea
+            id="notes"
+            rows={4}
+            placeholder="Additional notes about the guest"
+            className={cn(errors.specialRequests && "border border-red-400")}
+            {...register("specialRequests")}
+          />
+          {errors.specialRequests && (
+            <p className="text-sm mt-1 text-red-400">
+              {errors.specialRequests.message}
+            </p>
+          )}
+        </article>
+
         {/* Form Action buttons */}
         <div className="flex space-x-2 pt-4">
           <Button
@@ -496,7 +477,14 @@ export function BookingForm({
             disabled={createBookingMutation.isPending}
             className="flex-1 cursor-pointer"
           >
-            {createBookingMutation.isPending ? "Creating..." : "Create Booking"}
+            {createBookingMutation.isPending ? (
+              <span className="flex item-center gap-2">
+                <Loader className="animate-spin" />
+                <span>Creating booking</span>
+              </span>
+            ) : (
+              "Create Booking"
+            )}
           </Button>
           {onCancel && (
             <Button

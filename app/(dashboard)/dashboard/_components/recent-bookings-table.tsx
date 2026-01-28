@@ -143,7 +143,7 @@ export function RecentBookingsTable({
                     <TableCell>
                       {format(new Date(booking.checkOutDate), "dd/MM/yyyy")}
                     </TableCell>
-                    <TableCell>${booking.totalAmount}</TableCell>
+                    <TableCell>Ksh. {booking.totalAmount}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <BookingViewDialog booking={booking}>

@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { revalidatePath, unstable_cache, revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { evaluateUnitStatus } from "@/lib/utils"
 import { requirePermission } from "@/lib/check-permissions"
 import type { BookingStatus, CreateBookingData, } from "@/lib/types/types"
@@ -153,6 +153,21 @@ export async function createBooking(booking: CreateBookingData) {
 
 				})
 
+				// increment property occupied count
+				if (booking.status === "checked_in") {
+					await tx.property.update({
+						where: {
+							id: booking.propertyId
+						},
+						data: {
+							occupied: {
+								increment: 1
+							}
+						}
+
+					})
+				}
+
 				return newBooking
 			}, { timeout: 10000, maxWait: 3000, isolationLevel: "ReadCommitted" })
 
@@ -213,6 +228,21 @@ export async function updateBooking(
 						status: unitStatus
 					}
 				})
+
+				// increment property occupied count
+				if (booking.status === "checked_in") {
+					await tx.property.update({
+						where: {
+							id: booking.propertyId
+						},
+						data: {
+							occupied: {
+								increment: 1
+							}
+						}
+
+					})
+				}
 
 				return {
 					booking,
@@ -343,80 +373,75 @@ export async function getBookingStats() {
 	}
 }
 
-export const getBookingFormData = unstable_cache(
-	async () => {
-		// Retrieve guest and property info from the DB all in one go
-		const [guests, properties] = await Promise.all([
-			prisma.guest.findMany({
-				where: {
-					verificationStatus: "verified",
-					deletedAt:null
-				},
-				select: {
-					id: true,
-					firstName: true,
-					lastName: true,
-					email: true,
-					bookings: {
-						where: {
-							status: {
-								in: ["checked_in", "pending", "reserved"]
-							},
-							checkOutDate: {
-								gte: new Date()
-							}
+export const getBookingFormData = async () => {
+	// Retrieve guest and property info from the DB all in one go
+	const [guests, properties] = await Promise.all([
+		prisma.guest.findMany({
+			where: {
+				verificationStatus: "verified",
+				deletedAt: null
+			},
+			select: {
+				id: true,
+				firstName: true,
+				lastName: true,
+				email: true,
+				bookings: {
+					where: {
+						status: {
+							in: ["checked_in", "pending", "reserved"]
 						},
-						select: {
-							id: true,
-							status: true,
+					},
+					orderBy: {
+						checkOutDate: "desc"
+					},
+					select: {
+						id: true,
+						status: true,
 
-						},
-						take: 1
-					}
-				},
-				orderBy: {
-					createdAt: "desc"
+					},
+					take: 1
 				}
-			}),
+			},
+			orderBy: {
+				createdAt: "desc"
+			}
+		}),
 
-			prisma.property.findMany({
-				where: {
-					deletedAt: null
-				},
-				select: {
-					id: true,
-					name: true,
-					units: {
-						select: {
-							id: true,
-							name: true,
-							maxGuests: true,
-							status: true,
-							rent: true,
-						},
-						orderBy: {
-							name: "asc"
-						}
+		prisma.property.findMany({
+			where: {
+				deletedAt: null
+			},
+			select: {
+				id: true,
+				name: true,
+				units: {
+					select: {
+						id: true,
+						name: true,
+						maxGuests: true,
+						status: true,
+						rent: true,
+					},
+					orderBy: {
+						name: "asc"
 					}
-				},
-				orderBy: {
-					name: "asc"
 				}
-			})
-		])
+			},
+			orderBy: {
+				name: "asc"
+			}
+		})
+	])
 
-		// Add an isCheckedIn field to guests data
-		const processedGuests = guests.map(guest => ({
-			...guest,
-			isCheckedIn: guest.bookings.length > 0
-		}))
+	// Add an isCheckedIn field to guests data
+	const processedGuests = guests.map(guest => ({
+		...guest,
+		isCheckedIn: guest.bookings.length > 0
+	}))
 
-		return {
-			properties,
-			guests: processedGuests
-		}
-	},
-	["booking-form-data"], {
-	revalidate: 60,
-	tags: ["booking-form-data"]
-})
+	return {
+		properties,
+		guests: processedGuests
+	}
+}

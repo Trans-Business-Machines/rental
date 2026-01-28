@@ -203,7 +203,7 @@ function ArchivedGuestsTable() {
                     <span>{guest.phone}</span>
                   </div>
                 </TableCell>
-                <TableCell>{guest.totalStays}</TableCell>
+                <TableCell className="grid place-content-center">{guest.totalStays}</TableCell>
                 <TableCell>
                   {guest.lastStay
                     ? format(new Date(guest.lastStay), "dd/MM/yyyy")

@@ -61,7 +61,7 @@ function GuestsTable({
               <TableHead className="font-semibold text-foreground">
                 phone
               </TableHead>
-              <TableHead className="font-semibold text-foreground">
+              <TableHead className="font-semibold text-center  text-foreground">
                 total stays
               </TableHead>
               <TableHead className="font-semibold text-foreground">
@@ -101,7 +101,7 @@ function GuestsTable({
                     <span>{guest.phone}</span>
                   </div>
                 </TableCell>
-                <TableCell>{guest.totalStays}</TableCell>
+                <TableCell className="grid place-items-center">{guest.totalStays}</TableCell>
                 <TableCell>
                   {guest.lastStay
                     ? format(new Date(guest.lastStay), "dd/MM/yyyy")

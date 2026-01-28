@@ -46,3 +46,8 @@ export function shouldDisableDelete(guest: Guest) {
   return activeStatuses.includes(latestBooking.status)
 
 }
+
+export const getOccupancyRate = (occupied: number, total: number | null) => {
+  if (!total || total === 0) return 0;
+  return Math.round((occupied / total) * 100);
+};

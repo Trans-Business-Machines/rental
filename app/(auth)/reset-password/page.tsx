@@ -23,6 +23,7 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  Loader,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
@@ -102,7 +103,7 @@ function ResetPasswordForm() {
     } catch (error) {
       console.error("Reset password error:", error);
       toast.error(
-        "Failed to reset password. The link may have expired. Please request a new one."
+        "Failed to reset password. The link may have expired. Please request a new one.",
       );
     }
   };
@@ -223,7 +224,7 @@ function ResetPasswordForm() {
                           "h-1 flex-1 rounded-full transition-colors",
                           i < passwordStrength
                             ? strengthColors[passwordStrength - 1]
-                            : "bg-gray-200"
+                            : "bg-gray-200",
                         )}
                       />
                     ))}
@@ -255,7 +256,7 @@ function ResetPasswordForm() {
                   {...register("confirmPassword")}
                   className={cn(
                     errors.confirmPassword && "border-red-400",
-                    "pr-10"
+                    "pr-10",
                   )}
                 />
                 <button
@@ -285,28 +286,28 @@ function ResetPasswordForm() {
               <ul className="text-xs text-gray-500 space-y-1">
                 <li
                   className={cn(
-                    password.length >= 8 && "text-green-600 font-medium"
+                    password.length >= 8 && "text-green-600 font-medium",
                   )}
                 >
                   • At least 8 characters
                 </li>
                 <li
                   className={cn(
-                    /[A-Z]/.test(password) && "text-green-600 font-medium"
+                    /[A-Z]/.test(password) && "text-green-600 font-medium",
                   )}
                 >
                   • One uppercase letter
                 </li>
                 <li
                   className={cn(
-                    /[a-z]/.test(password) && "text-green-600 font-medium"
+                    /[a-z]/.test(password) && "text-green-600 font-medium",
                   )}
                 >
                   • One lowercase letter
                 </li>
                 <li
                   className={cn(
-                    /[0-9]/.test(password) && "text-green-600 font-medium"
+                    /[0-9]/.test(password) && "text-green-600 font-medium",
                   )}
                 >
                   • One number
@@ -315,7 +316,14 @@ function ResetPasswordForm() {
             </div>
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Resetting Password..." : "Reset Password"}
+              {isSubmitting ? (
+                <span className="flex item-center gap-2">
+                  <Loader className="animate-spin" />
+                  <span>Resetting</span>
+                </span>
+              ) : (
+                "Reset Password"
+              )}
             </Button>
           </form>
 

@@ -21,7 +21,7 @@ import {
   Clock,
   ClipboardPaste,
 } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { format } from "date-fns";
 import type { BookingsTableAndCardsProps } from "@/lib/types/types";
 import { getStatusColor } from "./BookingsTable";
 import { useRouter } from "next/navigation";
@@ -43,13 +43,7 @@ function BookingCards({
             booking.guest.firstName[0].toUpperCase() +
             booking.guest.lastName[0].toUpperCase();
 
-          const numOfNights = Math.max(
-            1,
-            differenceInDays(
-              new Date(booking.checkOutDate),
-              new Date(booking.checkInDate)
-            )
-          );
+          const numOfNights = booking.guest.totalStays;
 
           return (
             <Card
@@ -197,7 +191,7 @@ function BookingCards({
                   </Badge>
 
                   <div className="text-right">
-                    <p className="text-sm text-muted-foreground">{`${numOfNights} ${numOfNights === 1 ? "night" : "nights"}`}</p>
+                    <p className="text-sm text-muted-foreground">{`${numOfNights} ${numOfNights === 1 ? "total stay" : "total stays"}`}</p>
                     <p className="font-semibold text-foreground">
                       ${booking.totalAmount}
                     </p>

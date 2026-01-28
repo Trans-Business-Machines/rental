@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requirePermission } from "../check-permissions";
 
 export async function getCheckoutReports(page: number = 1) {
 	try {
@@ -98,6 +99,10 @@ export async function createCheckoutReport(data: {
 		notes?: string;
 	}[];
 }) {
+
+	// check if current user can checkout a guest
+	await requirePermission("guest", "check-out")
+
 	try {
 		const { checkoutItems, ...reportData } = data;
 
@@ -213,7 +218,7 @@ export async function createCheckoutReport(data: {
 				}
 
 				// 3. Update booking status
-				await tx.booking.update({
+				const booking = await tx.booking.update({
 					where: { id: data.bookingId },
 					data: {
 						status: "checked_out",
@@ -237,6 +242,19 @@ export async function createCheckoutReport(data: {
 						lastStay: data.checkoutDate,
 					},
 				});
+
+				// 6. Decrement property occupancy
+				await tx.property.update({
+					where: {
+						id: booking.propertyId
+					},
+					data: {
+						occupied: {
+							increment: -1
+						}
+					}
+
+				})
 
 				return report;
 			},

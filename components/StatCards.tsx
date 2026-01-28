@@ -15,7 +15,7 @@ export function StatCards({ stats }: { stats: StatCardsProps[] }) {
   return (
     <div
       className={cn(
-        "grid gap-2 md:grid-cols-2 lg:grid-cols-4",
+        "grid gap-2 md:grid-cols-2 lg:grid-cols-3",
         statsLength === 4 && "lg:grid-cols-4",
         statsLength === 5 && "lg:grid-cols-5",
         statsLength === 6 && "lg:grid-cols-3"

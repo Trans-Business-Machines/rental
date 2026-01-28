@@ -141,18 +141,24 @@ export const useCreateBooking = () => {
 					"booking already exists"
 				)
 			) {
-				toast.error(error.message);
-			} else if (error instanceof Error &&
+				toast.error(error.message, {
+					duration: 5000
+				});
+			}
+
+			else if (error instanceof Error &&
 				error.message.includes(
 					"Unauthorized: Insufficent permissions."
 				)) {
 
-				toast.warning("Unauthorized: Insufficent permissions.")
+				toast.error("Unauthorized, Insufficent permissions.", {
+					duration: 5000
+				})
+			}
 
-			} else {
+			else {
 				toast.error("Failed to create booking");
 			}
-			console.error("Error creating booking:", error);
 		},
 	});
 };

@@ -19,6 +19,8 @@ import { ItemsNotFound } from "./ItemsNotFound";
 import { SearchNotFound } from "./SearchNotFound";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { getOccupancyRate } from "@/lib/utils";
+import { Progress } from "./ui/progress";
 import type { Property } from "@/lib/types/types";
 
 interface PropertyListingProps {
@@ -39,11 +41,6 @@ const getStatusColor = (status: string) => {
     default:
       return "default";
   }
-};
-
-const getOccupancyRate = (occupied: number, total: number | null) => {
-  if (!total || total === 0) return 0;
-  return Math.round((occupied / total) * 100);
 };
 
 function PropertyListing({
@@ -177,7 +174,7 @@ function PropertyListing({
                   </div>
                   <div className="flex items-center">
                     <Banknote className="size-5 mr-2 text-muted-foreground" />
-                    <span>${property.rent}/month</span>
+                    <span>Ksh. {property.rent}/month</span>
                   </div>
                 </div>
 
@@ -193,17 +190,14 @@ function PropertyListing({
                       %)
                     </span>
                   </div>
-                  <div className="w-full bg-secondary rounded-full h-2">
-                    <div
-                      className="bg-primary h-2 rounded-full"
-                      style={{
-                        width: `${getOccupancyRate(
-                          property.occupied,
-                          property.totalUnits
-                        )}%`,
-                      }}
-                    />
-                  </div>
+
+                  <Progress
+                    value={getOccupancyRate(
+                      property.occupied,
+                      property.totalUnits,
+                    )}
+                    className="h-2"
+                  />
                 </div>
 
                 <PropertyCardActions property={property} />

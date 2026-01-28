@@ -412,16 +412,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                     Total Nights
                   </span>
                   <span className="text-2xl font-bold text-chart-3">
-                    {guest.totalNights || 0}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                  <span className="text-sm font-medium text-muted-foreground">
-                    Total Spent
-                  </span>
-                  <span className="text-2xl font-bold text-chart-4">
-                    ${(guest.totalSpent || 0).toLocaleString()}
+                    {guest.totalStays || 0}
                   </span>
                 </div>
               </div>
