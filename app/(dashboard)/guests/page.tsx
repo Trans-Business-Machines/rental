@@ -123,6 +123,10 @@ export default function GuestsPage() {
 
           <GuestDialog />
         </header>
+
+        {/* Statistics Cards */}
+        <StatCards stats={stats} />
+
         <ItemsNotFound
           title="No guests found!"
           message="Get Started by creating your first guest."
@@ -201,7 +205,7 @@ export default function GuestsPage() {
               <span
                 className={cn(
                   "text-muted-foreground text-sm",
-                  showArchived && "font-bold text-black"
+                  showArchived && "font-bold text-black",
                 )}
               >
                 Show Archived
