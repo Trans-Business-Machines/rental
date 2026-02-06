@@ -182,15 +182,11 @@ export async function getInventoryStats() {
 			}
 		})
 
-		const assignedItems = await prisma.inventoryAssignment.count({
-			where: { isActive: true }
-		})
 
 		return {
 			total: totalItems,
 			active: activeItems,
 			available: availableItems,
-			assigned: assignedItems,
 			discontinued: discontinuedItems,
 		};
 	} catch (error) {
