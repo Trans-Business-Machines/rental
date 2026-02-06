@@ -17,6 +17,7 @@ import {
 } from "@/lib/actions/inventory";
 import { useState } from "react";
 import { toast } from "sonner";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { InventoryItem } from "@/lib/types/types";
 
 interface InventoryFormProps {
@@ -32,6 +33,7 @@ export function InventoryForm({
   onCancel,
   isEditing = false,
 }: InventoryFormProps) {
+  const { isSuperAdmin } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     category: item?.category || "",
@@ -85,7 +87,7 @@ export function InventoryForm({
 
   const handleInputChange = (
     field: string,
-    value: string | number | boolean
+    value: string | number | boolean,
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -100,7 +102,7 @@ export function InventoryForm({
             value={formData.itemName}
             onChange={(e) => handleInputChange("itemName", e.target.value)}
             placeholder="e.g., Plates, Laptops, Sofas"
-            disabled={isEditing}
+            disabled={isEditing && !isSuperAdmin}
             required
           />
         </div>
@@ -139,7 +141,7 @@ export function InventoryForm({
             value={formData.description}
             onChange={(e) => handleInputChange("description", e.target.value)}
             placeholder="Detailed description of the item"
-            disabled={isEditing}
+            disabled={isEditing && !isSuperAdmin}
           />
         </div>
 
@@ -154,7 +156,7 @@ export function InventoryForm({
               handleInputChange("quantity", parseInt(e.target.value) || 0)
             }
             placeholder="Available quantity"
-            disabled={isEditing}
+            disabled={isEditing && !isSuperAdmin}
             required
           />
         </div>
@@ -167,7 +169,7 @@ export function InventoryForm({
               onCheckedChange={(checked) =>
                 handleInputChange("assignableOnBooking", checked)
               }
-              disabled={isEditing}
+              disabled={isEditing && !isSuperAdmin}
             />
             <div className="space-y-1">
               <Label
@@ -207,7 +209,7 @@ export function InventoryForm({
                 onChange={(e) =>
                   handleInputChange(
                     "purchasePrice",
-                    parseInt(e.target.value) || 1
+                    parseInt(e.target.value) || 1,
                   )
                 }
                 placeholder="0"
@@ -223,7 +225,7 @@ export function InventoryForm({
                 onChange={(e) =>
                   handleInputChange(
                     "currentValue",
-                    parseInt(e.target.value) || 1
+                    parseInt(e.target.value) || 1,
                   )
                 }
                 placeholder="0"

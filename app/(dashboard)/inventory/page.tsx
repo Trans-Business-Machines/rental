@@ -63,16 +63,10 @@ export default async function InventoryPage({
       color: "green",
     },
     {
-      title: "Assigned",
-      value: inventoryStatsResponse.assigned,
-      icon: Package,
-      color: "",
-    },
-    {
       title: "Active",
       value: inventoryStatsResponse.active,
       icon: CheckCircle,
-      color: "green",
+      color: "",
     },
     {
       title: "Discontinued",

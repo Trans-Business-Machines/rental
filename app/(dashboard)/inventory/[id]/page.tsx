@@ -17,6 +17,7 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import { notFound } from "next/navigation";
+import { format } from "date-fns";
 import Link from "next/link";
 
 function getStatusColor(status: string) {
@@ -67,7 +68,7 @@ export default async function InventoryDetailsPage({
         <CardContent className="flex items-center gap-6 py-4 md:py-5">
           <article className="flex-1">
             <div className="flex flex-col justify-center gap-2 mb-2">
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className="text-3xl capitalize font-bold tracking-tight">
                 {item.itemName}
               </h1>
 
@@ -119,9 +120,13 @@ export default async function InventoryDetailsPage({
         <Card className="p-4 flex items-center gap-3">
           <DollarSign className="h-5 w-5 text-muted-foreground" />
           <div>
-            <div className="text-xs text-muted-foreground">Current Value</div>
+            <div className="text-xs text-center text-muted-foreground">
+              Current Value
+            </div>
             <div className="font-medium">
-              KES {item.currentValue?.toLocaleString()}
+              {item.currentValue
+                ? `KES ${item.currentValue?.toLocaleString()}`
+                : "Not specified"}
             </div>
           </div>
         </Card>
@@ -183,7 +188,7 @@ export default async function InventoryDetailsPage({
                         className={idx % 2 === 0 ? "bg-white" : "bg-muted/50"}
                       >
                         <td className="p-3 whitespace-nowrap">
-                          {new Date(move.movedAt).toLocaleString()}
+                          {format(new Date(move.movedAt), "dd/MM/yyyy hh:mm a")}
                         </td>
                         <td className="p-3 whitespace-nowrap flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />
