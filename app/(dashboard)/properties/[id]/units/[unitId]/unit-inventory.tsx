@@ -32,8 +32,9 @@ export default function UnitInventory({ assignments, context }: Assignments) {
             </CardTitle>
             {assignments.length > 0 && (
               <p className="text-sm text-muted-foreground mt-1">
-                This table shows the lastest {assignments.length}{" "}
-                {assignments.length === 1 ? " assignment" : " assignments"}.
+                This table shows {assignments.length}{" "}
+                {assignments.length === 1 ? " assignment" : " assignments"} to
+                this unit.
               </p>
             )}
           </div>
@@ -59,13 +60,12 @@ export default function UnitInventory({ assignments, context }: Assignments) {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-60 overflow-y-auto">
             {/* Inventory items list will go here */}
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Item Name</TableHead>
-                  <TableHead>Category</TableHead>
                   <TableHead>Assigned At</TableHead>
                   <TableHead>Returned At</TableHead>
                 </TableRow>
@@ -73,14 +73,15 @@ export default function UnitInventory({ assignments, context }: Assignments) {
               <TableBody>
                 {assignments.map((assignment) => (
                   <TableRow key={assignment.id}>
-                    <TableCell className="capitlize text-sm">
+                    <TableCell className="capitalize text-sm">
                       {assignment.inventoryItem.itemName}
                     </TableCell>
-                    <TableCell className="capitlize text-sm">
-                      {assignment.inventoryItem.category}
-                    </TableCell>
+
                     <TableCell className="text-sm">
-                      {format(new Date(assignment.assignedAt), "dd/MM/yyyy")}
+                      {format(
+                        new Date(assignment.assignedAt),
+                        "dd/MM/yyyy hh:mm a",
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">
                       {assignment.returnedAt === null
