@@ -40,7 +40,6 @@ export const getUnitDetails = cache(async (unitId: string, propertyId: string) =
 					where: {
 						isActive: true,
 					},
-					take: 5,
 					orderBy: {
 						assignedAt: "desc"
 					},

@@ -103,7 +103,7 @@ function InventoryItems({
             setSelectFilters((prev) => ({ ...prev, status: value }));
           }}
         >
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-max">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -120,11 +120,11 @@ function InventoryItems({
             setSelectFilters((prev) => ({ ...prev, category: value }));
           }}
         >
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-max">
             <SelectValue />
-          </SelectTrigger>
+          </SelectTrigger >
           <SelectContent>
-            <SelectItem value="all">All Properties</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
             <SelectItem value="Furniture">Furniture</SelectItem>
             <SelectItem value="Electronics">Electronics</SelectItem>
             <SelectItem value="Cutlery">Cutlery</SelectItem>
