@@ -19,9 +19,9 @@ function Pagination({
   hasPrev,
 }: PaginationProps) {
   return (
-    <div className="flex items-center justify-between pt-4 w-full">
+    <div className="flex items-center justify-between  w-full">
       <p className="text-sm text-muted-foreground">
-        Page {currentPage} of {totalPages}
+        Page {currentPage} of {totalPages === 0 ? 1 : totalPages}
       </p>
       <div className="flex items-center gap-2">
         <Button
@@ -39,7 +39,7 @@ function Pagination({
           className="px-2 bg-transparent cursor-pointer disabled:bg-gray-200 hover:ring-1 hover:ring-primary capitalize group hover:text-primary"
           onClick={() =>
             handlePageChange(
-              Math.min(Number(currentPage) + 1, Number(totalPages))
+              Math.min(Number(currentPage) + 1, Number(totalPages)),
             )
           }
         >

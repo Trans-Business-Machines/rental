@@ -19,6 +19,15 @@ import {
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import Link from "next/link";
+import {
+  Table,
+  TableHeader,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import { Footer } from "@/components/Footer";
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -35,19 +44,28 @@ function getStatusColor(status: string) {
   }
 }
 
+interface InventoryDetailsPageProps {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ page: string }>;
+}
+
 export default async function InventoryDetailsPage({
   params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+  searchParams,
+}: InventoryDetailsPageProps) {
   const { id } = await params;
+  const { page = 1 } = await searchParams;
+
   const itemId = Number(id);
-  if (isNaN(itemId)) return notFound();
+  const currentPage = Number(page);
+
+  if (isNaN(itemId) || isNaN(currentPage)) return notFound();
 
   const item = await getInventoryItemById(itemId);
   if (!item) return notFound();
 
-  const movements = await getInventoryMovementsForItem(itemId);
+  const { movements, hasNext, hasPrev, totalPages } =
+    await getInventoryMovementsForItem(itemId, currentPage);
 
   return (
     <section className="space-y-6">
@@ -166,63 +184,84 @@ export default async function InventoryDetailsPage({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm border rounded-lg overflow-hidden">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="text-left p-3 font-semibold">Date</th>
-                    <th className="text-left p-3 font-semibold">By</th>
-                    <th className="text-left p-3 font-semibold">From</th>
-                    <th className="text-left p-3 font-semibold">To</th>
-                    <th className="text-left p-3 font-semibold">Direction</th>
-                    <th className="text-left p-3 font-semibold">Quantity</th>
-                    <th className="text-left p-3 font-semibold">Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="min-w-full text-sm border rounded-lg overflow-hidden">
+                <TableHeader className="bg-muted">
+                  <TableRow>
+                    <TableHead className="text-left p-3 font-semibold">
+                      Date
+                    </TableHead>
+                    <TableHead className="text-left p-3 font-semibold">
+                      By
+                    </TableHead>
+                    <TableHead className="text-left p-3 font-semibold">
+                      From
+                    </TableHead>
+                    <TableHead className="text-left p-3 font-semibold">
+                      To
+                    </TableHead>
+                    <TableHead className="text-left p-3 font-semibold">
+                      Direction
+                    </TableHead>
+                    <TableHead className="text-left p-3 font-semibold">
+                      Quantity
+                    </TableHead>
+                    <TableHead className="text-left p-3 font-semibold">
+                      Notes
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {movements.map((move: any, idx: number) => {
                     const DirectionIcon =
                       move.direction === "to_unit" ? ArrowRightLeft : Archive;
                     return (
-                      <tr
+                      <TableRow
                         key={move.id}
                         className={idx % 2 === 0 ? "bg-white" : "bg-muted/50"}
                       >
-                        <td className="p-3 whitespace-nowrap">
+                        <TableCell className="p-3 whitespace-nowrap">
                           {format(new Date(move.movedAt), "dd/MM/yyyy hh:mm a")}
-                        </td>
-                        <td className="p-3 whitespace-nowrap flex items-center gap-2">
+                        </TableCell>
+                        <TableCell className="p-3 whitespace-nowrap flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />
                           {move.movedBy}
-                        </td>
-                        <td className="p-3 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="p-3 whitespace-nowrap">
                           {move.fromUnit?.name || (
                             <span className="italic text-gray-400">Store</span>
                           )}
-                        </td>
-                        <td className="p-3 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="p-3 whitespace-nowrap">
                           {move.toUnit?.name || (
                             <span className="italic text-gray-400">Store</span>
                           )}
-                        </td>
-                        <td className="p-3 whitespace-nowrap flex items-center gap-1">
+                        </TableCell>
+                        <TableCell className="p-3 whitespace-nowrap flex items-center gap-1">
                           <DirectionIcon className="h-4 w-4 text-primary" />
                           {move.direction.replace("_", " ")}
-                        </td>
-                        <td className="p-3 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="p-3 whitespace-nowrap">
                           {move.quantity}
-                        </td>
-                        <td className="p-3 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="p-3 whitespace-nowrap">
                           {move.notes || "-"}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
       </Card>
+
+      <Footer
+        currentPage={currentPage}
+        hasNext={hasNext}
+        hasPrev={hasPrev}
+        totalPages={totalPages}
+      />
     </section>
   );
 }

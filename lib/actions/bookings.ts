@@ -4,13 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { evaluateUnitStatus } from "@/lib/utils"
 import { requirePermission } from "@/lib/check-permissions"
+import { LIMIT } from "@/lib/utils"
 import type { BookingStatus, CreateBookingData, } from "@/lib/types/types"
 
 export async function getBookings(page: number = 1) {
 	try {
-		// Define the Limit used for pagination
-		const LIMIT = 6;
-
 		const bookings = await prisma.booking.findMany({
 			where: {
 				deletedAt: null

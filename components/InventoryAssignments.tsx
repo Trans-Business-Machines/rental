@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { InventoryAssignmentsList } from "@/components/InventoryAssignmentsList";
 import {
   Select,
@@ -9,13 +9,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useFilter } from "@/hooks/useFilter";
 import { Input } from "@/components/ui/input";
-import { Search, CircleX } from "lucide-react";
+import { Search, CircleX, Loader } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ItemsNotFound } from "./ItemsNotFound";
-import { useSearchParams, useRouter } from "next/navigation";
-import Pagination from "./Pagination";
+import { Footer } from "@/components/Footer";
+import { useRouter } from "next/navigation";
 import type { Assignment, PropertyNames } from "@/lib/types/types";
+
+interface InventoryAssignmentsFilters {
+  search: string;
+  propertyId: string;
+  unitId: string;
+  status: string;
+}
 
 interface InventoryAssignmentsProps {
   assignments: Assignment[];
@@ -24,6 +31,8 @@ interface InventoryAssignmentsProps {
   hasNext: boolean;
   hasPrev: boolean;
   totalAssignments: number;
+  currentPage: number;
+  initialFilters: InventoryAssignmentsFilters;
 }
 
 function InventoryAssignments({
@@ -33,34 +42,72 @@ function InventoryAssignments({
   hasPrev,
   totalPages,
   totalAssignments,
+  currentPage,
+  initialFilters,
 }: InventoryAssignmentsProps) {
-  // Define state to hold the search term
-  const [searchTerm, setSearchTerm] = useState("");
-
-  // Define state to hold the select filters
-  const [selectFilters, setSelectFilters] = useState({
-    property: "all",
-    status: "all",
-  });
-
-  // Get search params and router object
-  const searchParams = useSearchParams();
+  // Get the router object
   const router = useRouter();
 
-  // Get the current page from search params
-  const currentPage = Number(searchParams.get("assignmentsPage")) || 1;
+  const [isApplyPending, startApplyTransition] = useTransition();
+  const [isClearPending, startClearTransition] = useTransition();
 
-  const filteredAssignments = useFilter({
-    items: assignments,
-    searchTerm,
-    searchFields: ["inventoryItem.itemName"],
-    selectFilters: {
-      "property.name": selectFilters.property,
-      isActive: selectFilters.status,
-    },
-  });
+  // Combined pending state for disabling inputs
+  const isPending = isApplyPending || isClearPending;
 
-  if (!assignments || assignments.length === 0) {
+  // Local state for filter inputs (before Apply is clicked)
+  const [filters, setFilters] =
+    useState<InventoryAssignmentsFilters>(initialFilters);
+
+  // Check if there are any active filters in the URL
+  const hasActiveFilters =
+    initialFilters.search !== "" ||
+    initialFilters.status !== "all" ||
+    initialFilters.propertyId !== "all" ||
+    initialFilters.unitId !== "";
+
+  const propertyUnits = properties.find(
+    (p) => p.id.toString() === filters.propertyId,
+  )?.units;
+
+  // ----------- URL handlers -----------
+  const applyFilters = () => {
+    const params = new URLSearchParams();
+    params.set("tab", "assignments");
+    params.set("page", "1");
+
+    if (filters.search) {
+      params.set("search", filters.search);
+    }
+    if (filters.status !== "all") {
+      params.set("status", filters.status);
+    }
+    if (filters.propertyId !== "all") {
+      params.set("propertyId", filters.propertyId);
+    }
+
+    if (filters.unitId !== "") {
+      params.set("unitId", filters.unitId);
+    }
+
+    startApplyTransition(() => {
+      router.push(`/inventory?${params.toString()}`);
+    });
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+      status: "all",
+      propertyId: "all",
+      unitId: "",
+    });
+
+    startClearTransition(() => {
+      router.push("/inventory?tab=assignments&page=1");
+    });
+  };
+
+  if (assignments.length === 0 && !hasActiveFilters) {
     return (
       <ItemsNotFound
         title="No item assignments found!"
@@ -70,92 +117,137 @@ function InventoryAssignments({
     );
   }
 
-  // function handle page change
-  const handlePageChange = (page: number) => {
-    // create a new params object using the exisitng searchParams
-    // this helps to reserve other existing params
-    const params = new URLSearchParams(searchParams);
-
-    params.set("assignmentsPage", page.toString());
-    router.push(`?${params.toString()}`);
-  };
-
   return (
-    <div>
+    <section>
       {/* Assignment Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 flex-1 mt-2 mb-4">
-        {/* ItemName filter */}
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search assignments by item name . . ."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      <header className="flex flex-col  gap-4 flex-1 mt-2 mb-4">
+        <article className="flex flex-col md:flex-row gap-4 md:gap-2 lg:pr-8">
+          {/* ItemName filter */}
+          <div className="relative md:flex-2">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search assignments by item name . . ."
+              value={filters.search}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, search: e.target.value }))
+              }
+              className="pl-10"
+            />
+          </div>
 
-        {/* Property Filter */}
-        <div className="min-w-[350px">
-          <Select
-            defaultValue="all"
-            value={selectFilters.property}
-            onValueChange={(value) =>
-              setSelectFilters((prev) => ({ ...prev, property: value }))
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="All Properties" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Properties</SelectItem>
-              {properties.map((property) => (
-                <SelectItem key={property.id} value={property.name}>
-                  {property.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          {/* Status Filter */}
+          <div className="md:flex-1">
+            <Select
+              value={filters.status}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, status: value }))
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="true">Active</SelectItem>
+                <SelectItem value="false">Returned</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Status Filter */}
-        <div className="min-w-[250px]">
-          <Select
-            value={selectFilters.status}
-            onValueChange={(value) =>
-              setSelectFilters((prev) => ({ ...prev, status: value }))
-            }
+          {/* Property Filter */}
+          <div className="md:flex-1">
+            <Select
+              defaultValue="all"
+              value={filters.propertyId}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, propertyId: value }))
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="All Properties" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Properties</SelectItem>
+                {properties.map((property) => (
+                  <SelectItem key={property.id} value={property.id.toString()}>
+                    {property.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Unit Filter */}
+          <div className="md:flex-1">
+            <Select
+              disabled={filters.propertyId === "all"}
+              value={filters.unitId}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, unitId: value }))
+              }
+            >
+              <SelectTrigger className="w-full text-black">
+                <SelectValue placeholder="All Units" />
+              </SelectTrigger>
+              <SelectContent>
+                {propertyUnits?.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id.toString()}>
+                    {unit.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </article>
+
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={applyFilters}
+            disabled={isPending}
+            className="cursor-pointer px-12"
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="true">Active</SelectItem>
-              <SelectItem value="false">Returned</SelectItem>
-            </SelectContent>
-          </Select>
+            {isApplyPending ? (
+              <span className="flex items-center gap-2">
+                <Loader className="size-4  animate-spin" />
+                Searching
+              </span>
+            ) : (
+              "Apply filters"
+            )}
+          </Button>
+          <Button
+            onClick={clearFilters}
+            disabled={isPending}
+            className="cursor-pointer px-12 bg-chart-5 hover:bg-red-600"
+          >
+            {isClearPending ? (
+              <span className="flex items-center gap-2">
+                <Loader className="size-4  animate-spin" />
+                Clearing
+              </span>
+            ) : (
+              "Clear filters"
+            )}
+          </Button>
         </div>
-      </div>
+      </header>
 
       {/* Assignments List */}
       <InventoryAssignmentsList
-        assignments={filteredAssignments}
+        assignments={assignments}
         totalAssignments={totalAssignments}
-        
       />
 
-      {/* Pagination */}
-      <footer>
-        <Pagination
-          currentPage={currentPage}
-          handlePageChange={handlePageChange}
-          hasNext={hasNext}
-          hasPrev={hasPrev}
-          totalPages={totalPages}
-        />
-      </footer>
-    </div>
+      {/*Footer and  Pagination */}
+      <Footer
+        currentPage={currentPage}
+        hasNext={hasNext}
+        hasPrev={hasPrev}
+        totalPages={totalPages}
+        paramName="page"
+        preserveParams={["tab", "search", "status", "propertyId", "unitId"]}
+      />
+    </section>
   );
 }
 

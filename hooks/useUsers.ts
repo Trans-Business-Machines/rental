@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getUserStats } from "@/lib/actions/user-stats"
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/usePermissions"
+import { LIMIT } from "@/lib/utils"
 import type { BanUserData, CreateUserData, UsersResponse, User, Role } from "@/lib/types/types"
 
 interface QuertObject {
@@ -41,9 +42,6 @@ export const useUsers = ({ page }: { page: number }) => {
 	return useQuery({
 		queryKey: userKeys.lists(page),
 		queryFn: async (): Promise<UsersResponse> => {
-			// Define the limit
-			const LIMIT = 6
-
 			// calculate the offset
 			const OFFSET = (page - 1) * LIMIT;
 
