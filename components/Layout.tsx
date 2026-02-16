@@ -343,7 +343,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Page content */}
-        <main className="p-4">{children}</main>
+        <main className="p-4  min-h-screen relative">{children}</main>
       </div>
     </div>
   );

@@ -51,3 +51,5 @@ export const getOccupancyRate = (occupied: number, total: number | null) => {
   if (!total || total === 0) return 0;
   return Math.round((occupied / total) * 100);
 };
+
+export const LIMIT = 9

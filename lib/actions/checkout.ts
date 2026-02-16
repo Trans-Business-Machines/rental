@@ -3,11 +3,43 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "../check-permissions";
+import { LIMIT } from "@/lib/utils"
 
-export async function getCheckoutReports(page: number = 1) {
+interface GetCheckoutReportsProps {
+	page: number
+	search?: string,
+	sortOrder?: "none" | "asc" | "desc";
+}
+
+export async function getCheckoutReports({ page = 1, sortOrder, search }: GetCheckoutReportsProps) {
 	try {
-		const LIMIT = 6;
+
+		// Build the where clause
+		const where = {
+			// search filter
+			OR: [
+				{
+					guest: {
+						lastName: {
+							contains: search, mode: "insensitive" as const
+						}
+					}
+				},
+				{
+					guest: {
+						firstName: {
+							contains: search, mode: "insensitive" as const
+						}
+					}
+				}
+			]
+
+
+
+		}
+
 		const reports = await prisma.checkoutReport.findMany({
+			where,
 			include: {
 				booking: {
 					include: {
@@ -24,14 +56,17 @@ export async function getCheckoutReports(page: number = 1) {
 				},
 			},
 			orderBy: {
-				createdAt: "desc",
+				createdAt: sortOrder === "none" ? "desc" : sortOrder,
+
 			},
 			take: LIMIT,
 			skip: (page - 1) * LIMIT
 		});
 
 		// count reports and calculate the total number of pages
-		const totalReports = await prisma.checkoutReport.count();
+		const totalReports = await prisma.checkoutReport.count({
+			where
+		});
 		const totalPages = Math.ceil(totalReports / LIMIT);
 
 		// get hasNext and hasPrev attributes
@@ -259,7 +294,7 @@ export async function createCheckoutReport(data: {
 				return report;
 			},
 			{
-				timeout: 40000, // 40 seconds for complex checkout
+				timeout: 60000 * 2, // 40 seconds for complex checkout
 				maxWait: 5000,
 				isolationLevel: "ReadCommitted",
 			}

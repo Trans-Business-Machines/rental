@@ -3,11 +3,10 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { requirePermission } from "@/lib/check-permissions"
+import { LIMIT } from "@/lib/utils"
 import type { GuestUpdateFormData, CreateNewGuest } from "@/lib/types/types"
 
 export async function getGuests(page: number = 1) {
-	// Define the limit
-	const LIMIT = 6;
 
 	const guests = await prisma.guest.findMany({
 		where: {

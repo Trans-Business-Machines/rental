@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "./ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Package, Download, Eye, Bed, Search, File } from "lucide-react";
+import {
+  Package,
+  Download,
+  Eye,
+  Bed,
+  Search,
+  File,
+  Loader,
+} from "lucide-react";
 import {
   Select,
   SelectTrigger,
@@ -15,20 +23,25 @@ import {
   SelectGroup,
 } from "./ui/select";
 import { Input } from "./ui/input";
-import { useFilter } from "@/hooks/useFilter";
-import { useSort } from "@/hooks/useSort";
 import { format } from "date-fns";
 import { ItemsNotFound } from "./ItemsNotFound";
 import { SearchNotFound } from "./SearchNotFound";
-import { useSearchParams, useRouter } from "next/navigation";
-import Pagination from "./Pagination";
+import { useRouter } from "next/navigation";
+import { Footer } from "@/components/Footer";
 import type { CheckoutReport, sortTypes } from "@/lib/types/types";
+
+interface CheckoutReportFilters {
+  search: string;
+  sortOrder: "none" | "asc" | "desc";
+}
 
 interface InventortyCheckoutReportsProps {
   reports: CheckoutReport[];
   totalPages: string | number;
   hasNext: boolean;
   hasPrev: boolean;
+  currentPage: number;
+  initialFilters: CheckoutReportFilters;
 }
 
 const formatCurrency = (amount: number) => {
@@ -43,33 +56,53 @@ function InventortyCheckoutReports({
   hasNext,
   hasPrev,
   totalPages,
+  currentPage,
+  initialFilters,
 }: InventortyCheckoutReportsProps) {
-  // State for sorting reports by date and time
-  const [order, setOrder] = useState<sortTypes>("none");
-
-  // State to filter reports by guest name
-  const [searchTerm, setSearchTerm] = useState("");
-
-  // Get the search params and the router object
-  const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Get the current page from URL search  params
-  const currentPage = Number(searchParams.get("reportsPage")) || 1;
+  const [filters, setFilters] = useState<CheckoutReportFilters>(initialFilters);
 
-  const filteredReports = useFilter<CheckoutReport>({
-    items: reports,
-    searchTerm,
-    searchFields: ["guest.firstName", "guest.lastName"],
-  });
+  // Check if there are any active filters in the URL
+  const hasActiveFilters =
+    initialFilters.search !== "" || initialFilters.sortOrder !== "none";
 
-  const sortedReports = useSort<CheckoutReport>({
-    sortItems: filteredReports,
-    sortOrder: order,
-    sortKey: "checkoutDate",
-  });
+  const [isApplyPending, startApplyTransition] = useTransition();
+  const [isClearPending, startClearTransition] = useTransition();
 
-  if (!reports || reports.length === 0) {
+  // Combined pending state for disabling inputs
+  const isPending = isApplyPending || isClearPending;
+
+  // URL Handlers
+  const applyFilters = () => {
+    const params = new URLSearchParams();
+    params.set("tab", "checkout");
+    params.set("page", "1");
+
+    if (filters.search) {
+      params.set("search", filters.search);
+    }
+    if (filters.sortOrder !== "none") {
+      params.set("sortOrder", filters.sortOrder);
+    }
+
+    startApplyTransition(() => router.push(`/inventory?${params.toString()}`));
+  };
+
+  const clearFilters = () => {
+    // Reset local state
+    setFilters({
+      search: "",
+      sortOrder: "none",
+    });
+
+    // Update URL
+    startClearTransition(() => {
+      router.push("/inventory?tab=checkout&page=1");
+    });
+  };
+
+  if (reports.length === 0 && !hasActiveFilters) {
     return (
       <ItemsNotFound
         title="No reports found!"
@@ -79,63 +112,90 @@ function InventortyCheckoutReports({
     );
   }
 
-  // function handle page change
-  const handlePageChange = (page: number) => {
-    // create a new params object using the exisitng searchParams
-    // this helps to reserve other existing params
-    const params = new URLSearchParams(searchParams);
-
-    params.set("reportsPage", page.toString());
-    router.push(`?${params.toString()}`);
-  };
-
   return (
     <section className="space-y-1">
-      {/* Filters */}
-      <div className="flex gap-2 mb-4">
-        {/* ItemName filter */}
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search reports by guest name . . ."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      {/*Search and  Filters */}
+      <header className="flex flex-col gap-2 lg:gap-4 mb-4">
+        <div className="flex flex-col md:flex-row gap-2 lg:pr-8">
+          {/* ItemName filter */}
+          <div className="relative md:w-3/5">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search reports by guest name . . ."
+              value={filters.search}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, search: e.target.value }))
+              }
+              className="pl-10"
+            />
+          </div>
+
+          <Select
+            value={filters.sortOrder}
+            onValueChange={(value: sortTypes) =>
+              setFilters((prev) => ({ ...prev, sortOrder: value }))
+            }
+          >
+            <SelectTrigger className="w-full md:w-2/5">
+              <SelectValue placeholder="Sort by . . ."></SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Sort by</SelectLabel>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="asc">
+                  Date: Ascending (Earliest first)
+                </SelectItem>
+                <SelectItem value="desc">
+                  Date: Descending (Latest first)
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
 
-        <Select
-          value={order}
-          onValueChange={(value: sortTypes) => setOrder(value)}
-        >
-          <SelectTrigger className="w-xs">
-            <SelectValue placeholder="Sort by . . ."></SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>Sort by</SelectLabel>
-              <SelectItem value="none">None</SelectItem>
-              <SelectItem value="asc">
-                Date: Ascending (Earliest first)
-              </SelectItem>
-              <SelectItem value="desc">
-                Date: Descending (Latest first)
-              </SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={applyFilters}
+            disabled={isPending}
+            className="cursor-pointer px-12"
+          >
+            {isApplyPending ? (
+              <span className="flex items-center gap-2">
+                <Loader className="size-4  animate-spin" />
+                Searching
+              </span>
+            ) : (
+              "Apply filters"
+            )}
+          </Button>
+          <Button
+            onClick={clearFilters}
+            disabled={isPending}
+            className="cursor-pointer px-12 bg-chart-5 hover:bg-red-600"
+          >
+            {isClearPending ? (
+              <span className="flex items-center gap-2">
+                <Loader className="size-4  animate-spin" />
+                Clearing
+              </span>
+            ) : (
+              "Clear filters"
+            )}
+          </Button>
+        </div>
+      </header>
 
       {/* Report grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {sortedReports.length === 0 ? (
+        {reports.length === 0 && !hasActiveFilters ? (
           <SearchNotFound
             title="No report matches the search criteria."
             className="md:col-span-2 lg:col-span-3"
             icon={File}
           />
         ) : (
-          sortedReports.map((report) => (
+          reports.map((report) => (
             <Card key={report.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -242,16 +302,15 @@ function InventortyCheckoutReports({
         )}
       </div>
 
-      {/* Pagination */}
-      <footer className="mt-4 mb-2">
-        <Pagination
-          currentPage={currentPage}
-          handlePageChange={handlePageChange}
-          hasNext={hasNext}
-          hasPrev={hasPrev}
-          totalPages={totalPages}
-        />
-      </footer>
+      {/*Footer and Pagination */}
+      <Footer
+        currentPage={currentPage}
+        hasNext={hasNext}
+        hasPrev={hasPrev}
+        totalPages={totalPages}
+        paramName="page"
+        preserveParams={["tab", "search", "sortOrder"]}
+      />
     </section>
   );
 }

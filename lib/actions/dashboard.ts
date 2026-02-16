@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { LIMIT } from "@/lib/utils"
 
 
 export async function getDashboardStats() {
@@ -39,9 +40,6 @@ export async function getDashboardStats() {
 }
 
 export async function getUnits(page: number = 1) {
-    // Define the limit for each Unit Page
-    const LIMIT = 6;
-
     // Get all units with their current bookings to determine status
     const units = await prisma.unit.findMany({
         include: {
@@ -87,9 +85,6 @@ export async function getUnits(page: number = 1) {
 }
 
 export async function getRecentBookings(page: number = 1) {
-    // Define the limit for each Bokkings Page
-    const LIMIT = 6;
-
     // Get recent bookings
     const recentBookings = await prisma.booking.findMany({
         include: {
@@ -121,9 +116,6 @@ export async function getRecentBookings(page: number = 1) {
 }
 
 export async function getInventoryItems(page: number = 1) {
-    // Define the limit for each Unit Page
-    const LIMIT = 6;
-
     // Get inventory items
     const inventoryItems = await prisma.inventoryItem.findMany({
         include: {

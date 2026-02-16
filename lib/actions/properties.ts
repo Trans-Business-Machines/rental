@@ -74,9 +74,25 @@ export const getCachedProperty = unstable_cache(
 export async function getPropertyNames() {
 	try {
 		const propertyNames = await prisma.property.findMany({
-			select: { name: true, id: true },
 			where: {
 				deletedAt: null
+			},
+			select: {
+				name: true,
+				id: true,
+				units: {
+					select: {
+						id: true,
+						name: true,
+
+					},
+					orderBy: {
+						name: "asc"
+					}
+				}
+			},
+			orderBy: {
+				name: "asc"
 			}
 		})
 
