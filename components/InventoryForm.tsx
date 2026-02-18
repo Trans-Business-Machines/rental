@@ -33,7 +33,7 @@ export function InventoryForm({
   onCancel,
   isEditing = false,
 }: InventoryFormProps) {
-  const { isSuperAdmin } = usePermissions();
+  const { isSuperAdmin, isAdmin } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     category: item?.category || "",
@@ -102,7 +102,7 @@ export function InventoryForm({
             value={formData.itemName}
             onChange={(e) => handleInputChange("itemName", e.target.value)}
             placeholder="e.g., Plates, Laptops, Sofas"
-            disabled={isEditing && !isSuperAdmin}
+            disabled={isEditing && !(isSuperAdmin || isAdmin)}
             required
           />
         </div>
@@ -129,6 +129,7 @@ export function InventoryForm({
               <SelectItem value="Bedroom Accessories">
                 Bedroom Accessories
               </SelectItem>
+              <SelectItem value="Room Accessories">Room Accessories</SelectItem>
               <SelectItem value="Other">Other</SelectItem>
             </SelectContent>
           </Select>
@@ -141,7 +142,7 @@ export function InventoryForm({
             value={formData.description}
             onChange={(e) => handleInputChange("description", e.target.value)}
             placeholder="Detailed description of the item"
-            disabled={isEditing && !isSuperAdmin}
+            disabled={isEditing && !(isSuperAdmin || isAdmin)}
           />
         </div>
 
@@ -156,7 +157,7 @@ export function InventoryForm({
               handleInputChange("quantity", parseInt(e.target.value) || 0)
             }
             placeholder="Available quantity"
-            disabled={isEditing && !isSuperAdmin}
+            disabled={isEditing && !(isSuperAdmin || isAdmin)}
             required
           />
         </div>
@@ -169,7 +170,7 @@ export function InventoryForm({
               onCheckedChange={(checked) =>
                 handleInputChange("assignableOnBooking", checked)
               }
-              disabled={isEditing && !isSuperAdmin}
+              disabled={isEditing && !(isSuperAdmin || isAdmin)}
             />
             <div className="space-y-1">
               <Label
