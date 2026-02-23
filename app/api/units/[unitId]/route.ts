@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUnitDetails } from "@/lib/actions/units";
+import { getUnitDetails, getAggregatedAssignmentsForUnit } from "@/lib/actions/units";
+
 
 export async function GET(request: NextRequest, context: { params: Promise<{ unitId: string }> }) {
     try {
@@ -14,8 +15,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ uni
         }
 
         const unit = await getUnitDetails(unitId, propertyId);
+        const groupedAssignments = await getAggregatedAssignmentsForUnit(unitId, propertyId)
 
-        return NextResponse.json(unit);
+        return NextResponse.json({ unit, groupedAssignments });
 
     } catch (error) {
         console.error("Error fetching unit details:", error);

@@ -27,6 +27,7 @@ import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
 import { useSearchParams, useRouter } from "next/navigation";
+import { getInventoryStatus } from "@/lib/utils";
 import type { InventoryItem } from "@/lib/types/types";
 
 interface InventoryTableProps {
@@ -34,20 +35,6 @@ interface InventoryTableProps {
   totalPages: string | number;
   hasNext: boolean;
   hasPrev: boolean;
-}
-
-function getInventoryStatus(item: InventoryItem) {
-  const assignedQuantity = item.assignments.length;
-  const totalStock = assignedQuantity + item.quantity;
-  const availableQuantity = item.quantity;
-
-  if (availableQuantity <= 0) {
-    return { status: "critical", label: "Critical" };
-  } else if (availableQuantity <= Math.round(totalStock * 0.25)) {
-    return { status: "low", label: "Low Stock" };
-  } else {
-    return { status: "good", label: "Good" };
-  }
 }
 
 function getInventoryBadge(status: string) {
@@ -62,7 +49,7 @@ function getInventoryBadge(status: string) {
       return (
         <Badge
           variant="secondary"
-          className="bg-yellow-500 hover:bg-yellow-600 text-white"
+          className="bg-amber-500 hover:bg-amber-600 text-white"
         >
           Low Stock
         </Badge>

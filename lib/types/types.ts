@@ -236,17 +236,6 @@ export type UnitDetailsResponse = {
         filePath: string;
         originalName: string;
     }>;
-    assignments: Array<{
-        id: number;
-        isActive: boolean;
-        assignedAt: Date;
-        returnedAt: Date | null;
-        inventoryItem: {
-            id: number;
-            itemName: string;
-            category: string;
-        };
-    }>;
     bookings: Array<{
         id: number;
         checkInDate: Date;
@@ -265,6 +254,20 @@ export type UnitProperty = UnitDetailsResponse["property"];
 
 export type UnitMedia = UnitDetailsResponse["media"][number];
 
-export type UnitAssignment = UnitDetailsResponse["assignments"][number];
-
 export type UnitBooking = UnitDetailsResponse["bookings"][number];
+
+export type GroupedAssigments = {
+    inventoryItemId: number;
+    itemName: string;
+    category: string;
+    quantity: number;
+}[];
+
+export type CategoryItemStats = {
+    category: string;
+    totalItems: number;
+    assigned: number;
+    available: number;
+}[]
+
+

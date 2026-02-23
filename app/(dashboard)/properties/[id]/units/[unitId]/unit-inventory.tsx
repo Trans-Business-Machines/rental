@@ -9,12 +9,11 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { InventoryAssignmentDialog } from "@/components/InventoryAssignmentDialog";
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import type { UnitAssignment } from "@/lib/types/types";
+import type { GroupedAssigments } from "@/lib/types/types";
 
 interface Assignments {
-  assignments: UnitAssignment[];
+  assignments: GroupedAssigments;
   context: {
     unitId: number;
     propertyId: number;
@@ -32,9 +31,7 @@ export default function UnitInventory({ assignments, context }: Assignments) {
             </CardTitle>
             {assignments.length > 0 && (
               <p className="text-sm text-muted-foreground mt-1">
-                This table shows {assignments.length}{" "}
-                {assignments.length === 1 ? " assignment" : " assignments"} to
-                this unit.
+                This table shows the assignments made to this unit.
               </p>
             )}
           </div>
@@ -66,27 +63,22 @@ export default function UnitInventory({ assignments, context }: Assignments) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Item Name</TableHead>
-                  <TableHead>Assigned At</TableHead>
-                  <TableHead>Returned At</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Quantity</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {assignments.map((assignment) => (
-                  <TableRow key={assignment.id}>
+                  <TableRow key={assignment.inventoryItemId}>
                     <TableCell className="capitalize text-sm">
-                      {assignment.inventoryItem.itemName}
+                      {assignment.itemName}
                     </TableCell>
 
-                    <TableCell className="text-sm">
-                      {format(
-                        new Date(assignment.assignedAt),
-                        "dd/MM/yyyy hh:mm a",
-                      )}
+                    <TableCell className="text-sm capitalize">
+                      {assignment.category}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {assignment.returnedAt === null
-                        ? "-"
-                        : format(new Date(assignment.returnedAt), "dd/MM/yyyy")}
+                      {assignment.quantity}
                     </TableCell>
                   </TableRow>
                 ))}

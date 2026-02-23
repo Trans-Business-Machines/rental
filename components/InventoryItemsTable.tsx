@@ -1,5 +1,5 @@
 import { Badge } from "./ui/badge";
-import { cn } from "@/lib/utils";
+import { getInventoryStatus } from "@/lib/utils";
 import {
   Table,
   TableHeader,
@@ -15,6 +15,30 @@ interface InventoryItemsTableProps {
   items: InventoryItem[];
 }
 
+function getInventoryBadge(status: string) {
+  switch (status) {
+    case "good":
+      return (
+        <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+          Good
+        </Badge>
+      );
+    case "low":
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-amber-500 hover:bg-amber-600 text-white"
+        >
+          Low Stock
+        </Badge>
+      );
+    case "critical":
+      return <Badge variant="destructive">Critical</Badge>;
+    default:
+      return <Badge variant="outline">{status}</Badge>;
+  }
+}
+
 function InventoryItemsTable({ items }: InventoryItemsTableProps) {
   return (
     <div className="rounded-lg overflow-hidden border border-border shadow-sm">
@@ -23,35 +47,33 @@ function InventoryItemsTable({ items }: InventoryItemsTableProps) {
           <TableRow className="bg-muted capitalize text-left font-bold hover:bg-muted">
             <TableHead>Name</TableHead>
             <TableHead>Category</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>Total Stock</TableHead>
             <TableHead>Available</TableHead>
             <TableHead>Assigned</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((item) => (
-            <TableRow key={item.id} className="group">
-              <TableCell className="capitalize">{item.itemName}</TableCell>
-              <TableCell>{item.category}</TableCell>
-              <TableCell>
-                <Badge
-                  className={cn(
-                    "capitalize text-sm font-medium border-0",
-                    item.status === "active" && "bg-green-100 text-green-700 ",
-                    item.status === "discontinued" && "bg-red-100 text-red-700"
-                  )}
-                >
-                  {item.status}
-                </Badge>
-              </TableCell>
-              <TableCell>{item.availableQuantity || 0}</TableCell>
-              <TableCell>{item.assignedQuantity || 0}</TableCell>
-              <TableCell>
-                <InventoryActions item={item} />
-              </TableCell>
-            </TableRow>
-          ))}
+          {items.map((item) => {
+            const itemStatus = getInventoryStatus(item);
+
+            return (
+              <TableRow key={item.id} className="group">
+                <TableCell className="capitalize">{item.itemName}</TableCell>
+                <TableCell>{item.category}</TableCell>
+                <TableCell>
+                  {item.assignedQuantity + item.availableQuantity || 0}
+                </TableCell>
+                <TableCell>{item.availableQuantity || 0}</TableCell>
+                <TableCell>{item.assignedQuantity || 0}</TableCell>
+                <TableCell>{getInventoryBadge(itemStatus.status)}</TableCell>
+                <TableCell>
+                  <InventoryActions item={item} />
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

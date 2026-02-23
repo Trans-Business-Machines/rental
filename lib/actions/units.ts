@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { cache } from "react"
-import type { UnitDetailsResponse } from "@/lib/types/types"
+import type { UnitDetailsResponse, GroupedAssigments } from "@/lib/types/types"
 
 export const getUnitDetails = cache(async (unitId: string, propertyId: string) => {
 	try {
@@ -35,28 +35,6 @@ export const getUnitDetails = cache(async (unitId: string, propertyId: string) =
 						filePath: true,
 						originalName: true
 					}
-				},
-				assignments: {
-					where: {
-						isActive: true,
-					},
-					orderBy: {
-						assignedAt: "desc"
-					},
-					select: {
-						id: true,
-						isActive: true,
-						assignedAt: true,
-						returnedAt: true,
-						inventoryItem: {
-							select: {
-								id: true,
-								itemName: true,
-								category: true
-							}
-						}
-					}
-
 				},
 				bookings: {
 					take: 5,
@@ -90,9 +68,7 @@ export const getUnitDetails = cache(async (unitId: string, propertyId: string) =
 		console.error("An error occurred fetching unit details: ", error);
 		throw error
 	}
-
 })
-
 
 export const getUnitById = async (unitId: string, propertyId: string) => {
 
@@ -113,4 +89,68 @@ export const getUnitById = async (unitId: string, propertyId: string) => {
 			media: true,
 		}
 	})
-} 
+}
+
+export const getAggregatedAssignmentsForUnit = async (unitId: string, propertyId: string) => {
+	try {
+
+		// validate the inputs
+		const parsedUnitId = Number(unitId);
+		const parsedPropertyId = Number(propertyId);
+
+		if (isNaN(parsedPropertyId) || isNaN(parsedUnitId)) {
+			notFound()
+		}
+
+		// Get all active assignments with item details, then aggregate in manually
+		const assignments = await prisma.inventoryAssignment.findMany({
+			where: {
+				unitId: parsedUnitId,
+				propertyId: parsedPropertyId,
+				isActive: true
+			},
+			select: {
+				inventoryItemId: true,
+				inventoryItem: {
+					select: {
+						id: true,
+						itemName: true,
+						category: true,
+					},
+				},
+			},
+		})
+
+		const aggregatedMap = new Map<
+			number,
+			{
+				inventoryItemId: number;
+				itemName: string;
+				category: string;
+				quantity: number;
+			}
+		>();
+
+		for (const assignment of assignments) {
+			const existing = aggregatedMap.get(assignment.inventoryItemId)
+
+			if (existing) {
+				existing.quantity += 1
+			} else {
+				aggregatedMap.set(assignment.inventoryItemId, {
+					inventoryItemId: assignment.inventoryItemId,
+					itemName: assignment.inventoryItem.itemName,
+					category: assignment.inventoryItem.category,
+					quantity: 1,
+				})
+			}
+		}
+
+		return Array.from(aggregatedMap.values()) as GroupedAssigments
+
+	} catch (error) {
+		console.error("Error getting aggregated assignments for unit: ", error);
+		throw error;
+	}
+
+}

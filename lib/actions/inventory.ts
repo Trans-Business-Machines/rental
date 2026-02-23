@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "@/lib/check-permissions"
 import { LIMIT } from "@/lib/utils"
+import type { CategoryItemStats } from "@/lib/types/types"
 
 
 /* --------------------------- INTERFACES --------------------------- */
@@ -203,39 +204,67 @@ export async function deleteInventoryItem(id: number) {
 	}
 }
 
-export async function getInventoryStats() {
+export async function getInventoryStatsByCategory() {
 	try {
-		const [availableResult, assignedCount] = await Promise.all([
-			// Sum of available quantities across all inventory items
-			prisma.inventoryItem.aggregate({
-				_sum: {
-					quantity: true,
-				},
-			}),
-			
-			// Count of active assignments (each row = 1 assigned item)
-			prisma.inventoryAssignment.count({
-				where: {
-					isActive: true,
-				},
-			}),
-		]);
 
-		const availableCount = availableResult._sum.quantity || 0;
-		const totalCount = availableCount + assignedCount;
+		const items = await prisma.inventoryItem.findMany({
+			select: {
+				id: true,
+				category: true,
+				quantity: true,
+				assignments: {
+					where: {
+						isActive: true,
+					},
+					select: {
+						id: true
+					}
+				}
 
-		return {
-			total: totalCount,
-			available: availableCount,
-			assigned: assignedCount,
-		};
+			}
+
+		})
+
+		const categoryMap = new Map<
+			string,
+			{
+				category: string;
+				totalItems: number;
+				assigned: number;
+				available: number;
+			}
+		>();
+
+		for (const item of items) {
+			const existing = categoryMap.get(item.category);
+			const assignedCount = item.assignments.length;
+			const available = item.quantity;
+			const total = available + assignedCount;
+
+			if (existing) {
+				existing.totalItems += total;
+				existing.assigned += assignedCount;
+				existing.available += available;
+			} else {
+				categoryMap.set(item.category, {
+					category: item.category,
+					totalItems: total,
+					assigned: assignedCount,
+					available: available,
+				});
+			}
+		}
+
+
+		const categoryStats = Array.from(categoryMap.values()).sort((a, b) =>
+			a.category.localeCompare(b.category)
+		);
+
+		return categoryStats as CategoryItemStats;
+
 	} catch (error) {
-		console.error("Error fetching inventory stats:", error);
-		return {
-			total: 0,
-			available: 0,
-			assigned: 0,
-		};
+		console.error("Error fetching inventory stats by category:", error);
+		throw error;
 	}
 }
 
