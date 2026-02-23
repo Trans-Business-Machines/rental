@@ -20,10 +20,13 @@ function UnitDetailsPage() {
    * If data was prefetched, it uses that immediately (no loading state)
    * If not prefetched, it fetches from the API
    */
-  const { data: unit, isLoading } = useUnitDetails({
+  const { data, isLoading } = useUnitDetails({
     unitId,
     propertyId,
   });
+
+  const unit = data?.unit;
+  const groupedAssignments = data?.groupedAssignments;
 
   if (isLoading) {
     return (
@@ -38,7 +41,7 @@ function UnitDetailsPage() {
     );
   }
 
-  if (!unit) {
+  if (!unit && !groupedAssignments) {
     notFound();
   }
 
@@ -68,24 +71,27 @@ function UnitDetailsPage() {
         </Button>
       </header>
 
-      <UnitGallery images={unit.media} />
+      {unit && <UnitGallery images={unit.media} />}
 
-      <UnitInfo unit={unit} />
+      {unit && <UnitInfo unit={unit} />}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <UnitInventory
-          assignments={unit.assignments}
-          context={{ unitId: unit.id, propertyId: unit.propertyId }}
-        />
-        <UnitBookings
-          bookings={unit.bookings}
-          context={{
-            propertyId: unit.propertyId,
-            unitId: unit.id,
-            unitStatus: unit.status,
-          }}
-        />
-      </div>
+      {unit && groupedAssignments && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <UnitInventory
+            assignments={groupedAssignments}
+            context={{ unitId: unit.id, propertyId: unit.propertyId }}
+          />
+
+          <UnitBookings
+            bookings={unit.bookings}
+            context={{
+              propertyId: unit.propertyId,
+              unitId: unit.id,
+              unitStatus: unit.status,
+            }}
+          />
+        </div>
+      )}
     </section>
   );
 }

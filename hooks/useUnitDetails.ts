@@ -1,5 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { UnitDetailsResponse } from "@/lib/types/types"
+import type { UnitDetailsResponse, GroupedAssigments } from "@/lib/types/types"
+
+
+
 
 export const unitKeys = {
     all: ["units"] as const,
@@ -14,7 +17,7 @@ export const useUnitDetails = ({
     propertyId: string;
 }) => {
 
-    return useQuery<UnitDetailsResponse>({
+    return useQuery<{ unit: UnitDetailsResponse, groupedAssignments: GroupedAssigments }>({
         queryKey: unitKeys.details(unitId, propertyId),
         queryFn: async () => {
             const response = await fetch(`/api/units/${unitId}?propertyId=${propertyId}`)

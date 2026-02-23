@@ -1,11 +1,13 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { countries } from "@nexisltd/country";
-import type { BookingStatus, UnitStatus, Guest } from "@/lib/types/types";
+import type { BookingStatus, UnitStatus, Guest, InventoryItem } from "@/lib/types/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+export const LIMIT = 9
 
 export function getNationalities() {
   const worldCountries = countries();
@@ -52,4 +54,16 @@ export const getOccupancyRate = (occupied: number, total: number | null) => {
   return Math.round((occupied / total) * 100);
 };
 
-export const LIMIT = 9
+export function getInventoryStatus(item: InventoryItem) {
+  const assignedQuantity = item.assignments.length;
+  const totalStock = assignedQuantity + item.quantity;
+  const availableQuantity = item.quantity;
+
+  if (availableQuantity <= 0) {
+    return { status: "critical", label: "Critical" };
+  } else if (availableQuantity <= Math.round(totalStock * 0.25)) {
+    return { status: "low", label: "Low Stock" };
+  } else {
+    return { status: "good", label: "Good" };
+  }
+}

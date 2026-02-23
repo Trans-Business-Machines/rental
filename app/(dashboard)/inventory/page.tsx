@@ -2,14 +2,13 @@ import { getCheckoutReports } from "@/lib/actions/checkout";
 import {
   getInventoryAssignments,
   getInventoryItems,
-  getInventoryStats,
+  getInventoryStatsByCategory,
 } from "@/lib/actions/inventory";
 import { getPropertyNames } from "@/lib/actions/properties";
 import { InventoryDialog } from "@/components/InventoryDialog";
 import { InventoryAssignments } from "@/components/InventoryAssignments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle, Package, SquarePen } from "lucide-react";
-import { StatCards, StatCardsProps } from "@/components/StatCards";
+import { CategoryCarousel } from "@/components/CategoryCarousel";
 import { InventoryItems } from "@/components/InventoryItems";
 import { InventortyCheckoutReports } from "@/components/InventortyCheckoutReports";
 import Link from "next/link";
@@ -64,42 +63,21 @@ export default async function InventoryPage({
   });
 
   const propertiesPromise = getPropertyNames();
-  const inventoryStatsPromise = getInventoryStats();
+  const categoryStatsPromise = getInventoryStatsByCategory();
 
   const [
     inventoryItemsResponse,
     checkoutReportsResponse,
     assignmentsResponse,
     propertiesResponse,
-    inventoryStatsResponse,
+    categoryStatsResponse,
   ] = await Promise.all([
     inventoryItemsPromise,
     checkoutReportsPromise,
     assignmentsPromise,
     propertiesPromise,
-    inventoryStatsPromise,
+    categoryStatsPromise,
   ]);
-
-  const stats: StatCardsProps[] = [
-    {
-      title: "Total Items",
-      value: inventoryStatsResponse.total,
-      icon: Package,
-      color: "blue",
-    },
-    {
-      title: "Available Items",
-      value: inventoryStatsResponse.available,
-      icon: CheckCircle,
-      color: "green",
-    },
-    {
-      title: "Active Assignments",
-      value: inventoryStatsResponse.assigned,
-      icon: SquarePen,
-      color: "orange",
-    },
-  ];
 
   return (
     <section className="space-y-6">
@@ -118,7 +96,9 @@ export default async function InventoryPage({
       </header>
 
       {/* Statistics Cards */}
-      <StatCards stats={stats} />
+      <div className="flex px-4 justify-center">
+        <CategoryCarousel stats={categoryStatsResponse} />
+      </div>
 
       {/* Tabs */}
       <Tabs value={tab} className="space-y-2">
