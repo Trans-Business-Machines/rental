@@ -1,28 +1,36 @@
+// app/(system)/properties/[id]/units/page.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { UnitListing } from "@/components/UnitListing";
-import { useSearchParams, useParams, useRouter } from "next/navigation";
+import { useSearchParams, useParams } from "next/navigation";
 import { usePropertyUnits } from "@/hooks/useProperties";
-import Pagination from "@/components/Pagination";
 import Link from "next/link";
 
 export default function UnitsPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams();
 
+  // Get URL params
   const currentPage = Number(searchParams.get("page")) || 1;
+  const search = searchParams.get("search") || "";
+  const status = searchParams.get("status") || "all";
+  const type = searchParams.get("type") || "all";
+  const sortOrder = searchParams.get("sortOrder") || "none";
 
   // Get the property id from params
   const propertyId = params.id;
   const parsedPropertyId = Number(propertyId);
 
-  // Fetch property units from DB
-  const { data, isError, error, isLoading, refetch } = usePropertyUnits({
-    page: currentPage,
+  // Fetch property units from DB with filters
+  const { data, isError, isLoading, refetch } = usePropertyUnits({
     propertyId: parsedPropertyId,
+    page: currentPage,
+    search,
+    status,
+    type,
+    sortOrder,
   });
 
   if (!propertyId || isNaN(parsedPropertyId)) {
@@ -34,10 +42,9 @@ export default function UnitsPage() {
   }
 
   if (isError) {
-    console.error("Fetch units failed: ", error);
     return (
       <div className="text-center p-6 bg-red-50 border border-red-400">
-        <p className="text-red-400">An error occured fetching units</p>
+        <p className="text-red-400">An error occurred fetching units</p>
         <Button size="sm" variant="outline" onClick={() => refetch()}>
           Refetch units
         </Button>
@@ -55,15 +62,6 @@ export default function UnitsPage() {
       </section>
     );
   }
-
-  const handlePageChange = (page: number) => {
-    // create a new params object using the exisitng searchParams
-    // this helps to reserve other existing params
-    const params = new URLSearchParams(searchParams);
-
-    params.set("page", page.toString());
-    router.push(`?${params.toString()}`);
-  };
 
   return (
     <section className="px-6 space-y-2">
@@ -91,19 +89,16 @@ export default function UnitsPage() {
         </Button>
       </header>
 
-      {/* Place Unit grid here */}
-      <UnitListing units={data.units} />
-
-      {/* Pagination */}
-      <footer className="flex items-center justify-between pt-4">
-        <Pagination
-          currentPage={data.currentPage}
-          totalPages={data.totalPages}
-          hasNext={data.hasNext}
-          hasPrev={data.hasPrev}
-          handlePageChange={handlePageChange}
-        />
-      </footer>
+      {/* Unit Listing with filters */}
+      <UnitListing
+        units={data.units}
+        propertyId={parsedPropertyId}
+        currentPage={data.currentPage}
+        totalPages={data.totalPages}
+        hasNext={data.hasNext}
+        hasPrev={data.hasPrev}
+        initialFilters={{ search, status, type, sortOrder }}
+      />
     </section>
   );
 }

@@ -205,6 +205,7 @@ model Guest {
 
   bookings        Booking[]
   checkoutReports CheckoutReport[]
+  media           Media?
 
   @@map("guests")
 }
@@ -371,10 +372,13 @@ model Media {
   property     Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   unitId       Int?
   unit         Unit?     @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  filePath     String
-  uploadedAt   DateTime  @default(now())
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @default(now())
+
+  guestId    Int?     @unique
+  guest      Guest?   @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  filePath   String
+  uploadedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
 
   @@index([propertyId])
   @@index([unitId])

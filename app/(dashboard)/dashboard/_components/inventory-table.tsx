@@ -1,6 +1,6 @@
+// app/(system)/dashboard/_components/inventory-table.tsx
 "use client";
 
-import { useState } from "react";
 import { InventoryEditDialog } from "@/components/InventoryEditDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,20 +21,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Edit, Search, Package } from "lucide-react";
-import Pagination from "@/components/Pagination";
-import { useFilter } from "@/hooks/useFilter";
+import { Edit, Search, Package, Loader2 } from "lucide-react";
+import { Footer } from "@/components/Footer";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { getInventoryStatus } from "@/lib/utils";
 import type { InventoryItem } from "@/lib/types/types";
+
+interface InventoryFilters {
+  search: string;
+}
 
 interface InventoryTableProps {
   items: InventoryItem[];
   totalPages: string | number;
   hasNext: boolean;
   hasPrev: boolean;
+  currentPage: number;
+  initialFilters: InventoryFilters;
 }
 
 function getInventoryBadge(status: string) {
@@ -66,42 +71,29 @@ export function InventoryTable({
   hasNext,
   hasPrev,
   totalPages,
+  currentPage,
+  initialFilters,
 }: InventoryTableProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const searchParams = useSearchParams();
-  const router = useRouter();
-
-  const filteredItems = useFilter({
-    items,
-    searchTerm,
-    searchFields: ["itemName"],
+  const { searchValue, isSearching, handleSearchChange } = useDebouncedSearch({
+    tab: "inventory",
   });
 
-  const currentPage = searchParams.get("itemsPage") || 1;
+  const hasActiveFilters = initialFilters.search !== "";
 
-  if (!items || items.length === 0) {
+  if (items.length === 0 && !hasActiveFilters) {
     return (
       <ItemsNotFound
-        title="No Inventory Items found!"
+        title="No inventory items found!"
         message="Go to inventory page to add inventory items."
         icon={Package}
       />
     );
   }
 
-  const handlePageChange = (page: number) => {
-    // create a new params object using the exisitng searchParams
-    // this helps to reserve other existing params
-    const params = new URLSearchParams(searchParams);
-
-    params.set("itemsPage", page.toString());
-    router.push(`?${params.toString()}`);
-  };
-
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col gap-4 md:gap-0 md:flex-row  md:items-start md:justify-between">
+        <div className="flex flex-col gap-4 md:gap-0 md:flex-row md:items-start md:justify-between">
           <div>
             <CardTitle>Inventory Management</CardTitle>
             <CardDescription>
@@ -109,20 +101,27 @@ export function InventoryTable({
             </CardDescription>
           </div>
 
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by item name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 w-xs md:w-lg"
-            />
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by item name..."
+                value={searchValue}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-8 w-xs md:w-64 lg:w-96"
+              />
+              {isSearching && (
+                <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
           </div>
         </div>
       </CardHeader>
-      {filteredItems.length === 0 ? (
+
+      {items.length === 0 && hasActiveFilters ? (
         <SearchNotFound
-          title="No inventory items matches the search criteria."
+          title="No inventory items match the search criteria."
           icon={Package}
         />
       ) : (
@@ -135,7 +134,7 @@ export function InventoryTable({
                     Item
                   </TableHead>
                   <TableHead className="font-semibold text-foreground">
-                    Total stock
+                    Total Stock
                   </TableHead>
                   <TableHead className="font-semibold text-foreground">
                     Available
@@ -152,7 +151,7 @@ export function InventoryTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredItems.map((item) => {
+                {items.map((item) => {
                   const assignedQuantity = item.assignments.length;
                   const inventoryStatus = getInventoryStatus(item);
 
@@ -189,13 +188,15 @@ export function InventoryTable({
           </div>
         </CardContent>
       )}
+
       <CardFooter>
-        <Pagination
+        <Footer
           currentPage={currentPage}
-          handlePageChange={handlePageChange}
           totalPages={totalPages}
-          hasPrev={hasPrev}
           hasNext={hasNext}
+          hasPrev={hasPrev}
+          paramName="page"
+          preserveParams={["tab", "search", "status"]}
         />
       </CardFooter>
     </Card>

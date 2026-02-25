@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useFilter } from "@/hooks/useFilter";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useDebouncedCallback } from "use-debounce";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PropertyCardActions } from "@/components/PropertyCardActions";
@@ -13,21 +14,26 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "./ui/carousel";
-import { Building2, Home, MapPin, Users, Banknote, Search } from "lucide-react";
-import Pagination from "./Pagination";
+import { Building2, Home, MapPin, Users, Search, Loader2 } from "lucide-react";
+import { Footer } from "./Footer";
 import { ItemsNotFound } from "./ItemsNotFound";
 import { SearchNotFound } from "./SearchNotFound";
-import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { getOccupancyRate } from "@/lib/utils";
 import { Progress } from "./ui/progress";
 import type { Property } from "@/lib/types/types";
+
+interface PropertyFilters {
+  search: string;
+}
 
 interface PropertyListingProps {
   properties: Property[];
   totalPages: string | number;
   hasNext: boolean;
   hasPrev: boolean;
+  currentPage: number;
+  initialFilters: PropertyFilters;
 }
 
 const getStatusColor = (status: string) => {
@@ -48,21 +54,51 @@ function PropertyListing({
   hasNext,
   hasPrev,
   totalPages,
+  currentPage,
+  initialFilters,
 }: PropertyListingProps) {
-  // Define state to track the search term
-  const [searchTerm, setSearchTerm] = useState("");
-
-  // Get search params and router objects
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const filteredProperties = useFilter<Property>({
-    items: properties,
-    searchTerm,
-    searchFields: ["name", "address", "description"],
-  });
+  // Local state for search input
+  const [searchValue, setSearchValue] = useState(initialFilters.search);
+  const [isSearching, setIsSearching] = useState(false);
 
-  if (!properties || properties.length == 0) {
+  // Sync search value with URL on mount/URL changes
+  useEffect(() => {
+    setSearchValue(initialFilters.search);
+  }, [initialFilters.search]);
+
+  // Check if there are any active filters
+  const hasActiveFilters = initialFilters.search !== "";
+
+  // Debounced search - updates URL after 600ms
+  const debouncedSearch = useDebouncedCallback((value: string) => {
+    const params = new URLSearchParams();
+    params.set("page", "1"); // Reset to page 1 on search
+
+    if (value) {
+      params.set("search", value);
+    }
+
+    // Preserve status filter
+    const status = searchParams.get("status");
+    if (status && status !== "all") {
+      params.set("status", status);
+    }
+
+    router.push(`/properties?${params.toString()}`);
+    setIsSearching(false);
+  }, 600);
+
+  // Handle search input change
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value);
+    setIsSearching(true);
+    debouncedSearch(value);
+  };
+
+  if (properties.length === 0 && !hasActiveFilters) {
     return (
       <ItemsNotFound
         title="No properties found!"
@@ -72,42 +108,36 @@ function PropertyListing({
     );
   }
 
-  // Get the current page from search params
-  const currentPage = Number(searchParams.get("page")) || 1;
-
-  // function handle page change
-  const handlePageChange = (page: number) => {
-    // create a new params object using the exisitng searchParams
-    // this helps to reserve other existing params
-    const params = new URLSearchParams(searchParams);
-
-    params.set("page", page.toString());
-    router.push(`?${params.toString()}`);
-  };
-
   return (
     <>
-      <div className="relative flex-1 w-10/12 md:max-w-md lg:max-w-lg">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input
-          key="property-search-input"
-          placeholder="Search properties by name, address, or description . . ."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search properties by name, address, or description..."
+            value={searchValue}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="pl-10"
+          />
+          {isSearching && (
+            <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+        </div>
       </div>
 
       {/* Properties Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProperties.length === 0 ? (
+      <div
+        className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${isSearching ? "opacity-50" : ""}`}
+      >
+        {properties.length === 0 && hasActiveFilters ? (
           <SearchNotFound
             title="No property matches the search criteria."
             icon={Building2}
             className="md:col-span-2 lg:col-span-3"
           />
         ) : (
-          filteredProperties.map((property) => (
+          properties.map((property) => (
             <Card
               key={property.id}
               className="hover:shadow-lg transition-shadow p-0 pb-4 gap-2"
@@ -131,20 +161,20 @@ function PropertyListing({
                         <div className="w-full h-60 relative">
                           <Image
                             src={image.filePath}
-                            alt={`${property.name}  image ${image.originalName}`}
+                            alt={`${property.name} image ${image.originalName}`}
                             fill
                             priority
                             sizes="(max-width: 1024px) 100vw, 50vw"
                             className="object-cover"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 " />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                         </div>
                       </CarouselItem>
                     ))}
                   </CarouselContent>
 
                   <CarouselPrevious className="left-4 opacity-0 group-hover:opacity-100 cursor-pointer bg-background/80" />
-                  <CarouselNext className="right-4 opacity-0 group-hover:opacity-100 cursor-pointer  bg-background/80" />
+                  <CarouselNext className="right-4 opacity-0 group-hover:opacity-100 cursor-pointer bg-background/80" />
                 </Carousel>
               )}
 
@@ -162,6 +192,7 @@ function PropertyListing({
                   </Badge>
                 </div>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   {property.description}
@@ -173,7 +204,6 @@ function PropertyListing({
                     <span className="capitalize">{property.type}</span>
                   </div>
                   <div className="flex items-center">
-                    <Banknote className="size-5 mr-2 text-muted-foreground" />
                     <span>Ksh. {property.rent}/month</span>
                   </div>
                 </div>
@@ -207,15 +237,14 @@ function PropertyListing({
         )}
       </div>
 
-      <footer className="my-2">
-        <Pagination
-          currentPage={currentPage}
-          handlePageChange={handlePageChange}
-          hasNext={hasNext}
-          hasPrev={hasPrev}
-          totalPages={totalPages}
-        />
-      </footer>
+      <Footer
+        currentPage={currentPage}
+        totalPages={totalPages}
+        hasNext={hasNext}
+        hasPrev={hasPrev}
+        paramName="page"
+        preserveParams={["search", "status"]}
+      />
     </>
   );
 }

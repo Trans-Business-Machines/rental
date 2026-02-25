@@ -298,7 +298,11 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="apartment">Apartment</SelectItem>
-                    <SelectItem value="studio">Studio</SelectItem>
+                    <SelectItem value="single">Single room</SelectItem>
+                    <SelectItem value="bed sitter">Bedsitter</SelectItem>
+                    <SelectItem value="1 bedroom">1 Bedroom</SelectItem>
+                    <SelectItem value="2 bedroom">2 Bedroom</SelectItem>
+                    <SelectItem value="3 bedroom">3 Bedroom</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors.type && (

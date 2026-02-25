@@ -4,7 +4,7 @@ import { BookingsTable } from "./BookingsTable";
 import { useTableMode } from "@/hooks/useTableMode";
 import { useSoftDeleteBooking } from "@/hooks/useBookings";
 import { AlertDialog } from "@/components/AlertDialog";
-import Pagination from "./Pagination";
+import { Footer } from "@/components/Footer";
 import type { Booking } from "@/lib/types/types";
 
 interface BookingListingsProps {
@@ -13,7 +13,6 @@ interface BookingListingsProps {
   totalPages: string | number;
   hasNext: boolean;
   hasPrev: boolean;
-  handlePageChange: (page: number) => void;
   setEditBooking: (booking: Booking) => void;
   setIsDialogOpen: (open: boolean) => void;
 }
@@ -22,7 +21,6 @@ function BookingListings({
   filteredBookings,
   setEditBooking,
   currentPage,
-  handlePageChange,
   hasNext,
   hasPrev,
   totalPages,
@@ -79,15 +77,14 @@ function BookingListings({
         statement="Once archived only a super admin can restore this booking."
       />
 
-      <footer className="flex items-center justify-between pt-4 w-full">
-        <Pagination
-          currentPage={currentPage}
-          handlePageChange={handlePageChange}
-          totalPages={totalPages}
-          hasNext={hasNext}
-          hasPrev={hasPrev}
-        />
-      </footer>
+      <Footer
+        currentPage={currentPage}
+        totalPages={totalPages}
+        hasNext={hasNext}
+        hasPrev={hasPrev}
+        paramName="page"
+        preserveParams={["search", "status", "propertyId"]}
+      />
     </>
   );
 }

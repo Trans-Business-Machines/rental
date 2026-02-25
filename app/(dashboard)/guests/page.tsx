@@ -1,34 +1,69 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { GuestDialog } from "@/components/GuestDialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useGuests, useGuestStats } from "@/hooks/useGuests";
 import {
   Clock,
-  Flag,
   Search,
   UserCheck,
   Users,
   ClipboardPaste,
+  Loader2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { useTableMode } from "@/hooks/useTableMode";
-import { useFilter } from "@/hooks/useFilter";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
-import { useSearchParams, useRouter } from "next/navigation";
-import GuestListings from "@/components/GuestListings";
-import Link from "next/link";
+import { SearchNotFound } from "@/components/SearchNotFound";
 import { cn } from "@/lib/utils";
 import { ArchivedGuestsTable } from "@/components/ArchivedGuestsTable";
 import { usePermissions } from "@/hooks/usePermissions";
-import type { Guest } from "@/lib/types/types";
+import GuestListings from "@/components/GuestListings";
+import Link from "next/link";
+
+interface GuestFilters {
+  search: string;
+  status: string;
+}
 
 export default function GuestsPage() {
-  // Define the search term
-  const [searchTerm, setSearchTerm] = useState("");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get URL params
+  const page = Number(searchParams.get("page")) || 1;
+  const urlSearch = searchParams.get("search") || "";
+  const urlStatus = searchParams.get("status") || "all";
+
+  // Separate transitions for apply and clear
+  const [isApplyPending, startApplyTransition] = useTransition();
+  const [isClearPending, startClearTransition] = useTransition();
+  const isPending = isApplyPending || isClearPending;
+
+  // Local state for filter inputs (before Apply is clicked)
+  const [filters, setFilters] = useState<GuestFilters>({
+    search: urlSearch,
+    status: urlStatus,
+  });
+
+  // Sync local filters with URL on mount and URL changes
+  useEffect(() => {
+    setFilters({
+      search: urlSearch,
+      status: urlStatus,
+    });
+  }, [urlSearch, urlStatus]);
 
   // Get table mode context from useTableMode Hook
   const { tableMode, setTableMode } = useTableMode();
@@ -39,26 +74,49 @@ export default function GuestsPage() {
   // Get role of the current session user
   const { isSuperAdmin } = usePermissions();
 
-  // Get URL search params and router object
-  const searchParams = useSearchParams();
-  const router = useRouter();
-
-  // Get guests and guests stats
-  const { guestStats } = useGuestStats();
-
-  const currentPage = Number(searchParams.get("page")) || 1;
-
+  // Get guests with URL filters
   const {
     data: guestsResponse,
     isLoading,
     error,
-  } = useGuests(Number(currentPage));
+  } = useGuests({ page, search: urlSearch, status: urlStatus });
 
-  const filteredGuests = useFilter<Guest>({
-    items: guestsResponse?.guests ?? [],
-    searchTerm,
-    searchFields: ["firstName", "lastName"],
-  });
+  // Get guest stats
+  const { guestStats } = useGuestStats();
+
+  // Check if there are any active filters in the URL
+  const hasActiveFilters = urlSearch !== "" || urlStatus !== "all";
+
+  /* ------------ URL Update Handlers ------------ */
+  const applyFilters = () => {
+    const params = new URLSearchParams();
+    params.set("page", "1"); // Reset to page 1 when applying filters
+
+    if (filters.search) {
+      params.set("search", filters.search);
+    }
+    if (filters.status !== "all") {
+      params.set("status", filters.status);
+    }
+
+    startApplyTransition(() => {
+      router.push(`/guests?${params.toString()}`);
+    });
+  };
+
+  const clearFilters = () => {
+    // Reset local state
+    setFilters({
+      search: "",
+      status: "all",
+    });
+
+    startClearTransition(() => {
+      router.push("/guests?page=1");
+    });
+  };
+
+
 
   const stats: StatCardsProps[] = [
     {
@@ -78,12 +136,6 @@ export default function GuestsPage() {
       value: guestStats?.pending || 0,
       icon: Clock,
       color: "orange",
-    },
-    {
-      title: "Blacklisted",
-      value: guestStats?.blacklisted || 0,
-      icon: Flag,
-      color: "red",
     },
   ];
 
@@ -110,7 +162,7 @@ export default function GuestsPage() {
     );
   }
 
-  if (!isLoading && guestsResponse?.guests.length === 0) {
+  if (!isLoading && guestsResponse?.guests.length === 0 && !hasActiveFilters) {
     return (
       <div className="space-y-6">
         <header className="flex items-center justify-between">
@@ -120,11 +172,9 @@ export default function GuestsPage() {
             </h1>
             <p className="text-muted-foreground">Manage guest registrations.</p>
           </div>
-
           <GuestDialog />
         </header>
 
-        {/* Statistics Cards */}
         <StatCards stats={stats} />
 
         <ItemsNotFound
@@ -136,19 +186,9 @@ export default function GuestsPage() {
     );
   }
 
-  // function handle page change
-  const handlePageChange = (page: number) => {
-    // create a new params object using the exisitng searchParams
-    // this helps to reserve other existing params
-    const params = new URLSearchParams(searchParams);
-
-    params.set("page", page.toString());
-    router.push(`?${params.toString()}`);
-  };
-
   return (
     <section className="space-y-6">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col gap-4 md:flex-row md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-normal text-foreground">
             Guest Management
@@ -156,7 +196,7 @@ export default function GuestsPage() {
           <p className="text-muted-foreground">Manage guest registrations.</p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-3 items center">
+        <div className="flex gap-3">
           <GuestDialog />
           <Button asChild>
             <Link href="/checkout" className="flex items-center gap-3">
@@ -171,72 +211,137 @@ export default function GuestsPage() {
       <StatCards stats={stats} />
 
       {/* Search and Filters */}
-      <article className="flex items-center space-x-4 ">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search guests..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-            disabled={isLoading}
-            autoFocus
-          />
-        </div>
-
-        <div className="self-center flex items-center gap-3">
-          <div className=" flex items-center gap-2">
-            <Switch
-              checked={tableMode}
-              disabled={showArchived}
-              onCheckedChange={setTableMode}
-              className="cursor-pointer"
+      <article className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search guests by name, email, or phone..."
+              value={filters.search}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, search: e.target.value }))
+              }
+              disabled={isPending || isLoading}
+              className="pl-10"
             />
-            <span className="text-muted-foreground text-sm">Table mode</span>
           </div>
 
-          {isSuperAdmin && (
+          {/* Status Filter */}
+          <Select
+            value={filters.status}
+            onValueChange={(value) =>
+              setFilters((prev) => ({ ...prev, status: value }))
+            }
+            disabled={isPending || isLoading}
+          >
+            <SelectTrigger className="w-full md:w-44">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="verified">Verified</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              {/*  <SelectItem value="blacklisted">Blacklisted</SelectItem> */}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Filter Buttons and Toggles */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={applyFilters}
+              disabled={isPending || isLoading}
+              className="cursor-pointer px-8"
+            >
+              {isApplyPending ? (
+                <>
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  Applying...
+                </>
+              ) : (
+                "Apply filters"
+              )}
+            </Button>
+            <Button
+              onClick={clearFilters}
+              disabled={isPending || isLoading}
+              className="cursor-pointer px-8 bg-chart-5 hover:bg-red-600"
+            >
+              {isClearPending ? (
+                <>
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  Clearing...
+                </>
+              ) : (
+                "Clear filters"
+              )}
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Switch
-                checked={showArchived}
-                onCheckedChange={setShowArchived}
+                checked={tableMode}
+                disabled={showArchived || isPending || isLoading}
+                onCheckedChange={setTableMode}
                 className="cursor-pointer"
               />
-              <span
-                className={cn(
-                  "text-muted-foreground text-sm",
-                  showArchived && "font-bold text-black",
-                )}
-              >
-                Show Archived
-              </span>
+              <span className="text-muted-foreground text-sm">Table mode</span>
             </div>
-          )}
+
+            {isSuperAdmin && (
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={showArchived}
+                  onCheckedChange={setShowArchived}
+                  disabled={isPending || isLoading}
+                  className="cursor-pointer"
+                />
+                <span
+                  className={cn(
+                    "text-muted-foreground text-sm",
+                    showArchived && "font-bold text-black",
+                  )}
+                >
+                  Show Archived
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </article>
 
       {/* Loading State */}
-      {isLoading && !guestsResponse && (
+      {isLoading && (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="text-muted-foreground mt-2">Loading guests...</p>
         </div>
       )}
 
-      {showArchived ? (
-        <ArchivedGuestsTable />
-      ) : (
-        !isLoading && (
-          <GuestListings
-            guests={filteredGuests}
-            tableMode={tableMode}
-            currentPage={currentPage}
-            handlePageChange={handlePageChange}
-            hasNext={guestsResponse?.hasNext || false}
-            hasPrev={guestsResponse?.hasPrev || false}
-            totalPages={guestsResponse?.totalPages || 1}
-          />
-        )
+      {/* Content */}
+      {!isLoading && (
+        <div className={isPending ? "opacity-50 pointer-events-none" : ""}>
+          {showArchived ? (
+            <ArchivedGuestsTable />
+          ) : guestsResponse?.guests.length === 0 && hasActiveFilters ? (
+            <SearchNotFound
+              title="No guests match the search criteria."
+              icon={Users}
+            />
+          ) : (
+            <GuestListings
+              guests={guestsResponse?.guests ?? []}
+              tableMode={tableMode}
+              currentPage={page}
+              hasNext={guestsResponse?.hasNext || false}
+              hasPrev={guestsResponse?.hasPrev || false}
+              totalPages={guestsResponse?.totalPages || 1}
+            />
+          )}
+        </div>
       )}
     </section>
   );

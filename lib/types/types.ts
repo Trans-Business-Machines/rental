@@ -28,6 +28,13 @@ export type InventoryItem = InvetoryItemResponse["items"][number]
 export type BookingsForCheckout = NonNullable<Awaited<ReturnType<typeof getBookingsForCheckout>>>
 export type InventoryAssignmentForUnit = NonNullable<Awaited<ReturnType<typeof getInventoryAssignmentsForUnit>>>
 
+interface IdDocumentData {
+    filename: string;
+    originalName: string;
+    fileSize: number;
+    mimeType: string;
+    filePath: string;
+}
 
 export type CreateNewGuest = {
     firstName: string;
@@ -40,6 +47,7 @@ export type CreateNewGuest = {
     idType: "national_id";
     passportNumber?: string | undefined;
     notes?: string | undefined;
+    idDocument?: IdDocumentData;
 } | {
     idType: "passport";
     firstName: string;
@@ -51,6 +59,7 @@ export type CreateNewGuest = {
     passportNumber: string;
     idNumber?: string | undefined;
     notes?: string | undefined;
+    idDocument?: IdDocumentData;
 }
 
 export type BookingStatus = "pending" | "reserved" | "checked_in" | "checked_out" | "cancelled"
@@ -94,34 +103,24 @@ export interface Unit {
     property: {
         name: string;
         id: number;
-        image: string;
-        createdAt: Date;
-        updatedAt: Date;
-        type: string;
-        status: string;
-        rent: number;
-        address: string;
-        totalUnits: number | null;
-        occupied: number;
-        description: string;
-        deletedAt: Date | null;
-        maxBedrooms: number | null;
-        maxBathrooms: number | null;
     },
     media: Media[]
 }
 
 export interface User {
-    id: string;
     name: string;
+    role: string
+    id: string;
     email: string;
-    role: string;
-    banned: boolean;
-    banReason?: string;
-    banExpires?: string;
-    createdAt: string;
     emailVerified: boolean;
+    image: string | null;
+    banned: boolean;
+    banReason: string | null;
+    banExpires: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
 }
+
 
 export interface UsersResponse {
     totalPages: number,

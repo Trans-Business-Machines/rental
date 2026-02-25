@@ -6,44 +6,70 @@ import { headers } from "next/headers";
 import { auth } from "../auth";
 import { unstable_cache } from "next/cache";
 
-export async function getProperties(page: number = 1) {
+interface GetPropertiesParams {
+	page?: number;
+	search?: string;
+}
+
+export async function getProperties({
+	page = 1,
+	search = "",
+}: GetPropertiesParams = {}) {
 	try {
 		const LIMIT = 3;
 
-		const properties = await prisma.property.findMany({
-			where: {
-				deletedAt: null,
-			},
-			include: {
-				tenants: true,
-				amenities: true,
-				media: true
-			},
-			orderBy: {
-				createdAt: "desc",
-			},
-			take: LIMIT,
-			skip: (page - 1) * LIMIT
-		});
+		const where = {
+			// Exclude soft-deleted properties
+			deletedAt: null,
 
-		// count properties and get total number of pages
-		const totalProperties = await prisma.property.count({
-			where: {
-				deletedAt: null,
-			}
-		});
-		const totalPages = Math.ceil(totalProperties / LIMIT);
+			// Search by name, address, or description
+			...(search && {
+				OR: [
+					{ name: { contains: search, mode: "insensitive" as const } },
+					{ address: { contains: search, mode: "insensitive" as const } },
+					{ description: { contains: search, mode: "insensitive" as const } },
+				],
+			}),
+		};
 
-		// Evaluate the hasNext and hasPrev attributes
+		const [properties, totalProperties] = await Promise.all([
+			prisma.property.findMany({
+				where,
+				include: {
+					tenants: true,
+					amenities: true,
+					media: true,
+				},
+				orderBy: {
+					createdAt: "desc",
+				},
+				take: LIMIT,
+				skip: (page - 1) * LIMIT,
+			}),
+			prisma.property.count({ where }),
+		]);
+
+		const totalPages = Math.ceil(totalProperties / LIMIT) || 1;
+
 		const hasNext = page < totalPages;
 		const hasPrev = page > 1 && page <= totalPages;
 
-
-		return { totalPages, properties, hasNext, hasPrev };
+		return {
+			totalPages,
+			properties,
+			currentPage: page,
+			hasNext,
+			hasPrev,
+		};
 	} catch (error) {
 		console.error("Error fetching properties:", error);
-		return { totalPages: 0, properties: [], hasNext: false, hasPrev: false };
-
+		return {
+			totalPages: 0,
+			properties: [],
+			currentPage: 1,
+			hasNext: false,
+			hasPrev: false,
+		};
 	}
 }
 

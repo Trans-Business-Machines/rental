@@ -24,16 +24,6 @@ function Footer({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  /* // define the handle page change function
-  const handlePageChange = (page: number) => {
-    // create a new params object using the exisitng searchParams
-    // this helps to reserve other existing params
-    const params = new URLSearchParams(searchParams);
-
-    params.set(paramName, page.toString());
-    router.push(`?${params.toString()}`);
-  }; */
-
   const navigate = (newPage: number) => {
     const params = new URLSearchParams();
 

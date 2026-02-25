@@ -15,7 +15,7 @@ function PropertyDetails({ property }: { property: UniqueProperty }) {
 
   const prefetchPropertyUnits = async () => {
     await queryClient.prefetchQuery({
-      queryKey: propertyUnitKeys.propertyUnitList(property.id, 1),
+      queryKey: propertyUnitKeys.propertyUnitList(property.id, { page: 1 }),
       queryFn: async () => {
         const response = await fetch(
           `/api/properties/${property.id}/units?page=${1}`,

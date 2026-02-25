@@ -8,17 +8,16 @@ import { GuestEditDialog } from "./GuestEditDialog";
 import { SearchNotFound } from "./SearchNotFound";
 import { useSoftDeleteGuest } from "@/hooks/useGuests";
 import { AlertDialog } from "@/components/AlertDialog";
-import Pagination from "@/components/Pagination";
+import { Footer } from "@/components/Footer";
 import type { Guest } from "@/lib/types/types";
 
 interface GuestListingsProps {
   guests: Guest[];
-  currentPage: string | number;
+  currentPage: number;
   totalPages: string | number;
   tableMode: boolean;
   hasNext: boolean;
   hasPrev: boolean;
-  handlePageChange: (page: number) => void;
 }
 
 function GuestListings({
@@ -28,7 +27,6 @@ function GuestListings({
   hasNext,
   hasPrev,
   totalPages,
-  handlePageChange,
 }: GuestListingsProps) {
   // Define state to control the Guest Edit Dialog Box
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -58,7 +56,7 @@ function GuestListings({
       <div>
         {guests.length === 0 ? (
           <SearchNotFound
-            title="No guests matches the search criteria."
+            title="No guests match the search criteria."
             icon={Users}
           />
         ) : tableMode ? (
@@ -98,15 +96,14 @@ function GuestListings({
         statement="Once archived only a super admin can restore this guest."
       />
 
-      <footer className="flex items-center justify-between pt-4 w-full">
-        <Pagination
-          currentPage={currentPage}
-          handlePageChange={handlePageChange}
-          hasNext={hasNext}
-          hasPrev={hasPrev}
-          totalPages={totalPages}
-        />
-      </footer>
+      <Footer
+        currentPage={currentPage}
+        totalPages={totalPages}
+        hasNext={hasNext}
+        hasPrev={hasPrev}
+        paramName="page"
+        preserveParams={["search", "status"]}
+      />
     </>
   );
 }

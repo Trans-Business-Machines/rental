@@ -1,22 +1,14 @@
+"use client";
+
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Search, User as UserIcon } from "lucide-react";
-import { useFilter } from "@/hooks/useFilter";
+import { User as UserIcon } from "lucide-react";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
 import { SearchNotFound } from "@/components/SearchNotFound";
-import { usePermissions } from "@/hooks/usePermissions";
+import { Footer } from "@/components/Footer";
 import { useUnbanUser } from "@/hooks/useUsers";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { BanDialog } from "./ban-dialog";
 import { AlertDialog } from "./alert-dialog";
 import UserListings from "./user-listings";
-import Pagination from "@/components/Pagination";
 import type { User } from "@/lib/types/types";
 
 interface UsersProps {
@@ -25,7 +17,7 @@ interface UsersProps {
   hasNext: boolean;
   hasPrev: boolean;
   currentPage: number;
-  handleUsersPageChange: (page: number) => void;
+  hasActiveFilters: boolean;
 }
 
 function Users({
@@ -34,31 +26,14 @@ function Users({
   hasNext,
   hasPrev,
   totalPages,
-  handleUsersPageChange,
+  hasActiveFilters,
 }: UsersProps) {
-  const [searchQuery, setSearchQuery] = useState("");
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
   const [userToUnban, setUserToUnban] = useState<string | null>(null);
 
-  // State for Select filters
-  const [selectFilters, setSelectFilters] = useState({
-    role: "all",
-    status: "all",
-  });
-
-  // Get the current session user role
-  const { isSuperAdmin } = usePermissions();
-
   const unbanUserMutation = useUnbanUser();
-
-  const filteredUsers = useFilter<User>({
-    items: users,
-    searchTerm: searchQuery,
-    searchFields: ["name", "email"],
-    selectFilters: { role: selectFilters.role, banned: selectFilters.status },
-  });
 
   const handleUnBanUserClick = (id: string) => {
     setUserToUnban(id);
@@ -76,7 +51,7 @@ function Users({
     }
   };
 
-  if (!users || users.length === 0) {
+  if (users.length === 0 && !hasActiveFilters) {
     return (
       <ItemsNotFound
         title="No users found!"
@@ -86,82 +61,35 @@ function Users({
     );
   }
 
+  if (users.length === 0 && hasActiveFilters) {
+    return (
+      <SearchNotFound
+        title="No users match the search criteria."
+        icon={UserIcon}
+      />
+    );
+  }
+
   return (
     <section className="mt-2 space-y-4">
-      {/* User filters */}
-      <div className="flex items-center space-x-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search users..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select
-          defaultValue="all"
-          value={selectFilters.role}
-          onValueChange={(value) => {
-            setSelectFilters((prev) => ({ ...prev, role: value }));
-          }}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="user">User</SelectItem>
-            {isSuperAdmin && (
-              <SelectItem value="super Admin">Super Admin</SelectItem>
-            )}
-          </SelectContent>
-        </Select>
-
-        <Select
-          defaultValue="all"
-          value={selectFilters.status}
-          onValueChange={(value) => {
-            setSelectFilters((prev) => ({ ...prev, status: value }));
-          }}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="false">Active</SelectItem>
-            <SelectItem value="true">Banned</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Users Grid */}
-      {filteredUsers.length === 0 ? (
-        <SearchNotFound
-          title="No user matches your search criteria."
-          icon={UserIcon}
-        />
-      ) : (
-        <UserListings
-          users={filteredUsers}
-          handleUnBanUserClick={handleUnBanUserClick}
-          setBanDialogOpen={setBanDialogOpen}
-          setSelectedUser={setSelectedUser}
-          unbanUserMutationPending={unbanUserMutation.isPending}
-        />
-      )}
+      <UserListings
+        users={users}
+        handleUnBanUserClick={handleUnBanUserClick}
+        setBanDialogOpen={setBanDialogOpen}
+        setSelectedUser={setSelectedUser}
+        unbanUserMutationPending={unbanUserMutation.isPending}
+      />
 
-      <footer className="my-4">
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          hasNext={hasNext}
-          hasPrev={hasPrev}
-          handlePageChange={handleUsersPageChange}
-        />
-      </footer>
+      {/* Footer Pagination */}
+      <Footer
+        currentPage={currentPage}
+        totalPages={totalPages}
+        hasNext={hasNext}
+        hasPrev={hasPrev}
+        paramName="page"
+        preserveParams={["tab", "search", "role", "status"]}
+      />
 
       {/* Alert Dialog for unban user */}
       <AlertDialog

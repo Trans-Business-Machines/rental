@@ -1,21 +1,21 @@
 import { authClient } from "@/lib/auth-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getUserStats } from "@/lib/actions/user-stats"
+import { getUserStats, getUsers } from "@/lib/actions/user-stats"
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/usePermissions"
-import { LIMIT } from "@/lib/utils"
-import type { BanUserData, CreateUserData, UsersResponse, User, Role } from "@/lib/types/types"
+import type { BanUserData, CreateUserData, Role, } from "@/lib/types/types"
 
-interface QuertObject {
-	filterField?: string,
-	filterValue?: string | number | boolean,
-	filterOperator?: "eq" | "ne" | "lt" | "lte" | "gt" | "gte"
+interface UseUsersParams {
+	page?: number;
+	search?: string;
+	role?: string;
+	status?: string;
 }
 
 // Query keys
 export const userKeys = {
 	all: ["users"] as const,
-	lists: (page: number) => [...userKeys.all, "list", page] as const,
+	lists: (params: UseUsersParams) => [...userKeys.all, "list", params] as const,
 	list: () => [...userKeys.all, "list"] as const,
 	details: () => [...userKeys.all, "detail"] as const,
 	detail: (id: string) => [...userKeys.details(), id] as const,
@@ -23,57 +23,17 @@ export const userKeys = {
 };
 
 // Fetch users
-export const useUsers = ({ page }: { page: number }) => {
-
-	const { role, userId } = usePermissions()
-
-	const queryObject: QuertObject = {}
-
-	if (role === "admin") {
-		queryObject.filterField = "role"
-		queryObject.filterValue = "user"
-		queryObject.filterOperator = "eq"
-	} else if (role === "superAdmin") {
-		queryObject.filterField = "id"
-		queryObject.filterValue = userId
-		queryObject.filterOperator = "ne"
-	}
-
+export const useUsers = ({
+	page = 1,
+	search = "",
+	role = "all",
+	status = "all",
+}: UseUsersParams = {}) => {
 	return useQuery({
-		queryKey: userKeys.lists(page),
-		queryFn: async (): Promise<UsersResponse> => {
-			// calculate the offset
-			const OFFSET = (page - 1) * LIMIT;
-
-			const { data: response, error } = await authClient.admin.listUsers({
-				query: {
-					limit: LIMIT,
-					offset: OFFSET,
-					sortBy: "createdAt",
-					sortDirection: "desc",
-					...queryObject
-				},
-			});
-
-			if (error) {
-				throw new Error("Failed to load users");
-			}
-
-			// Get total users and calculate total pages
-			const totalUsers = response?.total || 0
-			const totalPages = Math.ceil(totalUsers / LIMIT);
-
-			// Evaluate hasNext and hasPrev attributes
-			const hasNext = page < totalPages;
-			const hasPrev = page > 1 && page <= totalPages;
-
-			return {
-				totalPages,
-				currentPage: page,
-				users: (response?.users as User[]) || [],
-				hasNext,
-				hasPrev
-			}
+		queryKey: userKeys.lists({ page, search, role, status }),
+		queryFn: async () => {
+			const result = await getUsers({ page, search, role, status });
+			return result;
 		},
 	});
 };

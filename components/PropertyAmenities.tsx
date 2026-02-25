@@ -19,7 +19,7 @@ export function PropertyAmenities({
 
   const prefetchPropertyUnits = async () => {
     await queryClient.prefetchQuery({
-      queryKey: propertyUnitKeys.propertyUnitList(propertyId, 1),
+      queryKey: propertyUnitKeys.propertyUnitList(propertyId, { page: 1 }),
       queryFn: async () => {
         const response = await fetch(
           `/api/properties/${propertyId}/units?page=${1}`

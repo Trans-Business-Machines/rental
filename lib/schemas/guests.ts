@@ -37,6 +37,15 @@ export const GuestSchema = z.discriminatedUnion("idType", [
             .min(8, "At least 8 characters are required.")
             .max(10, "At most 10 characters"),
         passportNumber: z.string().optional(),
+        idDocument: z
+            .object({
+                filename: z.string(),
+                originalName: z.string(),
+                fileSize: z.number(),
+                mimeType: z.string(),
+                filePath: z.string(),
+            })
+            .optional(),
         notes: z.string().max(1000, "At most 1000 characters allowed.").optional(),
     }),
     z.object({
@@ -69,6 +78,15 @@ export const GuestSchema = z.discriminatedUnion("idType", [
         idType: z.literal("passport"),
         idNumber: z.string().optional(),
         passportNumber: z.string().length(9, "Passport should have 9 characters."),
+        idDocument: z
+            .object({
+                filename: z.string(),
+                originalName: z.string(),
+                fileSize: z.number(),
+                mimeType: z.string(),
+                filePath: z.string(),
+            })
+            .optional(),
         notes: z.string().max(1000, "At most 1000 characters allowed.").optional(),
     }),
 ]);

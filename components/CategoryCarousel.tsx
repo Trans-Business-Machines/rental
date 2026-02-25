@@ -45,7 +45,7 @@ export function CategoryCarousel({ stats }: { stats: CategoryItemStats }) {
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">
                   {stat.totalItems} {stat.totalItems === 1 ? "item" : "items"}{" "}
-                  in category
+                  in this category
                 </p>
               </CardHeader>
               <CardContent>
@@ -105,8 +105,8 @@ export function CategoryCarousel({ stats }: { stats: CategoryItemStats }) {
         ))}
       </CarouselContent>
 
-      <CarouselPrevious className="-left-4 md:-left-6 " />
-      <CarouselNext className="-right-4 md:-right-6" />
+      <CarouselPrevious className="-left-4 md:-left-5" />
+      <CarouselNext className="-right-4 md:-right-5" />
     </Carousel>
   );
 }

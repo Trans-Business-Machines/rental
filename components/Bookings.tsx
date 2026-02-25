@@ -1,9 +1,12 @@
+// components/Bookings.tsx
 "use client";
 
-import { useState } from "react";
-import { Calendar } from "lucide-react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Calendar, Search, Loader2 } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -13,16 +16,19 @@ import {
 } from "@/components/ui/select";
 import { BookingEditDialog } from "@/components/booking-edit-dialog";
 import { useTableMode } from "@/hooks/useTableMode";
-import { Search } from "lucide-react";
-import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "./SearchNotFound";
 import { ItemsNotFound } from "./ItemsNotFound";
-import { useSearchParams, useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ArchivedBookingsTable } from "./ArchivedBookings";
 import { BookingListings } from "./BookingListings";
 import { cn } from "@/lib/utils";
 import type { Booking, PropertyNames } from "@/lib/types/types";
+
+interface BookingFilters {
+  search: string;
+  status: string;
+  propertyId: string;
+}
 
 interface BookingsProps {
   bookings: Booking[];
@@ -30,6 +36,8 @@ interface BookingsProps {
   totalPages: string | number;
   hasNext: boolean;
   hasPrev: boolean;
+  currentPage: number;
+  initialFilters: BookingFilters;
 }
 
 function Bookings({
@@ -38,7 +46,16 @@ function Bookings({
   hasNext,
   hasPrev,
   totalPages,
+  currentPage,
+  initialFilters,
 }: BookingsProps) {
+  const router = useRouter();
+
+  // Separate transitions for apply and clear
+  const [isApplyPending, startApplyTransition] = useTransition();
+  const [isClearPending, startClearTransition] = useTransition();
+  const isPending = isApplyPending || isClearPending;
+
   // Get table mode context from useTableMode Hook
   const { tableMode, setTableMode } = useTableMode();
 
@@ -48,39 +65,55 @@ function Bookings({
   // Define state to control the Booking Edit Dialog Box
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  // Define state to toggle archived bookings
   const [showArchived, setShowArchived] = useState(false);
 
   // Define state to hold the booking to edit
   const [editBooking, setEditBooking] = useState<Booking | null>(null);
 
-  // Define state to hold the search term
-  const [searchTerm, setSearchTerm] = useState("");
+  // Local state for filter inputs (before Apply is clicked)
+  const [filters, setFilters] = useState<BookingFilters>(initialFilters);
 
-  // Get searchParams and the router objects
-  const searchParams = useSearchParams();
-  const router = useRouter();
+  // Check if there are any active filters in the URL
+  const hasActiveFilters =
+    initialFilters.search !== "" ||
+    initialFilters.status !== "all" ||
+    initialFilters.propertyId !== "all";
 
-  // State to manage select filters
-  const [selectFilters, setSelectFilter] = useState({
-    bookingStatus: "all",
-    propertyName: "all",
-  });
+  /* ------------ URL Update Handlers ------------ */
+  const applyFilters = () => {
+    const params = new URLSearchParams();
+    params.set("page", "1"); // Reset to page 1 when applying filters
 
-  // Filter bookings based of the search term and select filters if applicable
-  const filteredBookings = useFilter<Booking>({
-    items: bookings,
-    searchTerm,
-    searchFields: ["guest.firstName", "guest.lastName", "unit.name"],
-    selectFilters: {
-      status: selectFilters.bookingStatus,
-      "property.name": selectFilters.propertyName,
-    },
-  });
+    if (filters.search) {
+      params.set("search", filters.search);
+    }
+    if (filters.status !== "all") {
+      params.set("status", filters.status);
+    }
+    if (filters.propertyId !== "all") {
+      params.set("propertyId", filters.propertyId);
+    }
 
-  // Get the current page from URL search params
-  const currentPage = searchParams.get("page") || 1;
+    startApplyTransition(() => {
+      router.push(`/bookings?${params.toString()}`);
+    });
+  };
 
-  if (bookings.length === 0 || !bookings) {
+  const clearFilters = () => {
+    // Reset local state
+    setFilters({
+      search: "",
+      status: "all",
+      propertyId: "all",
+    });
+
+    startClearTransition(() => {
+      router.push("/bookings?page=1");
+    });
+  };
+
+  if (bookings.length === 0 && !hasActiveFilters) {
     return (
       <ItemsNotFound
         title="No bookings found!"
@@ -90,119 +123,153 @@ function Bookings({
     );
   }
 
-  // define the handle page change function
-  const handlePageChange = (page: number) => {
-    // create a new params object using the exisitng searchParams
-    // this helps to reserve other existing params
-    const params = new URLSearchParams(searchParams);
-
-    params.set("page", page.toString());
-    router.push(`?${params.toString()}`);
-  };
-
   return (
     <>
       {/* Search and Filters */}
-      <article className="flex items-center space-x-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search bookings by guest or unit . . ."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        <Select
-          defaultValue="all"
-          value={selectFilters.bookingStatus}
-          onValueChange={(value) => {
-            setSelectFilter((prev) => ({ ...prev, bookingStatus: value }));
-          }}
-        >
-          <SelectTrigger className="w-36">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="reserved">Reserved</SelectItem>
-            <SelectItem value="checked_in">Checked In</SelectItem>
-            <SelectItem value="checked_out">Checked Out</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          defaultValue="all"
-          value={selectFilters.propertyName}
-          onValueChange={(value) => {
-            setSelectFilter((prev) => ({ ...prev, propertyName: value }));
-          }}
-        >
-          <SelectTrigger className="w-56">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Properties</SelectItem>
-            {properties.map((property) => (
-              <SelectItem key={property.id} value={property.name}>
-                {property.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </article>
-
-      <section>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 mb-2 text-muted-foreground text-sm">
-            <Switch
-              checked={tableMode}
-              disabled={showArchived}
-              onCheckedChange={setTableMode}
-              className="cursor-pointer"
+      <article className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search bookings by guest or unit..."
+              value={filters.search}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, search: e.target.value }))
+              }
+              disabled={isPending}
+              className="pl-10"
             />
-            <span>Table mode</span>
           </div>
 
-          {isSuperAdmin && (
-            <div className="flex items-center gap-2 mb-2 text-muted-foreground text-sm">
-              <Switch
-                checked={showArchived}
-                onCheckedChange={setShowArchived}
-                className="cursor-pointer"
-              />
-              <span className={cn(showArchived ? "font-bold text-black" : "font-normal")}>
-                Show Archived
-              </span>
-            </div>
-          )}
+          {/* Status Filter */}
+          <Select
+            value={filters.status}
+            onValueChange={(value) =>
+              setFilters((prev) => ({ ...prev, status: value }))
+            }
+            disabled={isPending}
+          >
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="reserved">Reserved</SelectItem>
+              <SelectItem value="checked_in">Checked In</SelectItem>
+              <SelectItem value="checked_out">Checked Out</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Property Filter */}
+          <Select
+            value={filters.propertyId}
+            onValueChange={(value) =>
+              setFilters((prev) => ({ ...prev, propertyId: value }))
+            }
+            disabled={isPending}
+          >
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="All Properties" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Properties</SelectItem>
+              {properties.map((property) => (
+                <SelectItem key={property.id} value={property.id.toString()}>
+                  {property.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <>
-          {showArchived ? (
-            <div>
-              <ArchivedBookingsTable />
+        {/* Filter Buttons and Toggles */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={applyFilters}
+              disabled={isPending}
+              className="cursor-pointer px-8"
+            >
+              {isApplyPending ? (
+                <>
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  Applying...
+                </>
+              ) : (
+                "Apply filters"
+              )}
+            </Button>
+            <Button
+              onClick={clearFilters}
+              disabled={isPending}
+              className="cursor-pointer px-8 bg-chart-5 hover:bg-red-600"
+            >
+              {isClearPending ? (
+                <>
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  Clearing...
+                </>
+              ) : (
+                "Clear filters"
+              )}
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Switch
+                checked={tableMode}
+                disabled={showArchived || isPending}
+                onCheckedChange={setTableMode}
+                className="cursor-pointer"
+              />
+              <span>Table mode</span>
             </div>
-          ) : filteredBookings.length === 0 ? (
-            <SearchNotFound
-              title="No booking matches the search criteria."
-              icon={Calendar}
-            />
-          ) : (
-            <BookingListings
-              currentPage={currentPage}
-              filteredBookings={filteredBookings}
-              handlePageChange={handlePageChange}
-              hasNext={hasNext}
-              hasPrev={hasPrev}
-              setEditBooking={setEditBooking}
-              setIsDialogOpen={setIsDialogOpen}
-              totalPages={totalPages}
-            />
-          )}
-        </>
+
+            {isSuperAdmin && (
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Switch
+                  checked={showArchived}
+                  onCheckedChange={setShowArchived}
+                  disabled={isPending}
+                  className="cursor-pointer"
+                />
+                <span
+                  className={cn(
+                    showArchived ? "font-bold text-black" : "font-normal",
+                  )}
+                >
+                  Show Archived
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </article>
+
+      {/* Bookings Content */}
+      <section className={isPending ? "opacity-50 pointer-events-none" : ""}>
+        {showArchived ? (
+          <ArchivedBookingsTable />
+        ) : bookings.length === 0 && hasActiveFilters ? (
+          <SearchNotFound
+            title="No booking matches the search criteria."
+            icon={Calendar}
+          />
+        ) : (
+          <BookingListings
+            currentPage={currentPage}
+            filteredBookings={bookings}
+            hasNext={hasNext}
+            hasPrev={hasPrev}
+            setEditBooking={setEditBooking}
+            setIsDialogOpen={setIsDialogOpen}
+            totalPages={totalPages}
+          />
+        )}
       </section>
 
       {isDialogOpen && editBooking && (

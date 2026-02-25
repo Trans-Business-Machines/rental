@@ -1,5 +1,7 @@
+// components/GuestForm.tsx
 "use client";
 
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,10 +9,14 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { NationalityCombobox } from "@/components/NationalityCombobox";
 import { useCreateGuest } from "@/hooks/useGuests";
+import {
+  ClientMediaService,
+  UploadResult,
+} from "@/lib/services/clientMediaService";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
-import { Loader } from "lucide-react";
+import { Loader, Upload, X, FileText, Image as ImageIcon } from "lucide-react";
 import {
   GuestSchema,
   type NewGuest,
@@ -23,10 +29,14 @@ interface GuestFormProps {
 }
 
 export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
-  // Get the Guest mutation object from create guest hook.
   const createGuestMutation = useCreateGuest();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // New guest form management
+  // State for file upload
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   const {
     register,
     watch,
@@ -35,7 +45,7 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
     handleSubmit,
     control,
     formState: { errors },
-  } = useForm({
+  } = useForm<NewGuest>({
     mode: "all",
     resolver: zodResolver(GuestSchema),
     defaultValues: {
@@ -43,20 +53,90 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
     },
   });
 
-  // Watch the id type so that we can control the radio button group
   const idType = watch("idType");
 
-  // Define the submit handler function
-  const onSubmit: SubmitHandler<NewGuest> = async (values) => {
-    // create the new guest
-    await createGuestMutation.mutateAsync(values);
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setUploadError(null);
 
-    // reset the form
-    reset();
+    if (!file) return;
 
-    // close modal
-    closeModal();
+    // Validate using ClientMediaService
+    const validation = ClientMediaService.validateDocument(file);
+    if (!validation.valid) {
+      setUploadError(validation.error || "Invalid file");
+      return;
+    }
+
+    setSelectedFile(file);
   };
+
+  // Remove selected file
+  const removeFile = () => {
+    setSelectedFile(null);
+    setUploadError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Submit handler
+  const onSubmit: SubmitHandler<NewGuest> = async (values) => {
+    // Explicitly type as UploadResult | null
+    let uploadedDocument: UploadResult | null = null;
+    // Store filename separately for cleanup
+    let uploadedFilename: string | null = null;
+
+    try {
+      // Upload file if selected
+      if (selectedFile) {
+        setIsUploading(true);
+        try {
+          const result =
+            await ClientMediaService.uploadGuestDocument(selectedFile);
+          uploadedDocument = result;
+          uploadedFilename = result.filename; // Store filename for cleanup
+        } catch (error) {
+          setUploadError(
+            error instanceof Error ? error.message : "Upload failed",
+          );
+          setIsUploading(false);
+          return;
+        }
+        setIsUploading(false);
+      }
+
+      // Create guest with ID document
+      await createGuestMutation.mutateAsync({
+        ...values,
+        idDocument: uploadedDocument
+          ? {
+              filename: uploadedDocument.filename,
+              originalName: uploadedDocument.originalName,
+              fileSize: uploadedDocument.fileSize,
+              mimeType: uploadedDocument.mimeType,
+              filePath: uploadedDocument.url,
+            }
+          : undefined,
+      });
+
+      reset();
+      removeFile();
+      closeModal();
+    } catch (error) {
+      // Cleanup uploaded file if guest creation fails
+      if (uploadedFilename) {
+        try {
+          await ClientMediaService.deleteGuestDocument(uploadedFilename);
+        } catch (cleanupError) {
+          console.error("Failed to cleanup uploaded document:", cleanupError);
+        }
+      }
+      console.error("Error creating guest:", error);
+    }
+  };
+  const isSubmitting = createGuestMutation.isPending || isUploading;
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
@@ -179,6 +259,69 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
         )}
       </article>
 
+      {/* ID Document Upload */}
+      <article className="space-y-2">
+        <Label>
+          {idType === "national_id" ? "National ID" : "Passport"} Image
+        </Label>
+
+        {!selectedFile ? (
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className={cn(
+              "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors",
+              "hover:border-primary hover:bg-muted/50",
+              uploadError && "border-red-400",
+            )}
+          >
+            <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Click to upload ID document
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              JPG, PNG, WebP (max 5MB)
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+            <div className="flex items-center gap-3">
+              {selectedFile.type.startsWith("image/") ? (
+                <ImageIcon className="h-8 w-8 text-blue-500" />
+              ) : (
+                <FileText className="h-8 w-8 text-red-500" />
+              )}
+              <div>
+                <p className="text-sm font-medium truncate max-w-[200px]">
+                  {selectedFile.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {(selectedFile.size / 1024).toFixed(1)} KB
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={removeFile}
+              disabled={isSubmitting}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp, image/avif, image/jpg"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
+        {uploadError && <p className="text-sm text-red-400">{uploadError}</p>}
+      </article>
+
       {/* Date of Birth and nationality */}
       <article className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -212,7 +355,7 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
         </div>
       </article>
 
-      {/* Additional notes  */}
+      {/* Additional notes */}
       <article className="space-y-2">
         <Label htmlFor="notes">Notes (optional)</Label>
         <Textarea
@@ -231,13 +374,13 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
       <div className="flex justify-end space-x-2">
         <Button
           type="submit"
-          disabled={createGuestMutation.isPending}
+          disabled={isSubmitting}
           className="bg-chart-1 w-1/3 hover:bg-chart-1/90 cursor-pointer"
         >
-          {createGuestMutation.isPending ? (
-            <span className="flex item-center gap-2">
-              <Loader className="animate-spin" />
-              <span>Creating guest</span>
+          {isSubmitting ? (
+            <span className="flex items-center gap-2">
+              <Loader className="animate-spin h-4 w-4" />
+              <span>{isUploading ? "Uploading..." : "Creating guest"}</span>
             </span>
           ) : (
             "Create Guest"
@@ -248,6 +391,7 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
             type="button"
             className="bg-chart-5 w-1/4 hover:bg-chart-5/90 cursor-pointer"
             onClick={onCancel}
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
