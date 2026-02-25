@@ -43,7 +43,7 @@ const getRoleBadgeColor = (role: string) => {
   }
 };
 
-const formatDate = (dateString: string) => {
+const formatDate = (dateString: Date) => {
   return format(new Date(dateString), "dd/MM/yyyy");
 };
 

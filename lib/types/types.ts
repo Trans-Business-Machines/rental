@@ -109,11 +109,11 @@ export interface Unit {
 
 export interface User {
     name: string;
-    role: string
     id: string;
     email: string;
     emailVerified: boolean;
     image: string | null;
+    role: string;
     banned: boolean;
     banReason: string | null;
     banExpires: Date | null;
