@@ -175,7 +175,7 @@ function InventoryItems({
           </Select>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:justify-between">
           <div className="flex items-center gap-2">
             <Button
               onClick={applyFilters}

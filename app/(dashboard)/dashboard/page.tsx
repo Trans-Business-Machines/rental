@@ -5,6 +5,7 @@ import { RecentBookingsTable } from "./_components/recent-bookings-table";
 import { UnitAvailabilityTable } from "./_components/unit-availability-table";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { format } from "date-fns";
+import Link from "next/link";
 import {
   getDashboardStats,
   getUnits,
@@ -14,21 +15,40 @@ import {
 
 interface DashboardSearchParamsProps {
   searchParams: Promise<{
-    unitsPage: string;
-    recentBookingsPage: string;
-    itemsPage: string;
+    tab?: string;
+    page?: string;
+    search?: string;
+    status?: string;
   }>;
 }
 
 export default async function DashboardPage({
   searchParams,
 }: DashboardSearchParamsProps) {
-  const { unitsPage, recentBookingsPage, itemsPage } = await searchParams;
+  const params = await searchParams;
+
+  const tab = params.tab || "units";
+  const page = Number(params.page) || 1;
+  const search = params.search || "";
+  const status = params.status || "all";
+
+  // Fetch data based on active tab with filters
+  const unitsPromise =
+    tab === "units"
+      ? getUnits({ page, search, status })
+      : getUnits({ page: 1 });
+
+  const bookingsPromise =
+    tab === "bookings"
+      ? getRecentBookings({ page, search, status })
+      : getRecentBookings({ page: 1 });
+
+  const itemsPromise =
+    tab === "inventory"
+      ? getInventoryItems({ page, search })
+      : getInventoryItems({ page: 1 });
 
   const unitsStatsPromise = getDashboardStats();
-  const unitsPromise = getUnits(Number(unitsPage) || 1);
-  const bookingsPromise = getRecentBookings(Number(recentBookingsPage) || 1);
-  const itemsPromise = getInventoryItems(Number(itemsPage) || 1);
 
   const [
     unitsResponse,
@@ -43,20 +63,27 @@ export default async function DashboardPage({
   ]);
 
   const occupancyRate = Math.round(
-    (unitsStatsResponse.occupied / unitsStatsResponse.total) * 100
+    (unitsStatsResponse.occupied / unitsStatsResponse.total) * 100,
   );
 
-  // Transform units data for the table
+  // In your page.tsx where you transform units
   const unitsForTable = unitsResponse.units.map((unit) => {
     const currentBooking = unit.bookings[0];
-    const checkOutDate =
-      currentBooking &&
-      format(new Date(currentBooking.checkOutDate), "dd/MM/yyyy");
-    const guestName =
-      currentBooking &&
-      currentBooking.guest.firstName + " " + currentBooking.guest.lastName;
+    const checkOutDate = currentBooking
+      ? new Date(currentBooking.checkOutDate)
+      : null;
+    const formattedCheckOut = checkOutDate
+      ? format(checkOutDate, "dd/MM/yyyy")
+      : null;
+    const guestName = currentBooking
+      ? `${currentBooking.guest.firstName} ${currentBooking.guest.lastName}`
+      : null;
 
-    /* const unitStatus = isOccupied ? "occupied" : isBookedOrReserved ? "" */
+    // Check if guest has overstayed
+    const isOverstayed =
+      currentBooking?.status === "checked_in" &&
+      checkOutDate &&
+      checkOutDate < new Date();
 
     return {
       id: unit.id,
@@ -65,12 +92,12 @@ export default async function DashboardPage({
       propertyId: unit.propertyId,
       type: unit.type,
       status: unit.status,
-      guest: guestName || null,
-      checkOut: checkOutDate || null,
+      guest: guestName,
+      checkOut: formattedCheckOut,
+      isOverstayed,
       rent: unit.rent,
     };
   });
-
   const stats: StatCardsProps[] = [
     {
       title: "Total units",
@@ -112,16 +139,16 @@ export default async function DashboardPage({
       {/* Statistics Cards */}
       <StatCards stats={stats} />
 
-      <Tabs defaultValue="units" className="space-y-4">
+      <Tabs value={tab} className="space-y-4">
         <TabsList className="md:w-xl lg:w-3xl">
-          <TabsTrigger value="units" className="cursor-pointer">
-            Unit Status
+          <TabsTrigger value="units" className="cursor-pointer" asChild>
+            <Link href="/dashboard?tab=units&page=1">Unit Status</Link>
           </TabsTrigger>
-          <TabsTrigger value="bookings" className="cursor-pointer">
-            Recent Bookings
+          <TabsTrigger value="bookings" className="cursor-pointer" asChild>
+            <Link href="/dashboard?tab=bookings&page=1">Recent Bookings</Link>
           </TabsTrigger>
-          <TabsTrigger value="inventory" className="cursor-pointer">
-            Inventory
+          <TabsTrigger value="inventory" className="cursor-pointer" asChild>
+            <Link href="/dashboard?tab=inventory&page=1">Inventory</Link>
           </TabsTrigger>
         </TabsList>
 
@@ -130,7 +157,9 @@ export default async function DashboardPage({
             units={unitsForTable}
             hasNext={unitsResponse.hasNext}
             hasPrev={unitsResponse.hasPrev}
-            totalPages={unitsResponse.totlaPages}
+            totalPages={unitsResponse.totalPages}
+            currentPage={page}
+            initialFilters={{ search, status }}
           />
         </TabsContent>
 
@@ -138,17 +167,21 @@ export default async function DashboardPage({
           <RecentBookingsTable
             bookings={recentBookingsResponse.recentBookings}
             hasNext={recentBookingsResponse.hasNext}
-            hasPrev={recentBookingsResponse.hasNext}
+            hasPrev={recentBookingsResponse.hasPrev}
             totalPages={recentBookingsResponse.totalPages}
+            currentPage={page}
+            initialFilters={{ search, status }}
           />
         </TabsContent>
 
         <TabsContent value="inventory" className="space-y-4">
           <InventoryTable
-            items={inventoryItemsResponse.inventoryItems as any}
+            items={inventoryItemsResponse.inventoryItems}
             totalPages={inventoryItemsResponse.totalPages}
             hasNext={inventoryItemsResponse.hasNext}
             hasPrev={inventoryItemsResponse.hasPrev}
+            currentPage={page}
+            initialFilters={{ search }}
           />
         </TabsContent>
       </Tabs>

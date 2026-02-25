@@ -75,7 +75,7 @@ export function GuestEditDialog({
   });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -350,7 +350,12 @@ export function GuestEditDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem
+                    value="pending"
+                    disabled={guest.verificationStatus === "verified"}
+                  >
+                    Pending
+                  </SelectItem>
                   <SelectItem value="verified">Verified</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>

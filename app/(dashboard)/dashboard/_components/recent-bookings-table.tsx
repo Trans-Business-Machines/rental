@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,23 +17,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Edit, Eye, Search, Calendar } from "lucide-react";
+import { Edit, Eye, Search, Calendar, Loader2 } from "lucide-react";
 import { BookingEditDialog } from "@/components/booking-edit-dialog";
 import { BookingViewDialog } from "./booking-view-dialog";
-import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
-import Pagination from "@/components/Pagination";
-import { useSearchParams, useRouter } from "next/navigation";
+import { Footer } from "@/components/Footer";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { format } from "date-fns";
 import type { Booking } from "@/lib/types/types";
+
+interface BookingFilters {
+  search: string;
+  status: string;
+}
 
 interface RecentBookingsTableProps {
   bookings: Booking[];
   totalPages: string | number;
   hasNext: boolean;
   hasPrev: boolean;
+  currentPage: number;
+  initialFilters: BookingFilters;
 }
 
 export function RecentBookingsTable({
@@ -42,36 +54,24 @@ export function RecentBookingsTable({
   totalPages,
   hasNext,
   hasPrev,
+  currentPage,
+  initialFilters,
 }: RecentBookingsTableProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const searchParams = useSearchParams();
-  const router = useRouter();
+  const { searchValue, isSearching, handleSearchChange, handleStatusChange } =
+    useDebouncedSearch({ tab: "bookings" });
 
-  const filteredBookings = useFilter<Booking>({
-    items: bookings,
-    searchTerm,
-    searchFields: ["guest.firstName", "guest.lastName", "unit.name"],
-  });
+  const hasActiveFilters =
+    initialFilters.search !== "" || initialFilters.status !== "all";
 
-  if (!bookings || bookings.length === 0) {
-    <ItemsNotFound
-      title="No recent booking found!"
-      message="Go to booking page to create your first booking."
-      icon={Calendar}
-    />;
+  if (bookings.length === 0 && !hasActiveFilters) {
+    return (
+      <ItemsNotFound
+        title="No recent bookings found!"
+        message="Go to booking page to create your first booking."
+        icon={Calendar}
+      />
+    );
   }
-
-  // Get the current page from URL search params
-  const currentPage = searchParams.get("recentBookingsPage") || 1;
-
-  const handlePageChange = (page: number) => {
-    // create a new params object using the exisitng searchParams
-    // this helps to reserve other existing params
-    const params = new URLSearchParams(searchParams);
-
-    params.set("recentBookingsPage", page.toString());
-    router.push(`?${params.toString()}`);
-  };
 
   return (
     <Card>
@@ -84,20 +84,45 @@ export function RecentBookingsTable({
             </CardDescription>
           </div>
 
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search a recent booking..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 w-xs md:w-lg"
-            />
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            {/* Search Input */}
+            <div className="relative  w-full md:w-64 lg:w-96">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by guest name, property or unit..."
+                value={searchValue}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-8 w-full"
+              />
+              {isSearching && (
+                <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
+
+            {/* Status Filter */}
+            <Select
+              value={initialFilters.status}
+              onValueChange={handleStatusChange}
+            >
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="reserved">Reserved</SelectItem>
+                <SelectItem value="checked_in">Checked In</SelectItem>
+                <SelectItem value="checked_out">Checked Out</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </CardHeader>
-      {filteredBookings.length === 0 ? (
+
+      {bookings.length === 0 && hasActiveFilters ? (
         <SearchNotFound
-          title="No booking matches the search criteria."
+          title="No bookings match the search criteria."
           icon={Calendar}
         />
       ) : (
@@ -130,7 +155,7 @@ export function RecentBookingsTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredBookings.map((booking) => (
+                {bookings.map((booking) => (
                   <TableRow key={booking.id}>
                     <TableCell className="font-medium">
                       {booking.guest.firstName} {booking.guest.lastName}
@@ -165,13 +190,15 @@ export function RecentBookingsTable({
           </div>
         </CardContent>
       )}
+
       <CardFooter>
-        <Pagination
+        <Footer
           currentPage={currentPage}
           totalPages={totalPages}
-          handlePageChange={handlePageChange}
           hasNext={hasNext}
           hasPrev={hasPrev}
+          paramName="page"
+          preserveParams={["tab", "search", "status"]}
         />
       </CardFooter>
     </Card>

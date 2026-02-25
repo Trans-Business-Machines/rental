@@ -56,7 +56,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
     initialUnit.media.map((img) => ({
       ...img,
       markedForDelete: false,
-    }))
+    })),
   );
   const [imageError, setImageError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -92,7 +92,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
 
   const getAllExistingNames = () => {
     const existingNames = getActiveExistingImages().map((img) =>
-      img.originalName.toLowerCase()
+      img.originalName.toLowerCase(),
     );
     const newNames = newImages.map((file) => file.name.toLowerCase());
     return [...existingNames, ...newNames];
@@ -134,7 +134,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
             newImages: uploadedImages,
             imagesToDelete,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -171,7 +171,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
       if (uploadedImages.length > 0) {
         console.log("Cleaning up uploaded images...");
         await ClientMediaService.deleteFromSupabase(
-          uploadedImages.map((img) => img.filename)
+          uploadedImages.map((img) => img.filename),
         );
       }
 
@@ -213,7 +213,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
     if (duplicateFiles.length > 0) {
       toast.warning(
         `Skipped duplicate image(s): ${duplicateFiles.join(", ")}`,
-        { duration: 4000 }
+        { duration: 4000 },
       );
     }
 
@@ -224,7 +224,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
 
     if (totalAfterAdd > 10) {
       setImageError(
-        `Maximum 10 images allowed. You have ${activeExistingCount} existing and ${newImages.length} new images.`
+        `Maximum 10 images allowed. You have ${activeExistingCount} existing and ${newImages.length} new images.`,
       );
       return;
     }
@@ -245,8 +245,8 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
       prev.map((img) =>
         img.id === imageId
           ? { ...img, markedForDelete: !img.markedForDelete }
-          : img
-      )
+          : img,
+      ),
     );
     setTimeout(validateAndClearError, 0);
   };
@@ -305,7 +305,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
         toast.info("Uploading new images...", { duration: 5000 });
         uploadedImages = await ClientMediaService.processAndUploadImages(
           newImages,
-          "unit"
+          "unit",
         );
       }
 
@@ -369,14 +369,18 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                   <SelectTrigger
                     className={cn(
                       "w-full",
-                      errors.type && "border border-red-400"
+                      errors.type && "border border-red-400",
                     )}
                   >
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="apartment">Apartment</SelectItem>
-                    <SelectItem value="studio">Studio</SelectItem>
+                    <SelectItem value="single">Single room</SelectItem>
+                    <SelectItem value="bed sitter">Bedsitter</SelectItem>
+                    <SelectItem value="1 bedroom">1 Bedroom</SelectItem>
+                    <SelectItem value="2 bedroom">2 Bedroom</SelectItem>
+                    <SelectItem value="3 bedroom">3 Bedroom</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors.type && (
@@ -489,7 +493,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                       key={img.id}
                       className={cn(
                         "relative group",
-                        img.markedForDelete && "opacity-50"
+                        img.markedForDelete && "opacity-50",
                       )}
                     >
                       <div className="aspect-square relative">
@@ -544,7 +548,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                     : "border-muted-foreground/25 hover:border-muted-foreground/50",
                   (isLoading || updateMutation.isPending) &&
                     "opacity-50 cursor-not-allowed",
-                  imageError && "border-red-400"
+                  imageError && "border-red-400",
                 )}
               >
                 <input
@@ -608,7 +612,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
                 "text-xs",
                 getTotalImageCount() > 10
                   ? "text-red-500"
-                  : "text-muted-foreground"
+                  : "text-muted-foreground",
               )}
             >
               Total: {getTotalImageCount()}/10 images

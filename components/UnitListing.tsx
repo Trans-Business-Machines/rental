@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
@@ -19,19 +20,40 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "./ui/carousel";
-import { Bath, Users, Bed, Eye, Edit, Search, House } from "lucide-react";
-import { useFilter } from "@/hooks/useFilter";
-import { useSort } from "@/hooks/useSort";
+import {
+  Bath,
+  Users,
+  Bed,
+  Eye,
+  Edit,
+  Search,
+  House,
+  Loader2,
+} from "lucide-react";
 import { ItemsNotFound } from "./ItemsNotFound";
 import { SearchNotFound } from "./SearchNotFound";
+import { Footer } from "./Footer";
 import { useQueryClient } from "@tanstack/react-query";
 import { prefetchUnitDetails } from "@/hooks/useUnitDetails";
 import Link from "next/link";
 import Image from "next/image";
-import type { sortTypes, Unit, UnitStatus } from "@/lib/types/types";
+import type { Unit, UnitStatus } from "@/lib/types/types";
+
+interface UnitFilters {
+  search: string;
+  status: string;
+  type: string;
+  sortOrder: string;
+}
 
 interface UnitListingProps {
   units: Unit[];
+  propertyId: number;
+  currentPage: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+  initialFilters: UnitFilters;
 }
 
 const getStatusBadge = (status: UnitStatus) => {
@@ -71,37 +93,79 @@ const getStatusBadge = (status: UnitStatus) => {
   }
 };
 
-export function UnitListing({ units }: UnitListingProps) {
-  
-  // State to manage sorting and filtering
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectFilters, setselectFilters] = useState({
-    type: "all",
-    status: "all",
-  });
-
-  const [sortOrder, setSortOrder] = useState<sortTypes>("none");
-
+export function UnitListing({
+  units,
+  propertyId,
+  currentPage,
+  totalPages,
+  hasNext,
+  hasPrev,
+  initialFilters,
+}: UnitListingProps) {
+  const router = useRouter();
   const queryClient = useQueryClient();
 
-  const filteredUnits = useFilter({
-    items: units,
-    searchTerm,
-    searchFields: ["name"],
-    selectFilters,
-  });
+  // Separate transitions for apply and clear
+  const [isApplyPending, startApplyTransition] = useTransition();
+  const [isClearPending, startClearTransition] = useTransition();
+  const isPending = isApplyPending || isClearPending;
 
-  const sortedUnits = useSort({
-    sortItems: filteredUnits,
-    sortOrder,
-    sortKey: "rent",
-  });
+  // Local state for filter inputs
+  const [filters, setFilters] = useState<UnitFilters>(initialFilters);
+
+  // Sync filters with URL on mount/URL changes
+  useEffect(() => {
+    setFilters(initialFilters);
+  }, [initialFilters]);
+
+  // Check if there are any active filters
+  const hasActiveFilters =
+    initialFilters.search !== "" ||
+    initialFilters.status !== "all" ||
+    initialFilters.type !== "all" ||
+    initialFilters.sortOrder !== "none";
+
+  /* ------------ URL Update Handlers ------------ */
+  const applyFilters = () => {
+    const params = new URLSearchParams();
+    params.set("page", "1"); // Reset to page 1 when applying filters
+
+    if (filters.search) {
+      params.set("search", filters.search);
+    }
+    if (filters.status !== "all") {
+      params.set("status", filters.status);
+    }
+    if (filters.type !== "all") {
+      params.set("type", filters.type);
+    }
+    if (filters.sortOrder !== "none") {
+      params.set("sortOrder", filters.sortOrder);
+    }
+
+    startApplyTransition(() => {
+      router.push(`/properties/${propertyId}/units?${params.toString()}`);
+    });
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+      status: "all",
+      type: "all",
+      sortOrder: "none",
+    });
+
+    startClearTransition(() => {
+      router.push(`/properties/${propertyId}/units?page=1`);
+    });
+  };
 
   const handleUnitHover = (unitId: number, propertyId: number) => {
     prefetchUnitDetails(queryClient, unitId.toString(), propertyId.toString());
   };
 
-  if (units.length === 0 || !units) {
+  if (units.length === 0 && !hasActiveFilters) {
     return (
       <ItemsNotFound
         title="No units found!"
@@ -119,85 +183,132 @@ export function UnitListing({ units }: UnitListingProps) {
         </h2>
       </div>
 
-      {/* Units Search & Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
-        {/* Search Bar  */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2  size-4  text-muted-foreground" />
-          <Input
-            placeholder="seach by name or type ..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+      {/* Search & Filters */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name..."
+              value={filters.search}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, search: e.target.value }))
+              }
+              disabled={isPending}
+              className="pl-9"
+            />
+          </div>
+
+          <div className="flex-2 md:flex md:items-center space-y-4 md:space-y-0 md:space-x-2">
+            {/* Price Sort */}
+            <Select
+              value={filters.sortOrder}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, sortOrder: value }))
+              }
+              disabled={isPending}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Any price</SelectItem>
+                <SelectItem value="asc">Price: Low to high</SelectItem>
+                <SelectItem value="desc">Price: High to low</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Unit Type Filter */}
+            <Select
+              value={filters.type}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, type: value }))
+              }
+              disabled={isPending}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                <SelectItem value="apartment">Apartment</SelectItem>
+                <SelectItem value="single">Single room</SelectItem>
+                <SelectItem value="bed sitter">Bedsitter</SelectItem>
+                <SelectItem value="1 bedroom">1 Bedroom</SelectItem>
+                <SelectItem value="2 bedroom">2 Bedroom</SelectItem>
+                <SelectItem value="3 bedroom">3 Bedroom</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Unit Status Filter */}
+            <Select
+              value={filters.status}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, status: value }))
+              }
+              disabled={isPending}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All status</SelectItem>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="occupied">Occupied</SelectItem>
+                <SelectItem value="reserved">Reserved</SelectItem>
+                <SelectItem value="booked">Booked</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <div className="flex-2 md:flex md:items-center space-y-4 md:space-y-0 md:space-x-2">
-          {/* Price filter */}
-          <Select
-            value={sortOrder}
-            onValueChange={(value: sortTypes) => {
-              setSortOrder(value);
-            }}
+        {/* Filter Buttons */}
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={applyFilters}
+            disabled={isPending}
+            className="cursor-pointer px-8"
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Any price</SelectItem>
-              <SelectItem value="asc">Price: Low to high</SelectItem>
-              <SelectItem value="desc">Price: Hight to low</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/*  Unit type filter */}
-          <Select
-            value={selectFilters.type}
-            onValueChange={(value: string) => {
-              setselectFilters((prev) => ({ ...prev, type: value }));
-            }}
+            {isApplyPending ? (
+              <>
+                <Loader2 className="size-4 mr-2 animate-spin" />
+                Applying...
+              </>
+            ) : (
+              "Apply filters"
+            )}
+          </Button>
+          <Button
+            onClick={clearFilters}
+            disabled={isPending}
+            className="cursor-pointer px-8 bg-chart-5 hover:bg-red-600"
           >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
-              <SelectItem value="apartment">Apartment</SelectItem>
-              <SelectItem value="studio">Studio</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Unit status filter */}
-          <Select
-            value={selectFilters.status}
-            onValueChange={(value: string) => {
-              setselectFilters((prev) => ({ ...prev, status: value }));
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All status</SelectItem>
-              <SelectItem value="available">Available</SelectItem>
-              <SelectItem value="occupied">Occupied</SelectItem>
-              <SelectItem value="reserved">Reserved</SelectItem>
-              <SelectItem value="maintenance">Maintenance</SelectItem>
-            </SelectContent>
-          </Select>
+            {isClearPending ? (
+              <>
+                <Loader2 className="size-4 mr-2 animate-spin" />
+                Clearing...
+              </>
+            ) : (
+              "Clear filters"
+            )}
+          </Button>
         </div>
       </div>
 
-      {/* Unit listing grid */}
-      <div className="grid pt-2 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {sortedUnits.length === 0 ? (
+      {/* Unit Listing Grid */}
+      <div
+        className={`grid pt-2 gap-4 md:grid-cols-2 lg:grid-cols-3 ${isPending ? "opacity-50 pointer-events-none" : ""}`}
+      >
+        {units.length === 0 && hasActiveFilters ? (
           <SearchNotFound
             icon={House}
             title="No unit matches your search criteria."
             className="md:col-span-2 lg:col-span-3 pt-3"
           />
         ) : (
-          sortedUnits.map((unit) => (
+          units.map((unit) => (
             <Card
               key={unit.id}
               className="border-0 shadow-sm hover:shadow-md group pt-0 pb-4 bg-card"
@@ -215,22 +326,21 @@ export function UnitListing({ units }: UnitListingProps) {
                       <div className="w-full h-56 relative">
                         <Image
                           src={image.filePath}
-                          alt={`Unit ${unit.name}  image ${index} + 1`}
+                          alt={`Unit ${unit.name} image ${index + 1}`}
                           fill
                           priority
                           sizes="(max-width: 1024px) 100vw, 50vw"
                           className="object-cover"
                         />
                         {getStatusBadge(unit.status)}
-
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 " />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                       </div>
                     </CarouselItem>
                   ))}
                 </CarouselContent>
 
                 <CarouselPrevious className="left-4 opacity-0 group-hover:opacity-100 cursor-pointer bg-background/80" />
-                <CarouselNext className="right-4 opacity-0 group-hover:opacity-100 cursor-pointer  bg-background/80" />
+                <CarouselNext className="right-4 opacity-0 group-hover:opacity-100 cursor-pointer bg-background/80" />
               </Carousel>
 
               <CardContent>
@@ -242,7 +352,7 @@ export function UnitListing({ units }: UnitListingProps) {
                     <p className="text-sm text-muted-foreground">{unit.type}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-lg  text-foreground">
+                    <p className="font-bold text-lg text-foreground">
                       Ksh. {unit.rent}
                     </p>
                     <p className="text-xs text-muted-foreground">per month</p>
@@ -250,13 +360,13 @@ export function UnitListing({ units }: UnitListingProps) {
                 </div>
 
                 <div className="flex flex-wrap items-center my-3 gap-2">
-                  <div className="shrink-0 flex items-center gap-2 px-3  border border-accent-foreground/30 py-2 rounded-lg bg-muted/50">
+                  <div className="shrink-0 flex items-center gap-2 px-3 border border-accent-foreground/30 py-2 rounded-lg bg-muted/50">
                     <Bath className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">
                       {unit.bathrooms}
                     </span>
                   </div>
-                  <div className="shrink-0 flex items-center gap-2 px-3 py-2 border border-accent-foreground/30  rounded-lg bg-muted/50">
+                  <div className="shrink-0 flex items-center gap-2 px-3 py-2 border border-accent-foreground/30 rounded-lg bg-muted/50">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">
                       {unit.maxGuests === 1 ? "1" : `1 - ${unit.maxGuests}`}
@@ -296,7 +406,7 @@ export function UnitListing({ units }: UnitListingProps) {
                       className="flex items-center gap-2"
                     >
                       <Edit className="size-4" />
-                      <span> Edit</span>
+                      <span>Edit</span>
                     </Link>
                   </Button>
                 </div>
@@ -305,6 +415,16 @@ export function UnitListing({ units }: UnitListingProps) {
           ))
         )}
       </div>
+
+      {/* Footer Pagination */}
+      <Footer
+        currentPage={currentPage}
+        totalPages={totalPages}
+        hasNext={hasNext}
+        hasPrev={hasPrev}
+        paramName="page"
+        preserveParams={["search", "status", "type", "sortOrder"]}
+      />
     </section>
   );
 }

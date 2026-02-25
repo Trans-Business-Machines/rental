@@ -63,15 +63,13 @@ export function InventoryActions({ item }: InventoryActionsProps) {
             Edit Item
           </DropdownMenuItem>
 
-          {item.assignableOnBooking !== false && (
-            <DropdownMenuItem
-              onClick={handleAssignClick}
-              className="hover:bg-primary/30 focus:bg-primary/30"
-            >
-              <Move className="size-4 mr-2" />
-              Assign/Move
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem
+            onClick={handleAssignClick}
+            className="hover:bg-primary/30 focus:bg-primary/30"
+          >
+            <Move className="size-4 mr-2" />
+            Assign/Move
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 

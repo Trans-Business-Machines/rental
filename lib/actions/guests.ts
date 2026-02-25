@@ -6,50 +6,78 @@ import { requirePermission } from "@/lib/check-permissions"
 import { LIMIT } from "@/lib/utils"
 import type { GuestUpdateFormData, CreateNewGuest } from "@/lib/types/types"
 
-export async function getGuests(page: number = 1) {
+interface GetGuestsParams {
+	page?: number;
+	search?: string;
+	status?: string;
+}
 
-	const guests = await prisma.guest.findMany({
-		where: {
-			deletedAt: null
-		},
-		include: {
-			bookings: {
-				select: {
-					id: true,
-					status: true,
+export async function getGuests({
+	page = 1,
+	search = "",
+	status = "all",
+}: GetGuestsParams = {}) {
+	const where = {
+		// Exclude soft-deleted guests
+		deletedAt: null,
+
+		// Search by first name, last name, email, or phone
+		...(search && {
+			OR: [
+				{ firstName: { contains: search, mode: "insensitive" as const } },
+				{ lastName: { contains: search, mode: "insensitive" as const } },
+				{ email: { contains: search, mode: "insensitive" as const } },
+				{ phone: { contains: search, mode: "insensitive" as const } },
+			],
+		}),
+
+		// Status filter (verified, pending, blacklisted)
+		...(status !== "all" && {
+			verificationStatus: status,
+		}),
+	};
+
+	const [guests, totalGuests] = await Promise.all([
+		prisma.guest.findMany({
+			where,
+			include: {
+				bookings: {
+					select: {
+						id: true,
+						status: true,
+					},
+					orderBy: {
+						createdAt: "desc",
+					},
+					take: 1,
 				},
-				orderBy: {
-					createdAt: "desc"
-				},
-				take: 1
-			}
-		},
-		orderBy: { createdAt: "desc" },
-		take: LIMIT,
-		skip: (page - 1) * LIMIT
-	});
+			},
+			orderBy: { createdAt: "desc" },
+			take: LIMIT,
+			skip: (page - 1) * LIMIT,
+		}),
+		prisma.guest.count({ where }),
+	]);
 
-	// Count all guests and get the number of pages
-	const totalGuests = await prisma.guest.count();
-	const totalPages = Math.ceil(totalGuests / LIMIT);
+	const totalPages = Math.ceil(totalGuests / LIMIT) || 1;
 
-	// Get hasNext and hasPrev attributes
 	const hasNext = page < totalPages;
-	const hasPrev = page > 1 && page <= totalPages
+	const hasPrev = page > 1 && page <= totalPages;
 
 	return {
 		totalPages,
 		guests,
 		currentPage: page,
 		hasNext,
-		hasPrev
-	}
-
+		hasPrev,
+	};
 }
 
 export async function getGuestById(id: number) {
 	return prisma.guest.findUnique({
-		where: { id, deletedAt: null }, include: {
+		where: { id, deletedAt: null }, 
+		include: {
+			media:true,
 			bookings: {
 				select: {
 					id: true,
@@ -82,12 +110,31 @@ export async function getSoftDeletedGuests() {
 }
 
 export async function createGuest(data: CreateNewGuest) {
+	// Confirm that the current session user has permission to create a guest
+	await requirePermission("guest", "create");
 
-	// confirm that the current session user has the permission to create a guest
-	await requirePermission("guest", "create")
+	const { idDocument, ...guestData } = data;
 
+	// Create guest with optional ID document in a transaction
 	const guest = await prisma.guest.create({
-		data
+		data: {
+			...guestData,
+			// Create media record if ID document was uploaded
+			...(idDocument && {
+				media: {
+					create: {
+						filename: idDocument.filename,
+						originalName: idDocument.originalName,
+						fileSize: idDocument.fileSize,
+						mimeType: idDocument.mimeType,
+						filePath: idDocument.filePath,
+					},
+				},
+			}),
+		},
+		include: {
+			media: true,
+		},
 	});
 
 	revalidatePath("/guests");

@@ -8,25 +8,30 @@ import {
 	restoreGuest
 } from "@/lib/actions/guests";
 import { toast } from "sonner";
-import type { Guest, CreateNewGuest, GuestsResponse, GuestUpdateFormData } from "@/lib/types/types"
+import type { Guest, CreateNewGuest, GuestUpdateFormData } from "@/lib/types/types"
+
+interface UseGuestsParams {
+	page?: number;
+	search?: string;
+	status?: string;
+}
 
 // Query keys
 export const guestKeys = {
 	all: ["guests"] as const,
-	lists: (page: number) => [...guestKeys.all, "list", page] as const,
+	lists: (params: UseGuestsParams) => [...guestKeys.all, "list", params] as const,
 	list: () => [...guestKeys.all, "list"] as const,
 	details: () => [...guestKeys.all, "detail"] as const,
 	detail: (id: number) => [...guestKeys.details(), id] as const,
-	stats: () => [...guestKeys.all, "stats"] as const
+	stats: () => [...guestKeys.all, "stats"] as const,
 };
 
 // GET guests from the datababse
-export const useGuests = (page: number = 1) => {
+export const useGuests = ({ page = 1, search = "", status = "all" }: UseGuestsParams) => {
 	return useQuery({
-		queryKey: guestKeys.lists(page),
-		queryFn: async (): Promise<GuestsResponse> => {
-
-			const guests = await getGuests(page);
+		queryKey: guestKeys.lists({ page, search, status }),
+		queryFn: async () => {
+			const guests = await getGuests({ page, search, status });
 			return guests;
 		},
 	});
@@ -70,6 +75,7 @@ export const useCreateGuest = () => {
 			toast.success("Guest created successfully");
 
 			// Invalidate and refetch guests list
+			queryClient.invalidateQueries({ queryKey: guestKeys.stats() });
 			queryClient.invalidateQueries({ queryKey: guestKeys.list() });
 
 			// Optionally update the cache with the new guest
@@ -116,6 +122,9 @@ export const useUpdateGuest = ({
 			queryClient.invalidateQueries({
 				queryKey: guestKeys.list()
 			})
+
+			// Invalidate the Guest dashboard cards
+			queryClient.invalidateQueries({ queryKey: guestKeys.stats() });
 
 			// if a guest is verified, invalidate the booking-form-data
 			if (data.verificationStatus === "verified") {

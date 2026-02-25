@@ -7,44 +7,79 @@ import { requirePermission } from "@/lib/check-permissions"
 import { LIMIT } from "@/lib/utils"
 import type { BookingStatus, CreateBookingData, } from "@/lib/types/types"
 
-export async function getBookings(page: number = 1) {
+interface GetBookingsParams {
+	page?: number;
+	search?: string;
+	status?: string;
+	propertyId?: string;
+}
+
+export async function getBookings({
+	page = 1,
+	search = "",
+	status = "all",
+	propertyId = "all",
+}: GetBookingsParams = {}) {
 	try {
-		const bookings = await prisma.booking.findMany({
-			where: {
-				deletedAt: null
-			},
-			include: {
-				guest: true,
-				property: true,
-				unit: true,
-			},
-			orderBy: {
-				createdAt: "desc",
-			},
-			take: LIMIT,
-			skip: (page - 1) * LIMIT
-		});
+		const where = {
+			// Exclude soft-deleted bookings
+			deletedAt: null,
 
-		// Count bookings and find the totalPages
-		const totalBookings = await prisma.booking.count()
-		const totalPages = Math.ceil(totalBookings / LIMIT);
+			// Search by guest name or unit name
+			...(search && {
+				OR: [
+					{ guest: { firstName: { contains: search, mode: "insensitive" as const } } },
+					{ guest: { lastName: { contains: search, mode: "insensitive" as const } } },
+					{ unit: { name: { contains: search, mode: "insensitive" as const } } },
+				],
+			}),
 
-		// Get hasNext and hasPrev attributes
+			// Status filter
+			...(status !== "all" && {
+				status: status as BookingStatus,
+			}),
+
+			// Property filter
+			...(propertyId !== "all" && {
+				propertyId: parseInt(propertyId),
+			}),
+		};
+
+		const [bookings, totalBookings] = await Promise.all([
+			prisma.booking.findMany({
+				where,
+				include: {
+					guest: true,
+					property: true,
+					unit: true,
+				},
+				orderBy: {
+					createdAt: "desc",
+				},
+				take: LIMIT,
+				skip: (page - 1) * LIMIT,
+			}),
+			prisma.booking.count({ where }),
+		]);
+
+		const totalPages = Math.ceil(totalBookings / LIMIT) || 1;
+
 		const hasNext = page < totalPages;
 		const hasPrev = page > 1 && page <= totalPages;
 
 		return {
 			totalPages,
 			bookings,
+			currentPage: page,
 			hasPrev,
-			hasNext
-		}
-
+			hasNext,
+		};
 	} catch (error) {
 		console.error("Error fetching bookings:", error);
 		return {
 			totalPages: 0,
 			bookings: [],
+			currentPage: 1,
 			hasPrev: false,
 			hasNext: false,
 		};

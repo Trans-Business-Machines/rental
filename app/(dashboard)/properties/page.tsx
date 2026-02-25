@@ -5,17 +5,21 @@ import { PropertyListing } from "@/components/PropertyListing";
 import Link from "next/link";
 
 interface PropertiesPageParams {
-  searchParams: Promise<{ page: string }>;
+  searchParams: Promise<{
+    page?: string;
+    search?: string;
+  }>;
 }
 
 export default async function PropertiesPage({
   searchParams,
 }: PropertiesPageParams) {
-  const { page } = await searchParams;
+  const params = await searchParams;
 
-  const currentPage = Number(page) || 1;
+  const page = Number(params.page) || 1;
+  const search = params.search || "";
 
-  const propertiesData = await getProperties(currentPage);
+  const propertiesData = await getProperties({ page, search });
 
   return (
     <section className="space-y-6">
@@ -39,6 +43,8 @@ export default async function PropertiesPage({
         hasNext={propertiesData.hasNext}
         hasPrev={propertiesData.hasPrev}
         totalPages={propertiesData.totalPages}
+        currentPage={page}
+        initialFilters={{ search }}
       />
     </section>
   );

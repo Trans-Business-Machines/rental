@@ -23,26 +23,35 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 interface BookingsPageProps {
-  searchParams: Promise<{ page: string }>;
+  searchParams: Promise<{
+    page?: string;
+    search?: string;
+    status?: string;
+    propertyId?: string;
+  }>;
 }
 
 export default async function BookingsPage({
   searchParams,
 }: BookingsPageProps) {
-  // await for search params
-  const { page } = await searchParams;
+  const params = await searchParams;
 
-  // create the queryClient used for prefetching
+  const page = Number(params.page) || 1;
+  const search = params.search || "";
+  const status = params.status || "all";
+  const propertyId = params.propertyId || "all";
+
+  // Create the queryClient used for prefetching
   const queryClient = new QueryClient();
 
-  // prefetch the booking form data
+  // Prefetch the booking form data
   await queryClient.prefetchQuery({
     queryKey: ["booking-form-data"],
     queryFn: getBookingFormData,
   });
 
-  // Fetch real data from database
-  const bookingsPromise = getBookings(Number(page) || 1);
+  // Fetch data with filters
+  const bookingsPromise = getBookings({ page, search, status, propertyId });
   const propertiesPromise = getPropertyNames();
   const bookingsStatsPromise = getBookingStats();
 
@@ -107,13 +116,15 @@ export default async function BookingsPage({
         {/* Statistics Cards */}
         <StatCards stats={stats} />
 
-        {/* Bookings cards and table*/}
+        {/* Bookings cards and table */}
         <Bookings
           bookings={bookingsResponse.bookings}
           properties={propertiesResponse}
           totalPages={bookingsResponse.totalPages}
           hasNext={bookingsResponse.hasNext}
           hasPrev={bookingsResponse.hasPrev}
+          currentPage={page}
+          initialFilters={{ search, status, propertyId }}
         />
       </section>
     </HydrationBoundary>

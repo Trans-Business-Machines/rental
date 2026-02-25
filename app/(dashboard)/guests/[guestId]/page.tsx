@@ -18,9 +18,11 @@ import {
   Briefcase,
   Users,
   FileText,
+  Image as ImageIcon,
 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
+import Image from "next/image";
 import Header from "./Header";
 
 interface GuestDetailsPageProps {
@@ -52,6 +54,9 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
   if (!guest) {
     notFound();
   }
+
+  // Check if ID document is an image or PDF
+  const isDocumentImage = guest.media?.mimeType?.startsWith("image/");
 
   return (
     <section className="space-y-6 pb-4">
@@ -184,8 +189,8 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                       <p className="text-sm font-medium text-muted-foreground">
                         ID Type
                       </p>
-                      <p className="text-sm font-semibold text-foreground">
-                        {guest.idType}
+                      <p className="text-sm font-semibold text-foreground capitalize">
+                        {guest.idType.replace("_", " ")}
                       </p>
                     </div>
                   </div>
@@ -255,6 +260,67 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* ID Document */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <IdCard className="size-5 text-chart-1" />
+                ID Document
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {guest.media ? (
+                <div className="space-y-4">
+                  {/* Document Preview */}
+                  {isDocumentImage && (
+                    <div className="relative w-full max-w-md aspect-[3/2] rounded-lg overflow-hidden border border-border">
+                      <Image
+                        src={guest.media.filePath}
+                        alt={`${guest.firstName} ${guest.lastName}'s ID Document`}
+                        fill
+                        className="object-contain bg-muted"
+                        sizes="(max-width: 768px) 100vw, 400px"
+                      />
+                    </div>
+                  )}
+
+                  {/* Document Info & Actions */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+                    <div className="text-sm text-muted-foreground">
+                      <p>
+                        <span className="font-medium">File:</span>{" "}
+                        {guest.media.originalName}
+                      </p>
+                      <p>
+                        <span className="font-medium">Size:</span>{" "}
+                        {(guest.media.fileSize / 1024).toFixed(1)} KB
+                      </p>
+                      <p>
+                        <span className="font-medium">Uploaded:</span>{" "}
+                        {format(
+                          new Date(guest.media.uploadedAt),
+                          "MMM d, yyyy",
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="size-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <ImageIcon className="size-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    No ID document uploaded
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    ID document can be added when editing the guest
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -412,7 +478,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                     Total Nights
                   </span>
                   <span className="text-2xl font-bold text-chart-3">
-                    {guest.totalStays || 0}
+                    {guest.totalNights || 0}
                   </span>
                 </div>
               </div>
@@ -449,7 +515,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                   <p className="text-sm font-semibold text-foreground">
                     {format(
                       new Date(guest.registrationDate),
-                      "MMM d, yyyy, hh:mm a"
+                      "MMM d, yyyy, hh:mm a",
                     )}
                   </p>
                 </div>

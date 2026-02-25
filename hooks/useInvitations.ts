@@ -1,18 +1,53 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
-import type { InvitationResponse } from "@/lib/types/types";
+import { toast } from "sonner"
+import type { Invitation } from "@/lib/types/types";
 
-export function useInvitations({ currentPage }: { currentPage: number }) {
+interface UseInvitationsParams {
+    currentPage?: number;
+    search?: string;
+    status?: string;
+    role?: string;
+}
+
+interface InvitationResponse {
+    invitations: Invitation[];
+    totalPages: number;
+    currentPage: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+}
+
+export const invitationKeys = {
+    all: ["invitations"] as const,
+    lists: (params: UseInvitationsParams) =>
+        [...invitationKeys.all, "list", params] as const,
+};
+
+export function useInvitations({
+    currentPage = 1,
+    search = "",
+    status = "all",
+    role = "all",
+}: UseInvitationsParams = {}) {
     const {
         data,
         error: invitationsError,
         isPending: invitationsPending,
     } = useQuery({
-        queryKey: ["invitations", "list", currentPage],
+        queryKey: invitationKeys.lists({ currentPage, search, status, role }),
         queryFn: async () => {
-            const res = await fetch(`/api/invitations/list?page=${currentPage}`);
+            const params = new URLSearchParams();
+            params.set("page", currentPage.toString());
+
+            if (search) params.set("search", search);
+            if (status !== "all") params.set("status", status);
+            if (role !== "all") params.set("role", role);
+
+            const res = await fetch(`/api/invitations/list?${params.toString()}`);
+
             if (!res.ok) throw new Error("Failed to fetch invitations");
-            const data = await res.json() as InvitationResponse;
+
+            const data = (await res.json()) as InvitationResponse;
             return data;
         },
     });

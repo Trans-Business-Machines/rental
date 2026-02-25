@@ -12,6 +12,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -19,15 +26,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, Eye, Search, Home } from "lucide-react";
-import { useState } from "react";
+import { Edit, Eye, Search, Home, Loader2 } from "lucide-react";
 import { UnitEditDialog } from "./unit-edit-dialog";
 import { UnitViewDialog } from "./unit-view-dialog";
-import { useFilter } from "@/hooks/useFilter";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
-import { useSearchParams, useRouter } from "next/navigation";
-import Pagination from "@/components/Pagination";
+import { Footer } from "@/components/Footer";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import type { UnitStatus } from "@/lib/types/types";
 
 export interface Unit {
@@ -40,6 +45,12 @@ export interface Unit {
   guest: string | null;
   checkOut: string | null;
   rent: number;
+  isOverstayed: boolean | null;
+}
+
+interface UnitFilters {
+  search: string;
+  status: string;
 }
 
 interface UnitAvailabilityTableProps {
@@ -47,6 +58,8 @@ interface UnitAvailabilityTableProps {
   totalPages: string | number;
   hasNext: boolean;
   hasPrev: boolean;
+  currentPage: number;
+  initialFilters: UnitFilters;
 }
 
 function getStatusBadge(status: string) {
@@ -100,21 +113,16 @@ export function UnitAvailabilityTable({
   hasNext,
   hasPrev,
   totalPages,
+  currentPage,
+  initialFilters,
 }: UnitAvailabilityTableProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const router = useRouter();
+  const { searchValue, isSearching, handleSearchChange, handleStatusChange } =
+    useDebouncedSearch({ tab: "units" });
 
-  const filteredUnits = useFilter<Unit>({
-    items: units,
-    searchTerm,
-    searchFields: ["id", "property", "guest"],
-  });
+  const hasActiveFilters =
+    initialFilters.search !== "" || initialFilters.status !== "all";
 
-  const searchParams = useSearchParams();
-
-  const currentPage = searchParams.get("unitsPage") || 1;
-
-  if (!units || units.length == 0) {
+  if (units.length === 0 && !hasActiveFilters) {
     return (
       <ItemsNotFound
         title="No units found!"
@@ -124,42 +132,55 @@ export function UnitAvailabilityTable({
     );
   }
 
-  // function handle page change
-  const handlePageChange = (page: number) => {
-    // create a new params object using the exisitng searchParams
-    // this helps to reserve other existing params
-    const params = new URLSearchParams(searchParams);
-
-    params.set("unitsPage", page.toString());
-    router.push(`?${params.toString()}`);
-  };
-
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col gap-4 md:gap-0 md:flex-row  items-center justify-between">
+        <div className="flex flex-col gap-4 md:gap-0 md:flex-row items-center justify-between">
           <div>
             <CardTitle>Unit Availability</CardTitle>
             <CardDescription>
               Overview of all units with their current status and checkout dates
             </CardDescription>
           </div>
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            {/* Search Input */}
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by unit name . . ."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 w-xs md:w-lg"
+                placeholder="Search units..."
+                value={searchValue}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-8 w-xs md:w-64"
               />
+              {isSearching && (
+                <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
             </div>
+
+            {/* Status Filter */}
+            <Select
+              value={initialFilters.status}
+              onValueChange={handleStatusChange}
+            >
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="occupied">Occupied</SelectItem>
+                <SelectItem value="reserved">Reserved</SelectItem>
+                <SelectItem value="booked">Booked</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </CardHeader>
-      {filteredUnits.length === 0 ? (
+
+      {units.length === 0 && hasActiveFilters ? (
         <SearchNotFound
-          title="No units matches the search criteria."
+          title="No units match the search criteria."
           icon={Home}
         />
       ) : (
@@ -195,7 +216,7 @@ export function UnitAvailabilityTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUnits.map((unit) => (
+                {units.map((unit) => (
                   <TableRow key={unit.id}>
                     <TableCell className="font-medium">{unit.name}</TableCell>
                     <TableCell>{unit.property}</TableCell>
@@ -204,7 +225,16 @@ export function UnitAvailabilityTable({
                     <TableCell>{unit.guest || "-"}</TableCell>
                     <TableCell>
                       {unit.checkOut ? (
-                        <span className="text-sm">{unit.checkOut}</span>
+                        <span
+                          className={
+                            unit.isOverstayed
+                              ? "text-red-600 font-medium"
+                              : "text-sm"
+                          }
+                        >
+                          {unit.checkOut}
+                          {unit.isOverstayed && " (Overstayed)"}
+                        </span>
                       ) : (
                         "-"
                       )}
@@ -231,13 +261,15 @@ export function UnitAvailabilityTable({
           </div>
         </CardContent>
       )}
+
       <CardFooter>
-        <Pagination
+        <Footer
           currentPage={currentPage}
           totalPages={totalPages}
-          handlePageChange={handlePageChange}
           hasNext={hasNext}
           hasPrev={hasPrev}
+          paramName="page"
+          preserveParams={["tab", "search", "status"]}
         />
       </CardFooter>
     </Card>
