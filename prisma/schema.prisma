@@ -8,6 +8,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum PriceDuration {
+  one_night
+  weekly
+}
+
 model User {
   id            String       @id
   name          String
@@ -117,7 +122,6 @@ model Unit {
   property   Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   type       String
   status     Unit_Status @default(available)
-  rent       Int
   bedrooms   Int         @default(1)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
@@ -219,15 +223,20 @@ enum Booking_Status {
 }
 
 model Booking {
-  id              Int            @id @default(autoincrement())
-  guestId         Int
-  guest           Guest          @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  propertyId      Int
-  property        Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  unitId          Int
-  unit            Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  checkInDate     DateTime
-  checkOutDate    DateTime
+  id         Int      @id @default(autoincrement())
+  guestId    Int
+  guest      Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  propertyId Int
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unitId     Int
+  unit       Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  priceDuration PriceDuration @default(one_night)
+  unitPrice     Int // Price snapshot at time of booking
+
+  checkInDate  DateTime
+  checkOutDate DateTime
+
   numberOfGuests  Int
   totalAmount     Int
   source          String // direct, booking.com, airbnb, etc.
@@ -383,4 +392,18 @@ model Media {
   @@index([propertyId])
   @@index([unitId])
   @@map("media")
+}
+
+model UnitTypePricing {
+  id       Int           @id @default(autoincrement())
+  unitType String
+  duration PriceDuration // one_night weekly
+  price    Int // Price in KSH
+  nights   Int // 1 for one_night, 7 for weekly
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([unitType, duration])
+  @@map("unit_type_pricing")
 }
