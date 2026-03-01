@@ -8,6 +8,7 @@ export const statement = {
     guest: ["create", "read", "update", "delete", "restore", "check-out"],
     property: ["create", "read", "update", "delete", "restore"],
     unit: ["create", "read", "update", "delete", "restore"],
+    settings: ["create", "read", "update", "delete"]
 } as const
 
 
@@ -34,9 +35,10 @@ export const admin = ac.newRole({
 
 // Define the superAdmin role and its permissions
 export const superAdmin = ac.newRole({
+    ...adminAc.statements,
     booking: ["create", "read", "update", "delete", "restore"],
     guest: ["create", "read", "update", "delete", "restore", "check-out"],
     property: ["create", "read", "update", "delete", "restore"],
     unit: ["create", "read", "update", "delete", "restore"],
-    ...adminAc.statements,
+    settings: ["create", "read", "update", "delete"],
 })

@@ -11,7 +11,6 @@ interface Property {
   type: string;
   totalUnits: number | null;
   occupied: number;
-  rent: number;
   status: string;
   description: string;
   image: string;

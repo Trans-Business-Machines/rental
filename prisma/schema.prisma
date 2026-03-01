@@ -87,7 +87,6 @@ model Property {
   type         String
   totalUnits   Int?
   occupied     Int       @default(0)
-  rent         Int
   status       String    @default("active")
   description  String
   image        String
@@ -233,6 +232,7 @@ model Booking {
 
   priceDuration PriceDuration @default(one_night)
   unitPrice     Int // Price snapshot at time of booking
+  period        Int           @default(1) // Number of weeks to stay
 
   checkInDate  DateTime
   checkOutDate DateTime

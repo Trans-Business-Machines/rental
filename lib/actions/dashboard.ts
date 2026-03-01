@@ -1,7 +1,6 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { revalidatePath } from "next/cache"
 import { LIMIT } from "@/lib/utils"
 import type { UnitStatus, BookingStatus } from "@/lib/types/types"
 
@@ -21,7 +20,6 @@ interface GetInventoryItemsParams {
     page?: number;
     search?: string;
 }
-
 
 export async function getDashboardStats() {
     // count all units in the DB
@@ -108,7 +106,7 @@ export async function getUnits({
             take: LIMIT,
             skip: (page - 1) * LIMIT,
             orderBy: {
-                createdAt: "desc",
+                createdAt: "asc",
             },
         }),
         prisma.unit.count({ where }),
@@ -243,28 +241,3 @@ export async function getInventoryItems({
     };
 }
 
-export async function updateUnitStatus(
-    unitId: number, data: { rent: number }
-) {
-    try {
-
-        const result = await prisma.unit.update({
-            where: {
-                id: unitId
-            },
-            data
-        })
-
-        if (!result) {
-            throw new Error("Could not update unit with id " + unitId)
-        }
-
-        revalidatePath("/dashboard");
-        return result
-
-    } catch (error) {
-        console.error("Error updating unit rent and status: ", error);
-        return null;
-    }
-
-}

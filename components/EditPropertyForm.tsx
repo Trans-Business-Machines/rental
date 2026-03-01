@@ -56,7 +56,7 @@ export function EditPropertyForm({
     initialProperty.media.map((img) => ({
       ...img,
       markedForDelete: false,
-    }))
+    })),
   );
   const [imageError, setImageError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -74,7 +74,6 @@ export function EditPropertyForm({
       name: initialProperty.name,
       address: initialProperty.address,
       type: initialProperty.type,
-      rent: initialProperty.rent,
       maxBedrooms: initialProperty.maxBedrooms || 1,
       maxBathrooms: initialProperty.maxBathrooms || 1,
       description: initialProperty.description,
@@ -93,7 +92,7 @@ export function EditPropertyForm({
   const getAllExistingNames = () => {
     // Get names from active existing images
     const existingNames = getActiveExistingImages().map((img) =>
-      img.originalName.toLowerCase()
+      img.originalName.toLowerCase(),
     );
 
     // Get names from new images already added
@@ -155,7 +154,7 @@ export function EditPropertyForm({
       if (uploadedImages.length > 0) {
         console.log("Cleaning up uploaded images...");
         await ClientMediaService.deleteFromSupabase(
-          uploadedImages.map((img) => img.filename)
+          uploadedImages.map((img) => img.filename),
         );
       }
 
@@ -197,7 +196,7 @@ export function EditPropertyForm({
     if (duplicateFiles.length > 0) {
       toast.warning(
         `Skipped duplicate image(s): ${duplicateFiles.join(", ")}`,
-        { duration: 4000 }
+        { duration: 4000 },
       );
     }
 
@@ -208,7 +207,7 @@ export function EditPropertyForm({
 
     if (totalAfterAdd > 10) {
       setImageError(
-        `Maximum 10 images allowed. You have ${activeExistingCount} existing and ${newImages.length} new images.`
+        `Maximum 10 images allowed. You have ${activeExistingCount} existing and ${newImages.length} new images.`,
       );
       return;
     }
@@ -231,8 +230,8 @@ export function EditPropertyForm({
       prev.map((img) =>
         img.id === imageId
           ? { ...img, markedForDelete: !img.markedForDelete }
-          : img
-      )
+          : img,
+      ),
     );
 
     // Clear error after toggle if conditions are now met
@@ -291,7 +290,7 @@ export function EditPropertyForm({
         toast.info("Uploading new images...", { duration: 5000 });
         uploadedImages = await ClientMediaService.processAndUploadImages(
           newImages,
-          "property"
+          "property",
         );
       }
 
@@ -354,7 +353,7 @@ export function EditPropertyForm({
                   <SelectTrigger
                     className={cn(
                       "w-full",
-                      errors.type && "border border-red-400"
+                      errors.type && "border border-red-400",
                     )}
                   >
                     <SelectValue placeholder="Select type" />
@@ -400,23 +399,6 @@ export function EditPropertyForm({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="rent" className="mb-1.5 block">
-                  Base Rent (KES)
-                </Label>
-                <Input
-                  id="rent"
-                  type="number"
-                  placeholder="0"
-                  className={cn(errors.rent && "border border-red-400")}
-                  {...register("rent", { valueAsNumber: true })}
-                />
-                {errors.rent && (
-                  <p className="mt-1 text-sm text-red-400">
-                    {errors.rent.message}
-                  </p>
-                )}
-              </div>
               <div>
                 <Label htmlFor="max-bedrooms" className="mb-1.5 block">
                   Max Bedrooms
@@ -492,7 +474,7 @@ export function EditPropertyForm({
                       key={img.id}
                       className={cn(
                         "relative group",
-                        img.markedForDelete && "opacity-50"
+                        img.markedForDelete && "opacity-50",
                       )}
                     >
                       <div className="aspect-square relative">
@@ -547,7 +529,7 @@ export function EditPropertyForm({
                     : "border-muted-foreground/25 hover:border-muted-foreground/50",
                   (isLoading || updateMutation.isPending) &&
                     "opacity-50 cursor-not-allowed",
-                  imageError && "border-red-400"
+                  imageError && "border-red-400",
                 )}
               >
                 <input
@@ -611,7 +593,7 @@ export function EditPropertyForm({
                 "text-xs",
                 getTotalImageCount() > 10
                   ? "text-red-500"
-                  : "text-muted-foreground"
+                  : "text-muted-foreground",
               )}
             >
               Total: {getTotalImageCount()}/10 images

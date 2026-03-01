@@ -203,9 +203,6 @@ function PropertyListing({
                     <Home className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span className="capitalize">{property.type}</span>
                   </div>
-                  <div className="flex items-center">
-                    <span>Ksh. {property.rent}/month</span>
-                  </div>
                 </div>
 
                 <div className="space-y-2">

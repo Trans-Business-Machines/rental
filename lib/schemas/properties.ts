@@ -23,12 +23,6 @@ export const NewPropertySchema = z.object({
     name: z.string().min(1, "Property name is required"),
     address: z.string().min(5, "At least 5 characters are required"),
     type: z.string().min(1, "property type is required."),
-    rent: z
-        .number({
-            invalid_type_error: "rent must be number"
-        })
-        .positive("rent must a positve integer.")
-        .min(1, "Minimum is 1"),
     maxBedrooms: z
         .number({
             invalid_type_error: "max bedrooms must be number"
@@ -53,12 +47,6 @@ export type EditPropertyFormData = z.infer<typeof EditPropertySchema>;
 export const NewUnitSchema = z.object({
     name: z.string().min(3, "Unit name is required."),
     type: z.string().min(1, "Unit type is required."),
-    rent: z
-        .number({
-            invalid_type_error: "rent must be number"
-        })
-        .positive("Rent must a positve integer.")
-        .min(1, "Minimum is 1"),
     bedrooms: z
         .number({
             invalid_type_error: "max bedrooms must be number"

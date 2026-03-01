@@ -12,6 +12,11 @@ export const BookingFormSchema = z
             })
             .positive("Must be a positive number")
             .int("Must be a whole number"),
+        priceDuration: z.enum(["one_night", "weekly"], {
+            required_error: "Please select a stay duration",
+        }),
+        period: z.coerce.number().min(1, "Period must be at least 1"),
+        unitPrice: z.coerce.number().min(1, "Unit price is required"),
         checkInDate: z
             .string()
             .min(1, "Check-in date is required.")

@@ -431,7 +431,7 @@ export const getBookingFormData = async () => {
 					select: {
 						id: true,
 						status: true,
-
+						unitPrice: true,
 					},
 					take: 1
 				}
@@ -454,7 +454,6 @@ export const getBookingFormData = async () => {
 						name: true,
 						maxGuests: true,
 						status: true,
-						rent: true,
 					},
 					orderBy: {
 						name: "asc"

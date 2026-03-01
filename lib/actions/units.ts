@@ -63,7 +63,13 @@ export const getUnitDetails = cache(async (unitId: string, propertyId: string) =
 			notFound()
 		}
 
-		return unit as UnitDetailsResponse
+		const pricings = await prisma.unitTypePricing.findMany({
+			where: {
+				unitType: unit.type
+			}
+		})
+
+		return { ...unit, pricingOptions: pricings } as UnitDetailsResponse
 	} catch (error) {
 		console.error("An error occurred fetching unit details: ", error);
 		throw error
@@ -79,7 +85,7 @@ export const getUnitById = async (unitId: string, propertyId: string) => {
 		notFound()
 	}
 
-	return await prisma.unit.findUnique({
+	const unit = await prisma.unit.findUnique({
 		where: {
 			id: parsedUnitId,
 			propertyId: parsedPropertyId
@@ -89,6 +95,21 @@ export const getUnitById = async (unitId: string, propertyId: string) => {
 			media: true,
 		}
 	})
+
+	if (!unit) {
+		notFound()
+	}
+
+	const pricing = await prisma.unitTypePricing.findFirst({
+		where: {
+			unitType: unit.type
+		}
+	})
+
+	return {
+		...unit,
+		pricingOptions: pricing ? [pricing] : []
+	}
 }
 
 export const getAggregatedAssignmentsForUnit = async (unitId: string, propertyId: string) => {

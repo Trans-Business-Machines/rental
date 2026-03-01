@@ -333,23 +333,6 @@ function NewPropertyForm() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="rent" className="mb-1.5 block">
-                  Base Rent (KES)
-                </Label>
-                <Input
-                  id="rent"
-                  type="number"
-                  placeholder="0"
-                  className={cn(errors.rent && "border border-red-400")}
-                  {...register("rent", { valueAsNumber: true })}
-                />
-                {errors.rent && (
-                  <p className="mt-1 text-sm text-red-400">
-                    {errors.rent.message}
-                  </p>
-                )}
-              </div>
-              <div>
                 <Label htmlFor="max-bedrooms" className="mb-1.5 block">
                   Max Bedrooms
                 </Label>

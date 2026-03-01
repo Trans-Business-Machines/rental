@@ -26,8 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, Eye, Search, Home, Loader2 } from "lucide-react";
-import { UnitEditDialog } from "./unit-edit-dialog";
+import { Eye, Search, Home, Loader2 } from "lucide-react";
 import { UnitViewDialog } from "./unit-view-dialog";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
@@ -44,7 +43,6 @@ export interface Unit {
   status: UnitStatus;
   guest: string | null;
   checkOut: string | null;
-  rent: number;
   isOverstayed: boolean | null;
 }
 
@@ -208,9 +206,6 @@ export function UnitAvailabilityTable({
                     Checkout Date
                   </TableHead>
                   <TableHead className="font-semibold text-foreground">
-                    Monthly Rent
-                  </TableHead>
-                  <TableHead className="font-semibold text-foreground">
                     Actions
                   </TableHead>
                 </TableRow>
@@ -239,7 +234,6 @@ export function UnitAvailabilityTable({
                         "-"
                       )}
                     </TableCell>
-                    <TableCell>Ksh. {unit.rent}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <UnitViewDialog unit={unit}>
@@ -247,11 +241,6 @@ export function UnitAvailabilityTable({
                             <Eye className="h-4 w-4" />
                           </Button>
                         </UnitViewDialog>
-                        <UnitEditDialog unit={unit}>
-                          <Button variant="ghost" size="icon">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </UnitEditDialog>
                       </div>
                     </TableCell>
                   </TableRow>

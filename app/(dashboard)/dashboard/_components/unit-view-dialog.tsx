@@ -56,12 +56,6 @@ export function UnitViewDialog({ unit, children }: UnitViewDialogProps) {
               </Label>
               <p className="text-sm capitalize">{unit.status}</p>
             </div>
-            <div>
-              <Label className="text-sm font-medium text-muted-foreground">
-                Monthly Rent
-              </Label>
-              <p className="text-sm">${unit.rent}</p>
-            </div>
           </div>
 
           {unit.guest && (

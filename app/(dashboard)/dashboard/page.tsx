@@ -95,7 +95,6 @@ export default async function DashboardPage({
       guest: guestName,
       checkOut: formattedCheckOut,
       isOverstayed,
-      rent: unit.rent,
     };
   });
   const stats: StatCardsProps[] = [

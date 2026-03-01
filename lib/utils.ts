@@ -1,13 +1,14 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { countries } from "@nexisltd/country";
-import type { BookingStatus, UnitStatus, Guest, InventoryItem } from "@/lib/types/types";
+import { addDays } from "date-fns"
+import type { BookingStatus, UnitStatus, Guest, InventoryItem, PriceDuration } from "@/lib/types/types";
+
+export const LIMIT = 9
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-
-export const LIMIT = 9
 
 export function getNationalities() {
   const worldCountries = countries();
@@ -66,4 +67,75 @@ export function getInventoryStatus(item: InventoryItem) {
   } else {
     return { status: "good", label: "Good" };
   }
+}
+
+export function getDurationLabel(duration: PriceDuration) {
+  switch (duration) {
+    case "one_night":
+      return "One Night";
+    case "weekly":
+      return "Weekly (7 nights)";
+    default:
+      return duration;
+  }
+}
+
+export function getDurationNights(duration: PriceDuration) {
+  switch (duration) {
+    case "one_night":
+      return 1;
+    case "weekly":
+      return 7;
+    default:
+      return 1;
+  }
+}
+
+export function getPeriodLabel(duration: PriceDuration) {
+  switch (duration) {
+    case "one_night":
+      return "nights";
+    case "weekly":
+      return "weeks";
+    default:
+      return "nights";
+  }
+}
+
+export function getPeriodLabelSingular(duration: PriceDuration) {
+  switch (duration) {
+    case "one_night":
+      return "night";
+    case "weekly":
+      return "week";
+    default:
+      return "night";
+  }
+}
+
+export function calculateCheckoutDate(
+  checkInDate: Date,
+  duration: PriceDuration,
+  period: number = 1
+) {
+  const nights = getDurationNights(duration) * period;
+  return addDays(checkInDate, nights);
+}
+
+export function calculateTotalNights(
+  duration: PriceDuration,
+  period: number
+) {
+  return getDurationNights(duration) * period;
+}
+
+export function calculateTotalAmount(
+  unitPrice: number,
+  period: number
+) {
+  return unitPrice * period;
+}
+
+export function formatPrice(price: number) {
+  return `KSH ${price.toLocaleString()}`;
 }
