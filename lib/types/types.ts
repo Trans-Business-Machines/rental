@@ -3,6 +3,7 @@ import { getInventoryItems, getInventoryAssignments } from "@/lib/actions/invent
 import { getCheckoutReportById, getBookingsForCheckout, getInventoryAssignmentsForUnit } from "@/lib/actions/checkout";
 import { getProperties, getPropertyNames, getCachedProperty } from "@/lib/actions/properties";
 import { getGuests, } from "@/lib/actions/guests";
+import { getUnitPricingOptions } from "@/lib/actions/pricing"
 
 /* ---------------- Type Definitions ---------------- */
 export type Booking = NonNullable<Awaited<ReturnType<typeof getBookingById>>>
@@ -27,6 +28,7 @@ export type InventoryItem = InvetoryItemResponse["items"][number]
 
 export type BookingsForCheckout = NonNullable<Awaited<ReturnType<typeof getBookingsForCheckout>>>
 export type InventoryAssignmentForUnit = NonNullable<Awaited<ReturnType<typeof getInventoryAssignmentsForUnit>>>
+export type UnitTypePricing = NonNullable<Awaited<ReturnType<typeof getUnitPricingOptions>>>[number]
 
 interface IdDocumentData {
     filename: string;
@@ -64,6 +66,7 @@ export type CreateNewGuest = {
 
 export type BookingStatus = "pending" | "reserved" | "checked_in" | "checked_out" | "cancelled"
 export type UnitStatus = "booked" | "reserved" | "maintenance" | "available" | "occupied"
+export type PriceDuration = "one_night" | "weekly"
 
 export type BadgeVariant =
     | "dashboard"
@@ -88,6 +91,16 @@ export interface GuestsTableAndCardsProps {
     handleClick: (guestId: number) => void
 }
 
+interface UnitPricingOptions {
+    id: number;
+    createdAt: Date;
+    updatedAt: Date;
+    unitType: string;
+    duration: PriceDuration,
+    price: number;
+    nights: number;
+}
+
 export interface Unit {
     name: string;
     id: number;
@@ -96,7 +109,6 @@ export interface Unit {
     propertyId: number;
     type: string;
     status: UnitStatus;
-    rent: number;
     bedrooms: number;
     bathrooms: number | null
     maxGuests: number | null;
@@ -104,7 +116,8 @@ export interface Unit {
         name: string;
         id: number;
     },
-    media: Media[]
+    media: Media[],
+    pricingOptions: UnitPricingOptions[]
 }
 
 export interface User {
@@ -205,6 +218,7 @@ export interface CreateBookingData {
     checkOutDate: Date;
     numberOfGuests: number;
     totalAmount: number;
+    unitPrice: number;
     source: string;
     purpose: string;
     paymentMethod: string;
@@ -220,11 +234,11 @@ export type UnitDetailsResponse = {
     bedrooms: number;
     bathrooms: number;
     maxGuests: number;
-    rent: number;
     status: UnitStatus;
     propertyId: number;
     createdAt: Date;
     updatedAt: Date;
+    pricingOptions: UnitPricingOptions[],
     property: {
         id: number;
         name: string;

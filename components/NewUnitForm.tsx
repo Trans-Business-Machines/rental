@@ -312,24 +312,6 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
                 )}
               </div>
             </div>
-
-            <div>
-              <Label htmlFor="rent" className="mb-1.5 block">
-                Rent (KES)
-              </Label>
-              <Input
-                id="rent"
-                type="number"
-                placeholder="Enter unit rent"
-                className={cn(errors.rent && "border border-red-400")}
-                {...register("rent", { valueAsNumber: true })}
-              />
-              {errors.rent && (
-                <p className="mt-1 text-sm text-red-400">
-                  {errors.rent.message}
-                </p>
-              )}
-            </div>
           </CardContent>
         </Card>
 

@@ -78,6 +78,7 @@ export async function GET(
                         }
                     },
                     media: true,
+
                 },
                 orderBy,
                 take: LIMIT,
@@ -86,15 +87,28 @@ export async function GET(
             prisma.unit.count({ where }),
         ]);
 
+        const allPricings = await prisma.unitTypePricing.findMany()
+
         const totalPages = Math.ceil(totalUnits / LIMIT) || 1;
 
         const hasNext = page < totalPages;
         const hasPrev = page > 1 && page <= totalPages;
 
+        const unitsWithPricing = units.map((unit) => {
+            const pricingOptions = allPricings.filter(
+                (pricing) => pricing.unitType === unit.type
+            )
+
+            return {
+                ...unit,
+                pricingOptions,
+            };
+        });
+
         return NextResponse.json({
             totalPages,
             currentPage: page,
-            units,
+            units:unitsWithPricing, 
             hasPrev,
             hasNext,
         });

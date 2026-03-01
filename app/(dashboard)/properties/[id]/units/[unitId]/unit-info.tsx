@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bath, Users, Bed, Building, House } from "lucide-react";
+import { getDurationLabel } from "@/lib/utils";
 import type { UnitDetailsResponse, UnitStatus } from "@/lib/types/types";
 
 interface UnitInfoProps {
@@ -68,13 +69,14 @@ export default function UnitInfo({ unit }: UnitInfoProps) {
           {getStatusBadge(unit.status)}
         </div>
 
-        <div className="mb-4">
-          <p className="text-2xl text-chart-2 font-bold">
-            Ksh. {unit.rent}
-            <span className="text-base font-normal text-muted-foreground">
-              &nbsp;/ month
-            </span>
-          </p>
+        <p className="text-base font-semibold font-sans">Unit Pricings</p>
+        <div className="pb-4">
+          {unit.pricingOptions.map((opt) => (
+            <div key={opt.id} className="text-muted-foreground text-sm">
+              <span>{getDurationLabel(opt.duration)} </span>-
+              <span> Ksh {opt.price}</span>
+            </div>
+          ))}
         </div>
 
         <div className="flex items-center gap-6">

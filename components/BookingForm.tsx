@@ -4,13 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GuestCombobox } from "@/components/GuestCombobox";
+import { BookingPricingSelector } from "@/components/BookingPricingSelector";
 import { useCreateBooking } from "@/hooks/useBookings";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getBookingFormData } from "@/lib/actions/bookings";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
-import { differenceInDays } from "date-fns";
+import {
+  cn,
+  calculateCheckoutDate,
+  calculateTotalAmount,
+} from "@/lib/utils";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -22,6 +26,8 @@ import {
 } from "@/components/ui/select";
 import { Info, Loader } from "lucide-react";
 import { BookingFormSchema, type BookingFormData } from "@/lib/schemas/booking";
+import { format } from "date-fns";
+import type { PriceDuration, UnitTypePricing } from "@/lib/types/types";
 
 interface BookingFormProps {
   onSuccess?: () => void;
@@ -36,6 +42,7 @@ export function BookingForm({
   preselectedPropertyId,
   preselectedUnitId,
 }: BookingFormProps) {
+
   // Get prefetched data from react query cache
   const { data: formDataCache, isLoading } = useQuery({
     queryKey: ["booking-form-data"],
@@ -45,7 +52,13 @@ export function BookingForm({
   // Get today's date
   const today = new Date().toISOString().split("T")[0];
 
-  // Get the create booking mutation objectI
+  // State for pricing selection
+  const [selectedPricing, setSelectedPricing] = useState<UnitTypePricing | null>(
+    null
+  );
+  const [period, setPeriod] = useState<number>(1);
+
+  // Get the create booking mutation object
   const createBookingMutation = useCreateBooking();
 
   // Form management with React Hook form
@@ -66,7 +79,10 @@ export function BookingForm({
       unitId: preselectedUnitId?.toString() || "",
       checkInDate: today,
       checkOutDate: "",
-      numberOfGuests: undefined,
+      numberOfGuests: 1,
+      priceDuration: "one_night",
+      period: 1,
+      unitPrice: 0,
       paymentMethod: "",
       status: "pending",
       specialRequests: "",
@@ -80,19 +96,19 @@ export function BookingForm({
   const selectedProperty = formDataCache?.properties.find(
     (p) =>
       p.id.toString() ===
-      (preselectedPropertyId?.toString() || formData.propertyId),
+      (preselectedPropertyId?.toString() || formData.propertyId)
   );
 
   // Derived unit state from property selections
   const selectedUnit = selectedProperty?.units.find(
     (u) =>
-      u.id.toString() === (preselectedUnitId?.toString() || formData.unitId),
+      u.id.toString() === (preselectedUnitId?.toString() || formData.unitId)
   );
 
   // Validation flags for cascading enables/disables
   const isPropertySelected = !!formData.propertyId || !!preselectedPropertyId;
-
   const isUnitSelected = !!formData.unitId || !!preselectedUnitId;
+  const isPricingSelected = !!selectedPricing;
 
   const isMaxGuestsValid =
     formData.numberOfGuests !== undefined &&
@@ -102,26 +118,37 @@ export function BookingForm({
       ? formData.numberOfGuests <= selectedUnit.maxGuests
       : false);
 
+  // Update checkout date when check-in, duration, or period changes
   useEffect(() => {
-    if (
-      selectedUnit?.maxGuests &&
-      formData.numberOfGuests &&
-      formData.numberOfGuests > selectedUnit.maxGuests
-    ) {
-      setValue("numberOfGuests", formData.numberOfGuests, {
-        shouldValidate: true,
-      });
+    if (formData.checkInDate && selectedPricing) {
+      const checkIn = new Date(formData.checkInDate);
+      const checkOut = calculateCheckoutDate(
+        checkIn,
+        selectedPricing.duration as PriceDuration,
+        period
+      );
+      setValue("checkOutDate", format(checkOut, "yyyy-MM-dd"));
     }
-  }, [selectedUnit, formData.numberOfGuests, setValue]);
+  }, [formData.checkInDate, selectedPricing, period, setValue]);
 
-  // Handle new booking from subimission
+  // Handle pricing selection
+  const handlePricingSelect = (pricing: UnitTypePricing) => {
+    setSelectedPricing(pricing);
+    setValue("priceDuration", pricing.duration as PriceDuration);
+    setValue("unitPrice", pricing.price);
+  };
+
+  // Handle period change
+  const handlePeriodChange = (newPeriod: number) => {
+    setPeriod(newPeriod);
+    setValue("period", newPeriod);
+  };
+
+  // Handle new booking form submission
   const onSubmit: SubmitHandler<BookingFormData> = (data) => {
-    const daysToStay = differenceInDays(
-      new Date(data.checkOutDate),
-      new Date(data.checkInDate),
-    );
+    if (!selectedPricing) return;
 
-    const charges = selectedUnit ? selectedUnit.rent * daysToStay : 0;
+    const totalAmount = calculateTotalAmount(selectedPricing.price, period);
 
     const newBooking = {
       guestId: parseInt(data.guestId),
@@ -130,7 +157,10 @@ export function BookingForm({
       checkInDate: new Date(data.checkInDate),
       checkOutDate: new Date(data.checkOutDate),
       numberOfGuests: data.numberOfGuests,
-      totalAmount: charges,
+      priceDuration: data.priceDuration,
+      unitPrice: data.unitPrice,
+      period: data.period,
+      totalAmount,
       source: "direct" as const,
       purpose: "personal" as const,
       paymentMethod: data.paymentMethod,
@@ -141,6 +171,8 @@ export function BookingForm({
     createBookingMutation.mutate(newBooking, {
       onSuccess: () => {
         reset();
+        setSelectedPricing(null);
+        setPeriod(1);
         onSuccess?.();
       },
     });
@@ -154,6 +186,11 @@ export function BookingForm({
     setValue("checkInDate", today);
     setValue("checkOutDate", "");
     setValue("paymentMethod", "");
+    setValue("priceDuration", undefined as unknown as PriceDuration);
+    setValue("unitPrice", 0);
+    setValue("period", 1);
+    setSelectedPricing(null);
+    setPeriod(1);
   };
 
   // Update unit on change and reset dependent fields
@@ -163,6 +200,11 @@ export function BookingForm({
     setValue("checkInDate", today);
     setValue("checkOutDate", "");
     setValue("paymentMethod", "");
+    setValue("priceDuration", undefined as unknown as PriceDuration);
+    setValue("unitPrice", 0);
+    setValue("period", 1);
+    setSelectedPricing(null);
+    setPeriod(1);
   };
 
   if (isLoading) {
@@ -170,16 +212,16 @@ export function BookingForm({
       <div className="space-y-4">
         <div className="animate-pulse space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="h-12  md:h-16 bg-gray-200 rounded"></div>
-            <div className="h-12  md:h-16 bg-gray-200 rounded"></div>
+            <div className="h-12 md:h-16 bg-gray-200 rounded"></div>
+            <div className="h-12 md:h-16 bg-gray-200 rounded"></div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="h-12  md:h-16 bg-gray-200 rounded"></div>
-            <div className="h-12  md:h-16 bg-gray-200 rounded"></div>
+            <div className="h-12 md:h-16 bg-gray-200 rounded"></div>
+            <div className="h-12 md:h-16 bg-gray-200 rounded"></div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="h-12  md:h-16 bg-gray-200 rounded"></div>
-            <div className="h-12  md:h-16 bg-gray-200 rounded"></div>
+            <div className="h-12 md:h-16 bg-gray-200 rounded"></div>
+            <div className="h-12 md:h-16 bg-gray-200 rounded"></div>
           </div>
         </div>
       </div>
@@ -225,7 +267,7 @@ export function BookingForm({
                 <SelectTrigger
                   className={cn(
                     "w-full",
-                    errors.propertyId && "border-red-400",
+                    errors.propertyId && "border-red-400"
                   )}
                 >
                   <SelectValue placeholder="Select property" />
@@ -271,7 +313,7 @@ export function BookingForm({
                     <SelectTrigger
                       className={cn(
                         "w-full",
-                        errors.unitId && "border-red-400",
+                        errors.unitId && "border-red-400"
                       )}
                     >
                       <SelectValue placeholder="Select unit" />
@@ -283,11 +325,11 @@ export function BookingForm({
                           value={unit.id.toString()}
                           className={cn(
                             unit.status !== "available" &&
-                              "cursor-not-allowed opacity-50",
+                              "cursor-not-allowed opacity-50"
                           )}
                         >
                           {unit.name}{" "}
-                          {unit.status !== "available" && `${unit.status}`}
+                          {unit.status !== "available" && `(${unit.status})`}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -332,6 +374,7 @@ export function BookingForm({
               min="1"
               className={cn(errors.numberOfGuests && "border border-red-400")}
               {...register("numberOfGuests", {
+                valueAsNumber: true,
                 validate: (value: number) => {
                   if (!selectedUnit?.maxGuests) return true;
                   if (value > selectedUnit.maxGuests) {
@@ -349,136 +392,153 @@ export function BookingForm({
           </div>
         </article>
 
-        {/* Check-in/out Dates - Disabled until valid guest count */}
-        <article className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="checkInDate">Check-in Date</Label>
-            <Input
-              id="checkInDate"
-              type="date"
-              disabled={!isMaxGuestsValid}
-              className={cn(errors.checkInDate && "border border-red-400")}
-              {...register("checkInDate")}
+        {/* Pricing Selection - Disabled until valid guest count */}
+        {isUnitSelected && isMaxGuestsValid && selectedUnit && (
+          <article className="space-y-2">
+            <Label>Select Stay Duration & Period</Label>
+            <BookingPricingSelector
+              unitId={selectedUnit.id}
+              selectedDuration={selectedPricing?.duration as PriceDuration | null}
+              period={period}
+              onSelect={handlePricingSelect}
+              onPeriodChange={handlePeriodChange}
             />
-            {errors.checkInDate && (
+            {errors.priceDuration && (
               <p className="text-sm text-red-400">
-                {errors.checkInDate.message}
+                {errors.priceDuration.message}
               </p>
             )}
-          </div>
+          </article>
+        )}
 
-          <div className="space-y-2">
-            <Label htmlFor="checkOutDate">Check-out Date</Label>
-            <Input
-              id="checkOutDate"
-              type="date"
-              disabled={!isMaxGuestsValid}
-              min={formData.checkInDate}
-              className={cn(errors.checkOutDate && "border border-red-400")}
-              {...register("checkOutDate")}
+        {/* Check-in/out Dates - Disabled until pricing selected */}
+        {isPricingSelected && (
+          <article className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="checkInDate">Check-in Date</Label>
+              <Input
+                id="checkInDate"
+                type="date"
+                min={today}
+                className={cn(errors.checkInDate && "border border-red-400")}
+                {...register("checkInDate")}
+              />
+              {errors.checkInDate && (
+                <p className="text-sm text-red-400">
+                  {errors.checkInDate.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="checkOutDate">Check-out Date</Label>
+              <Input
+                id="checkOutDate"
+                type="date"
+                disabled
+                className="bg-muted"
+                {...register("checkOutDate")}
+              />
+              <p className="text-xs text-muted-foreground">
+                Auto-calculated based on duration and period
+              </p>
+            </div>
+          </article>
+        )}
+
+        {/* Payment Method - Disabled until pricing selected */}
+        {isPricingSelected && (
+          <article className="space-y-2">
+            <Label htmlFor="paymentMethod">Payment Method</Label>
+            <Controller
+              name="paymentMethod"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger
+                    className={cn(
+                      "w-full",
+                      errors.paymentMethod && "border-red-400"
+                    )}
+                  >
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mpesa_till">Mpesa Till No.</SelectItem>
+                    <SelectItem value="credit_card">Credit Card</SelectItem>
+                    <SelectItem value="debit_card">Debit Card</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             />
-            {errors.checkOutDate && (
+            {errors.paymentMethod && (
               <p className="text-sm text-red-400">
-                {errors.checkOutDate.message}
+                {errors.paymentMethod.message}
               </p>
             )}
-          </div>
-        </article>
-
-        {/* Payment Method - Disabled until valid guest count */}
-        <article className="space-y-2">
-          <Label htmlFor="paymentMethod">Payment Method</Label>
-          <Controller
-            name="paymentMethod"
-            control={control}
-            render={({ field }) => (
-              <Select
-                value={field.value}
-                onValueChange={field.onChange}
-                disabled={!isMaxGuestsValid}
-              >
-                <SelectTrigger
-                  className={cn(
-                    "w-full",
-                    errors.paymentMethod && "border-red-400",
-                  )}
-                >
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mpesa_till">Mpesa Till No.</SelectItem>
-                  <SelectItem value="credit_card">Credit Card</SelectItem>
-                  <SelectItem value="debit_card">Debit Card</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {errors.paymentMethod && (
-            <p className="text-sm text-red-400">
-              {errors.paymentMethod.message}
-            </p>
-          )}
-        </article>
+          </article>
+        )}
 
         {/* Booking Status - Optional */}
-        <article>
-          <Label htmlFor="bookingStatus">Booking Status (Optional)</Label>
-          <p className="text-xs text-muted-foreground my-2">
-            If not selected, &quot;pending&quot; will be set as the default
-            status.
-          </p>
-          <Controller
-            name="status"
-            control={control}
-            render={({ field }) => (
-              <Select
-                value={field.value}
-                onValueChange={field.onChange}
-                disabled={!isMaxGuestsValid}
-              >
-                <SelectTrigger
-                  className={cn("w-full", errors?.status && "border-red-400")}
-                >
-                  <SelectValue placeholder="Select booking status (default: Pending)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="reserved">Reserved</SelectItem>
-                  <SelectItem value="checked_in">Checked In</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {errors?.status && (
-            <p className="text-sm text-red-400">{errors.status.message}</p>
-          )}
-        </article>
-
-        <article className="space-y-2">
-          <Label htmlFor="notes">Specail Requests (optional)</Label>
-          <Textarea
-            id="notes"
-            rows={4}
-            placeholder="Additional notes about the guest"
-            className={cn(errors.specialRequests && "border border-red-400")}
-            {...register("specialRequests")}
-          />
-          {errors.specialRequests && (
-            <p className="text-sm mt-1 text-red-400">
-              {errors.specialRequests.message}
+        {isPricingSelected && (
+          <article>
+            <Label htmlFor="bookingStatus">Booking Status (Optional)</Label>
+            <p className="text-xs text-muted-foreground my-2">
+              If not selected, &quot;pending&quot; will be set as the default
+              status.
             </p>
-          )}
-        </article>
+            <Controller
+              name="status"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger
+                    className={cn("w-full", errors?.status && "border-red-400")}
+                  >
+                    <SelectValue placeholder="Select booking status (default: Pending)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="reserved">Reserved</SelectItem>
+                    <SelectItem value="checked_in">Checked In</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors?.status && (
+              <p className="text-sm text-red-400">{errors.status.message}</p>
+            )}
+          </article>
+        )}
+
+        {/* Special Requests */}
+        {isPricingSelected && (
+          <article className="space-y-2">
+            <Label htmlFor="notes">Special Requests (optional)</Label>
+            <Textarea
+              id="notes"
+              rows={4}
+              placeholder="Additional notes about the booking"
+              className={cn(errors.specialRequests && "border border-red-400")}
+              {...register("specialRequests")}
+            />
+            {errors.specialRequests && (
+              <p className="text-sm mt-1 text-red-400">
+                {errors.specialRequests.message}
+              </p>
+            )}
+          </article>
+        )}
 
         {/* Form Action buttons */}
         <div className="flex space-x-2 pt-4">
           <Button
             type="submit"
-            disabled={createBookingMutation.isPending}
+            disabled={createBookingMutation.isPending || !isPricingSelected}
             className="flex-1 cursor-pointer"
           >
             {createBookingMutation.isPending ? (
-              <span className="flex item-center gap-2">
+              <span className="flex items-center gap-2">
                 <Loader className="animate-spin" />
                 <span>Creating booking</span>
               </span>

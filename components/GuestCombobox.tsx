@@ -22,6 +22,7 @@ interface Guest {
   bookings: {
     id: number;
     status: BookingStatus;
+    unitPrice: number
   }[];
   firstName: string;
   lastName: string;

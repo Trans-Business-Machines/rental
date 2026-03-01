@@ -55,12 +55,6 @@ function PropertyDetails({ property }: { property: UniqueProperty }) {
         {/* Description and pricing */}
         <div>
           <p className="text-foreground font-medium">{property.description}</p>
-          <p className="text-2xl font-bold text-chart-2">
-            Ksh. {property.rent}
-            <span className="text-base font-normal text-muted-foreground">
-              &nbsp; / month
-            </span>
-          </p>
         </div>
 
         {/* Property Stats */}

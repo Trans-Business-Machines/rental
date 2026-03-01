@@ -13,11 +13,11 @@ import {
   Phone,
   CreditCard,
   FileText,
+  Banknote,
   MapPin,
   IdCard,
   Users,
   Bed,
-  Banknote,
   CheckCircle2,
   Clock,
   XCircle,
@@ -25,7 +25,7 @@ import {
 import { format, differenceInDays } from "date-fns";
 import Header from "./Header";
 import type { BookingStatus } from "@/lib/types/types";
-import { cn } from "@/lib/utils";
+import { cn, getPeriodLabelSingular, formatPrice } from "@/lib/utils";
 
 const getStatusColor = (status: BookingStatus): string => {
   switch (status) {
@@ -93,7 +93,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
           booking.status === "reserved" && "border-l-chart-4",
           booking.status === "checked_in" && "border-l-chart-2",
           booking.status === "checked_out" && "border-l-chart-5",
-          booking.status === "cancelled" && "border-l-destructive"
+          booking.status === "cancelled" && "border-l-destructive",
         )}
       >
         <CardContent className="flex items-center justify-between p-4">
@@ -113,12 +113,12 @@ async function BookingDetails({ params }: BookingDetailsPros) {
               </Badge>
             </div>
           </div>
-          <div className="text-right">
+          {/* <div className="text-right">
             <p className="text-sm text-muted-foreground">Total Amount</p>
             <p className="text-2xl font-bold text-foreground">
               Ksh. {(booking.unit.rent * nights).toLocaleString()}
             </p>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
 
@@ -284,9 +284,11 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                 <div className="text-center p-3 rounded-lg bg-muted/60">
                   <Banknote className="size-5 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm font-medium text-foreground">
-                    Ksh. {booking.unit.rent}
+                    Ksh. {booking.unitPrice}
                   </p>
-                  <p className="text-xs text-muted-foreground">Per Night</p>
+                  <p className="text-xs text-muted-foreground">
+                    Per {getPeriodLabelSingular(booking.priceDuration)}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -331,7 +333,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                       Check in date
                     </p>
                     <p className="text-sm font-normal text-foreground">
-                      {format(checkInDate, "EEE, MMM d, yyyy")}
+                      {format(checkInDate, "EEEE, MMM d, yyyy")}
                     </p>
                   </div>
                 </div>
@@ -347,7 +349,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                       Check out date
                     </p>
                     <p className="text-sm font-normal text-foreground">
-                      {format(checkOutDate, "EEE, MMM d, yyyy")}
+                      {format(checkOutDate, "EEEE, MMM d, yyyy")}
                     </p>
                   </div>
                 </div>
@@ -401,10 +403,10 @@ async function BookingDetails({ params }: BookingDetailsPros) {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Ksh.{booking.unit.rent} &#x78; {nights} nights
+                    Ksh.{booking.unitPrice} &#x78; {nights} nights
                   </span>
                   <span className="text-foreground">
-                    Ksh. {(booking.unit.rent * nights).toLocaleString()}
+                    {formatPrice(booking.totalAmount)}
                   </span>
                 </div>
                 <Separator />
@@ -412,8 +414,8 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                   <span className="font-semibold text-foreground">
                     Total Amount
                   </span>
-                  <span className="text-xl font-bold text-foreground">
-                    Ksh. {(booking.unit.rent * nights).toLocaleString()}
+                  <span className="text-base font-bold text-foreground">
+                    {formatPrice(booking.totalAmount)}
                   </span>
                 </div>
               </div>
@@ -438,7 +440,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                   <p className="text-xs text-muted-foreground">
                     {format(
                       new Date(booking.createdAt),
-                      "MMM dd, yyyy, hh:mm a"
+                      "MMM dd, yyyy, hh:mm a",
                     )}
                   </p>
                 </div>
@@ -452,7 +454,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                   <p className="text-xs text-muted-foreground">
                     {format(
                       new Date(booking.updatedAt),
-                      "MMM dd, yyyy, hh:mm a"
+                      "MMM dd, yyyy, hh:mm a",
                     )}
                   </p>
                 </div>

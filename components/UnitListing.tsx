@@ -36,6 +36,7 @@ import { Footer } from "./Footer";
 import { useQueryClient } from "@tanstack/react-query";
 import { prefetchUnitDetails } from "@/hooks/useUnitDetails";
 import Link from "next/link";
+import { getDurationLabel } from "@/lib/utils";
 import Image from "next/image";
 import type { Unit, UnitStatus } from "@/lib/types/types";
 
@@ -165,21 +166,41 @@ export function UnitListing({
     prefetchUnitDetails(queryClient, unitId.toString(), propertyId.toString());
   };
 
-  if (units.length === 0 && !hasActiveFilters) {
+  if (units.length === 0) {
     return (
-      <ItemsNotFound
-        title="No units found!"
-        icon={House}
-        message="Get started by adding your first unit."
-      />
+      <section className="text-center">
+        <ItemsNotFound
+          title="No units found!"
+          icon={House}
+          message="Get started by adding your first unit."
+        />
+        {hasActiveFilters && (
+          <Button
+            onClick={clearFilters}
+            disabled={isPending}
+            className="cursor-pointer px-8 bg-chart-5 hover:bg-red-600"
+          >
+            {isClearPending ? (
+              <>
+                <Loader2 className="size-4 mr-2 animate-spin" />
+                Clearing...
+              </>
+            ) : (
+              "Clear filters"
+            )}
+          </Button>
+        )}
+      </section>
     );
   }
+
+  const propertyName = units[0].property.name || "this property's";
 
   return (
     <section className="space-y-4">
       <div>
         <h2 className="font-semibold text-base md:text-2xl text-muted-foreground">
-          View and manage {units[0].property.name} units
+          View and manage {propertyName} units
         </h2>
       </div>
 
@@ -349,14 +370,21 @@ export function UnitListing({
                     <h4 className="font-semibold text-lg text-foreground">
                       {unit.name}
                     </h4>
-                    <p className="text-sm text-muted-foreground">{unit.type}</p>
+                    <div>
+                      {unit.pricingOptions.map((opt) => (
+                        <div
+                          key={opt.id}
+                          className="text-muted-foreground text-sm"
+                        >
+                          <span>{getDurationLabel(opt.duration)} </span>-
+                          <span> Ksh {opt.price}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-lg text-foreground">
-                      Ksh. {unit.rent}
-                    </p>
-                    <p className="text-xs text-muted-foreground">per month</p>
-                  </div>
+                  <p className="text-sm font-medium text-black capitalize">
+                    {unit.type}
+                  </p>
                 </div>
 
                 <div className="flex flex-wrap items-center my-3 gap-2">
