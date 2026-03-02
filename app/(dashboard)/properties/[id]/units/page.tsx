@@ -1,4 +1,3 @@
-// app/(system)/properties/[id]/units/page.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,6 @@ export default function UnitsPage() {
   const search = searchParams.get("search") || "";
   const status = searchParams.get("status") || "all";
   const type = searchParams.get("type") || "all";
-  const sortOrder = searchParams.get("sortOrder") || "none";
 
   // Get the property id from params
   const propertyId = params.id;
@@ -30,7 +28,6 @@ export default function UnitsPage() {
     search,
     status,
     type,
-    sortOrder,
   });
 
   if (!propertyId || isNaN(parsedPropertyId)) {
@@ -97,7 +94,7 @@ export default function UnitsPage() {
         totalPages={data.totalPages}
         hasNext={data.hasNext}
         hasPrev={data.hasPrev}
-        initialFilters={{ search, status, type, sortOrder }}
+        initialFilters={{ search, status, type }}
       />
     </section>
   );

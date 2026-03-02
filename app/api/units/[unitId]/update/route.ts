@@ -12,17 +12,14 @@ const uploadedImageSchema = z.object({
     mimeType: z.string(),
 });
 
-// Define schema for the new unit
+// Define schema for the updated unit
 const updateUnitSchema = z.object({
     name: z.string().min(1),
     type: z.string().min(1),
-    rent: z.coerce.number().positive(),
     bedrooms: z.coerce.number().positive(),
     bathrooms: z.coerce.number().min(0),
     maxGuests: z.coerce.number().positive(),
-    // New images uploaded from client
     newImages: z.array(uploadedImageSchema).optional().default([]),
-    // IDs of existing images to delete
     imagesToDelete: z.array(z.string()).optional().default([]),
 });
 

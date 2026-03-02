@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/carousel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CategoryItemStats } from "@/lib/types/types";
+import { cn } from "@/lib/utils";
 
 export function CategoryCarousel({ stats }: { stats: CategoryItemStats }) {
   const autoplayPlugin = useRef(
@@ -59,8 +60,18 @@ export function CategoryCarousel({ stats }: { stats: CategoryItemStats }) {
                   </article>
 
                   {/* Available */}
-                  <article className="flex flex-col items-center p-2 rounded-lg bg-green-50">
-                    <span className="text-xl font-bold text-green-600">
+                  <article
+                    className={cn(
+                      "flex flex-col items-center p-2 rounded-lg",
+                      stat.available <= 0 ? "bg-red-50" : "bg-green-50",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "text-xl font-bold",
+                        stat.available <= 0 ? "text-red-500" : "text-green-500",
+                      )}
+                    >
                       {stat.available}
                     </span>
                     <span className="text-xs text-muted-foreground">
