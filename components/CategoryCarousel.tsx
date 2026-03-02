@@ -63,13 +63,13 @@ export function CategoryCarousel({ stats }: { stats: CategoryItemStats }) {
                   <article
                     className={cn(
                       "flex flex-col items-center p-2 rounded-lg",
-                      stat.available <= 0 ? "bg-red-50" : "bg-green-50",
+                      stat.available <= 0 ? "bg-chart-5/20" : "bg-green-50",
                     )}
                   >
                     <span
                       className={cn(
                         "text-xl font-bold",
-                        stat.available <= 0 ? "text-red-500" : "text-green-500",
+                        stat.available <= 0 ? "text-chart-5" : "text-green-500",
                       )}
                     >
                       {stat.available}
