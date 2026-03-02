@@ -22,7 +22,6 @@ export async function GET(
         const search = searchParams.get("search") || "";
         const status = searchParams.get("status") || "all";
         const type = searchParams.get("type") || "all";
-        const sortOrder = searchParams.get("sortOrder") || "none";
 
         const LIMIT = 3;
 
@@ -58,15 +57,6 @@ export async function GET(
             }),
         };
 
-        // Build orderBy clause
-        let orderBy: { createdAt?: "asc" | "desc"; rent?: "asc" | "desc" } = { createdAt: "desc" };
-
-        if (sortOrder === "asc") {
-            orderBy = { rent: "asc" };
-        } else if (sortOrder === "desc") {
-            orderBy = { rent: "desc" };
-        }
-
         const [units, totalUnits] = await Promise.all([
             prisma.unit.findMany({
                 where,
@@ -80,7 +70,9 @@ export async function GET(
                     media: true,
 
                 },
-                orderBy,
+                orderBy: {
+                    createdAt: "asc"
+                },
                 take: LIMIT,
                 skip: (page - 1) * LIMIT,
             }),
@@ -108,7 +100,7 @@ export async function GET(
         return NextResponse.json({
             totalPages,
             currentPage: page,
-            units:unitsWithPricing, 
+            units: unitsWithPricing,
             hasPrev,
             hasNext,
         });

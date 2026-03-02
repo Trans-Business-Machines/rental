@@ -44,7 +44,6 @@ interface UnitFilters {
   search: string;
   status: string;
   type: string;
-  sortOrder: string;
 }
 
 interface UnitListingProps {
@@ -123,8 +122,7 @@ export function UnitListing({
   const hasActiveFilters =
     initialFilters.search !== "" ||
     initialFilters.status !== "all" ||
-    initialFilters.type !== "all" ||
-    initialFilters.sortOrder !== "none";
+    initialFilters.type !== "all";
 
   /* ------------ URL Update Handlers ------------ */
   const applyFilters = () => {
@@ -140,9 +138,6 @@ export function UnitListing({
     if (filters.type !== "all") {
       params.set("type", filters.type);
     }
-    if (filters.sortOrder !== "none") {
-      params.set("sortOrder", filters.sortOrder);
-    }
 
     startApplyTransition(() => {
       router.push(`/properties/${propertyId}/units?${params.toString()}`);
@@ -154,7 +149,6 @@ export function UnitListing({
       search: "",
       status: "all",
       type: "all",
-      sortOrder: "none",
     });
 
     startClearTransition(() => {
@@ -222,24 +216,6 @@ export function UnitListing({
           </div>
 
           <div className="flex-2 md:flex md:items-center space-y-4 md:space-y-0 md:space-x-2">
-            {/* Price Sort */}
-            <Select
-              value={filters.sortOrder}
-              onValueChange={(value) =>
-                setFilters((prev) => ({ ...prev, sortOrder: value }))
-              }
-              disabled={isPending}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Any price</SelectItem>
-                <SelectItem value="asc">Price: Low to high</SelectItem>
-                <SelectItem value="desc">Price: High to low</SelectItem>
-              </SelectContent>
-            </Select>
-
             {/* Unit Type Filter */}
             <Select
               value={filters.type}

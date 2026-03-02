@@ -17,13 +17,10 @@ const updatePropertySchema = z.object({
     name: z.string().min(1),
     address: z.string().min(1),
     type: z.string().min(1),
-    rent: z.coerce.number().positive(),
     maxBedrooms: z.coerce.number().positive(),
     maxBathrooms: z.coerce.number().positive(),
     description: z.string().min(1).max(1000),
-    // New images uploaded from client
     newImages: z.array(uploadedImageSchema).optional().default([]),
-    // IDs of existing images to delete
     imagesToDelete: z.array(z.string()).optional().default([]),
 });
 
