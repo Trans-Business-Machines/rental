@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { LIMIT } from "@/lib/utils";
 
 export async function GET(
     request: NextRequest,
@@ -23,7 +24,6 @@ export async function GET(
         const status = searchParams.get("status") || "all";
         const type = searchParams.get("type") || "all";
 
-        const LIMIT = 3;
 
         // Verify the property exists
         const existingProperty = await prisma.property.findUnique({

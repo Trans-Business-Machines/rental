@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { AppSkeleton } from "./AppSkeleton";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -71,7 +72,6 @@ export function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const currentPage = pathname.slice(1) || "dashboard";
-  // const [searchQuery, setSearchQuery] = useState("");
   const { data: session } = authClient.useSession();
 
   // Track which collapsible menus are open
@@ -81,7 +81,7 @@ export function Layout({ children }: LayoutProps) {
     navigationConfig.forEach((item) => {
       if (item.items) {
         const hasActiveChild = item.items.some(
-          (subItem) => subItem.id === currentPage
+          (subItem) => subItem.id === currentPage,
         );
         if (hasActiveChild) {
           initialOpen.add(item.id);
@@ -94,20 +94,14 @@ export function Layout({ children }: LayoutProps) {
   // Show loading state while checking authentication
   if (session === undefined) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <AppSkeleton/>
     );
   }
 
   // If no session, show a message (middleware will handle redirect)
   if (!session) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Home className="h-12 w-12 text-primary mx-auto mb-4" />
-        </div>
-      </div>
+      <AppSkeleton/>
     );
   }
 
@@ -159,7 +153,7 @@ export function Layout({ children }: LayoutProps) {
                 "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2  transition-colors cursor-pointer",
                 isActive
                   ? "bg-sidebar-primary font-bold"
-                  : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               )}
             >
               {Icon && <Icon className="size-5" />}
@@ -183,7 +177,7 @@ export function Layout({ children }: LayoutProps) {
                   "w-12/12 flex items-center space-x-3 px-3 py-2 ml-6 rounded-none transition-colors text-sm cursor-pointer text-sidebar-primary-foreground",
                   currentPage === subItem.id
                     ? "bg-sidebar-primary font-bold"
-                    : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 )}
               >
                 <div className="size-1 bg-current rounded-full" />
@@ -207,7 +201,7 @@ export function Layout({ children }: LayoutProps) {
           "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2  transition-colors cursor-pointer",
           isActive
             ? "bg-sidebar-primary font-bold"
-            : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         )}
       >
         {Icon && <Icon className="size-5" />}
@@ -242,7 +236,7 @@ export function Layout({ children }: LayoutProps) {
       <aside
         className={cn(
           "fixed inset-y-0 left-0 w-52 bg-sidebar border-r border-sidebar-border transform transition-transform duration-200  ease-in-out z-50 overflow-x-hidden",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
         <div className="flex items-center justify-between px-5 h-16 border-b border-sidebar-border">

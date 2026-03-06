@@ -18,7 +18,8 @@ type PropertyResponse = Awaited<ReturnType<typeof getProperties>>
 export type Property = PropertyResponse["properties"][number]
 export type Media = Property["media"][number]
 
-export type UniqueProperty = NonNullable<Awaited<ReturnType<typeof getCachedProperty>>>
+export type UniqueProperty = NonNullable<Awaited<ReturnType<typeof getCachedProperty>>>["property"]
+export type PropertyPricings = NonNullable<Awaited<ReturnType<typeof getCachedProperty>>>["pricings"]
 
 type AssignmentResponse = Awaited<ReturnType<typeof getInventoryAssignments>>
 export type Assignment = AssignmentResponse["assignments"][number]

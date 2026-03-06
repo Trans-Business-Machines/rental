@@ -10,7 +10,7 @@ export default async function EditPropertyPage({
   params,
 }: EditPropertyPageParams) {
   const { id } = await params;
-  const property = await getCachedProperty(Number(id));
+  const { property } = await getCachedProperty(Number(id));
 
   if (!property) {
     notFound();
