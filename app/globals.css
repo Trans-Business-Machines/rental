@@ -46,6 +46,14 @@
     --success-foreground: oklch(0.99 0.005 106.423);
     --warning: oklch(0.75 0.12 60);
     --warning-foreground: oklch(0.15 0.01 106.423);
+
+    /* Some more shades of colors */
+    --azure: oklch(0.4819 0.147751 252.8167);
+    --night: oklch(0.1491 0.009 96.47);
+    --medium-jungle: oklch(63.168% 0.16967 151.088);
+    --lipstick-red: oklch(60.754% 0.24432 20.891);
+    --crimson-red: oklch(60.818% 0.23227 24.939);
+    --princeton-orange: oklch(73.491% 0.18454 53.82);
 }
 
 .dark {
@@ -82,6 +90,12 @@
     --font-sans: var(--font-geist-sans);
     --font-mono: var(--font-geist-mono);
     --color-background: var(--background);
+    --color-azure: var(--azure);
+    --color-night: var(--night);
+    --color-medium-jungle: var(--medium-jungle);
+    --color-lipstick-red: var(--lipstick-red);
+    --color-crimson-red: var(--crimson-red);
+    --color-princeton-orange: var(--princeton-orange);
     --color-foreground: var(--foreground);
     --color-card: var(--card);
     --color-card-foreground: var(--card-foreground);

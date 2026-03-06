@@ -18,9 +18,9 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
   const id = (await params).id;
 
   // fetch the property from the database
-  const property = await getCachedProperty(Number(id));
+  const { property, pricings } = await getCachedProperty(Number(id));
 
-  if (!property) {
+  if (!property || property === null) {
     notFound();
   }
 
@@ -71,8 +71,8 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
       />
 
       <div className="flex flex-col md:flex-row gap-2">
-        <PropertyDetails property={property} />
-       {/*  <PropertyAmenities amenities={amenities} propertyId={property.id} /> */}
+        <PropertyDetails property={property} pricings={pricings} />
+        {/*  <PropertyAmenities amenities={amenities} propertyId={property.id} /> */}
       </div>
     </section>
   );

@@ -75,7 +75,7 @@ export async function getProperties({
 
 export const getCachedProperty = unstable_cache(
 	async (propertyId: number) => {
-		return await prisma.property.findUnique({
+		const property = await prisma.property.findUnique({
 			where: { id: propertyId, deletedAt: null, },
 			include: {
 				tenants: true,
@@ -89,10 +89,18 @@ export const getCachedProperty = unstable_cache(
 
 			},
 		});
+
+		const pricings = await prisma.unitTypePricing.findMany()
+
+
+		return {
+			property,
+			pricings
+		}
 	},
 	["property"],
 	{
-		revalidate: 2 * 60,
+		revalidate: 60,
 		tags: ["property"],
 	}
 )

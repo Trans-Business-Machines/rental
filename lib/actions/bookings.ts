@@ -187,7 +187,7 @@ export async function createBooking(booking: CreateBookingData) {
 				})
 
 				// increment property occupied count
-				if (booking.status === "checked_in") {
+				if (["checked_in", "reserved"].includes(booking.status)) {
 					await tx.property.update({
 						where: {
 							id: booking.propertyId

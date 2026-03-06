@@ -1,9 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UnitDetailsResponse, GroupedAssigments } from "@/lib/types/types"
 
-
-
-
 export const unitKeys = {
     all: ["units"] as const,
     details: (unitId: string, propertyId: string) => [...unitKeys.all, "details", propertyId, unitId] as const
