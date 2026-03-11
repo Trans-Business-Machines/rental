@@ -84,6 +84,14 @@ export interface BookingsTableAndCardsProps {
     setIsDialogOpen: (open: boolean) => void;
 }
 
+export interface UpdatePricingParams {
+    id: number;
+    duration: PriceDuration;
+    price: number;
+    nights: number;
+}
+
+
 export interface GuestsTableAndCardsProps {
     guests: Guest[];
     isArchivePending: boolean,
