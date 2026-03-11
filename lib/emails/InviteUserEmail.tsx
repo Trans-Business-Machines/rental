@@ -34,7 +34,7 @@ export function InviteUserEmail({
             </Text>
             <Text className="mb-4 text-gray-700">
               You have been assigned the{" "}
-              <span className="font-bold">{role}</span> role
+              <span className="font-bold capitalize">{role}</span> role
             </Text>
             <div className="my-6 text-center">
               <Link

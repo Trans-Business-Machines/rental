@@ -24,6 +24,15 @@ export const user = ac.newRole({
     unit: ["create", "read", "update",],
 })
 
+// Define marketer role and its permissions
+export const marketer = ac.newRole({
+    user: ["set-password"],
+    booking: ["create", "read"],
+    guest: ["read"],
+    property: ["read"],
+    unit: ["read"],
+})
+
 // Define the admin role and its permissions
 export const admin = ac.newRole({
     booking: ["create", "read", "update"],

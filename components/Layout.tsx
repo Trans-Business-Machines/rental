@@ -1,5 +1,7 @@
 "use client";
 
+import { authClient } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -14,11 +16,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { authClient } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
 import {
   ChartColumnBig,
-  Bell,
   Building2,
   CalendarDays,
   ChevronDown,
@@ -27,6 +26,7 @@ import {
   Home,
   LogOut,
   Menu,
+  Settings,
   User,
   Users,
   X,
@@ -53,18 +53,8 @@ const navigationConfig: NavItem[] = [
   { id: "guests", label: "Guests", icon: Users },
   { id: "inventory", label: "Inventory", icon: Box },
   { id: "properties", label: "Properties", icon: Building2 },
-  /*   { id: "payments", label: "Payments", icon: CreditCard }, */
-  /*  { id: "maintenance", label: "Maintenance", icon: Wrench }, */
   { id: "users", label: "Users", icon: User, roles: ["admin", "superAdmin"] },
-  /* {
-    id: "amenities",
-    label: "Amenities",
-    icon: Calendar,
-    items: [
-      { id: "amenities", label: "Amenities" },
-      { id: "booking-requests", label: "Booking Requests" },
-    ],
-  }, */
+  { id: "settings", label: "Settings", icon: Settings, roles: ["superAdmin"] },
 ];
 
 export function Layout({ children }: LayoutProps) {
@@ -77,7 +67,6 @@ export function Layout({ children }: LayoutProps) {
   // Track which collapsible menus are open
   const [openMenus, setOpenMenus] = useState<Set<string>>(() => {
     const initialOpen = new Set<string>();
-    // Open menu if current page is a nested item
     navigationConfig.forEach((item) => {
       if (item.items) {
         const hasActiveChild = item.items.some(
@@ -91,18 +80,12 @@ export function Layout({ children }: LayoutProps) {
     return initialOpen;
   });
 
-  // Show loading state while checking authentication
   if (session === undefined) {
-    return (
-      <AppSkeleton/>
-    );
+    return <AppSkeleton />;
   }
 
-  // If no session, show a message (middleware will handle redirect)
   if (!session) {
-    return (
-      <AppSkeleton/>
-    );
+    return <AppSkeleton />;
   }
 
   const handleLogout = async () => {
@@ -140,7 +123,6 @@ export function Layout({ children }: LayoutProps) {
     const isOpen = openMenus.has(item.id);
 
     if (item.items) {
-      // Render collapsible menu
       return (
         <Collapsible
           key={item.id}
@@ -150,7 +132,7 @@ export function Layout({ children }: LayoutProps) {
           <CollapsibleTrigger asChild>
             <button
               className={cn(
-                "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2  transition-colors cursor-pointer",
+                "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2 transition-colors cursor-pointer",
                 isActive
                   ? "bg-sidebar-primary font-bold"
                   : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
@@ -189,7 +171,6 @@ export function Layout({ children }: LayoutProps) {
       );
     }
 
-    // Render regular menu item
     return (
       <button
         key={item.id}
@@ -198,7 +179,7 @@ export function Layout({ children }: LayoutProps) {
           setSidebarOpen(false);
         }}
         className={cn(
-          "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2  transition-colors cursor-pointer",
+          "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2 transition-colors cursor-pointer",
           isActive
             ? "bg-sidebar-primary font-bold"
             : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
@@ -210,11 +191,9 @@ export function Layout({ children }: LayoutProps) {
     );
   };
 
-  // Get user display name and role
   const userName = session?.user?.name || "User";
   const userRole = session?.user?.role || "User";
 
-  // Filter navigation items based on role
   const filteredNavigationConfig = navigationConfig.filter((item) => {
     if (item.roles && !item.roles.includes(userRole)) {
       return false;
@@ -235,7 +214,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 w-52 bg-sidebar border-r border-sidebar-border transform transition-transform duration-200  ease-in-out z-50 overflow-x-hidden",
+          "fixed inset-y-0 left-0 w-52 bg-sidebar border-r border-sidebar-border transform transition-transform duration-200 ease-in-out z-50 overflow-x-hidden",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
@@ -260,9 +239,10 @@ export function Layout({ children }: LayoutProps) {
           {filteredNavigationConfig.map(renderNavItem)}
         </nav>
 
-        <div className="absolute bottom-0  border-t border-sidebar-border  w-full">
+        {/* Logout Button */}
+        <div className="absolute bottom-0 border-t border-sidebar-border w-full">
           <Button
-            className="rounded-none w-full cursor-pointer flex justify-start items-center gap-2 py-6 bg-transparent text-sidebar-primary-foreground  transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            className="rounded-none w-full cursor-pointer flex justify-start items-center gap-2 py-6 bg-transparent text-sidebar-primary-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             onClick={handleLogout}
           >
             <LogOut className="size-4 ml-4" />
@@ -275,7 +255,6 @@ export function Layout({ children }: LayoutProps) {
       <div className="lg:ml-52">
         {/* Top bar */}
         <div className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
-          {/* Mobile: Hamburger menu */}
           <div className="flex items-center gap-4 flex-1">
             <Button
               variant="ghost"
@@ -287,15 +266,7 @@ export function Layout({ children }: LayoutProps) {
             </Button>
           </div>
 
-          {/* Profile information */}
           <div className="flex items-center gap-4">
-            {/* Notifications */}
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-6 w-6" />
-              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
-            </Button>
-
-            {/* User Profile */}
             <div className="flex items-center gap-3">
               <div className="hidden md:block text-right">
                 <p className="text-sm font-medium">{userName}</p>
@@ -321,7 +292,6 @@ export function Layout({ children }: LayoutProps) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleLogout}
@@ -336,8 +306,7 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
 
-        {/* Page content */}
-        <main className="p-4  min-h-screen relative">{children}</main>
+        <main className="p-4 min-h-screen relative">{children}</main>
       </div>
     </div>
   );

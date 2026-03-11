@@ -101,7 +101,6 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
       const result = await response.json();
 
       if (!result.success) {
-        console.log(result);
         throw new Error("Invite failed, try again!");
       }
 
@@ -146,9 +145,10 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
               <Input
                 id="name"
                 type="text"
+                placeholder="e.g, John Doe"
                 className={cn(
                   "w-full border rounded",
-                  errors.name && "border-red-400"
+                  errors.name && "border-red-400",
                 )}
                 {...register("name")}
               />
@@ -170,9 +170,10 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
               <Input
                 id="email"
                 type="email"
+                placeholder="e.g., john@gmail.com"
                 className={cn(
                   "w-full border rounded",
-                  errors.email && "border-red-400"
+                  errors.email && "border-red-400",
                 )}
                 {...register("email")}
               />
@@ -200,7 +201,7 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
                 <SelectTrigger
                   className={cn(
                     "w-full rounded-sm",
-                    errors.role && "border-red-400"
+                    errors.role && "border-red-400",
                   )}
                 >
                   <SelectValue
@@ -210,6 +211,7 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="marketer">Marketer</SelectItem>
                   {userRole === "superAdmin" && (
                     <SelectItem value="admin">Admin</SelectItem>
                   )}
