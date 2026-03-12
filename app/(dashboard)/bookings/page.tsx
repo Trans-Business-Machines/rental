@@ -21,6 +21,8 @@ import {
 } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { getServerSession } from "@/lib/check-permissions";
+import { redirect } from "next/navigation";
 
 interface BookingsPageProps {
   searchParams: Promise<{
@@ -34,6 +36,13 @@ interface BookingsPageProps {
 export default async function BookingsPage({
   searchParams,
 }: BookingsPageProps) {
+  const session = await getServerSession();
+  const user = session?.user;
+
+  if (!user) {
+    redirect("/login");
+  }
+
   const params = await searchParams;
 
   const page = Number(params.page) || 1;
@@ -104,12 +113,12 @@ export default async function BookingsPage({
 
           <div className="flex gap-3">
             <BookingDialog />
-            <Button asChild>
+            {user.role !== "marketer" && <Button asChild>
               <Link href="/checkout" className="flex items-center gap-3">
                 <ClipboardPaste className="size-4 text-white" />
                 <span className="text-white">Checkout guest</span>
               </Link>
-            </Button>
+            </Button>}
           </div>
         </header>
 

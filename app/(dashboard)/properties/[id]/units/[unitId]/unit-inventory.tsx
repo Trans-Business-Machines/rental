@@ -11,6 +11,7 @@ import {
 import { InventoryAssignmentDialog } from "@/components/InventoryAssignmentDialog";
 import { Button } from "@/components/ui/button";
 import type { GroupedAssigments } from "@/lib/types/types";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Assignments {
   assignments: GroupedAssigments;
@@ -21,6 +22,8 @@ interface Assignments {
 }
 
 export default function UnitInventory({ assignments, context }: Assignments) {
+  const { isMarketer } = usePermissions();
+
   return (
     <Card className="border-border shadow-sm bg-card rounded-xl">
       <CardHeader>
@@ -35,12 +38,15 @@ export default function UnitInventory({ assignments, context }: Assignments) {
               </p>
             )}
           </div>
-          <InventoryAssignmentDialog
-            preselectedUnitId={context.unitId}
-            preselectedPropertyId={context.propertyId}
-          >
-            <Button size="sm">Assign item</Button>
-          </InventoryAssignmentDialog>
+          
+          {!isMarketer && (
+            <InventoryAssignmentDialog
+              preselectedUnitId={context.unitId}
+              preselectedPropertyId={context.propertyId}
+            >
+              <Button size="sm">Assign item</Button>
+            </InventoryAssignmentDialog>
+          )}
         </div>
       </CardHeader>
       <CardContent>
