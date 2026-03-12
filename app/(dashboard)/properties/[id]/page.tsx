@@ -8,12 +8,21 @@ import { getCachedProperty } from "@/lib/actions/properties";
 import { notFound } from "next/navigation";
 //import { amenities } from "@/lib/data/properties";
 import Link from "next/link";
+import { getServerSession } from "@/lib/check-permissions";
+import { redirect } from "next/navigation";
 
 interface PropertyDetailsPageProps {
   params: Promise<{ id: string }>;
 }
 
 async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
+  const session = await getServerSession();
+  const user = session?.user;
+
+  if (!user) {
+    redirect("/login");
+  }
+
   // use this id to get property details from backend
   const id = (await params).id;
 
@@ -48,20 +57,22 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 py-3 md:py-0">
-          <Button asChild>
-            <Link href={`/properties/${id}/edit`}>
-              <SquarePen className="size-4 text-white" />
-              <span className="text-white">Edit property</span>
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href={`/properties/${id}/add-unit`}>
-              <Plus className="size-4 text-white" />
-              <span className="text-white">Add unit</span>
-            </Link>
-          </Button>
-        </div>
+        {user.role !== "marketer" && (
+          <div className="flex items-center gap-2 py-3 md:py-0">
+            <Button asChild>
+              <Link href={`/properties/${id}/edit`}>
+                <SquarePen className="size-4 text-white" />
+                <span className="text-white">Edit property</span>
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href={`/properties/${id}/add-unit`}>
+                <Plus className="size-4 text-white" />
+                <span className="text-white">Add unit</span>
+              </Link>
+            </Button>
+          </div>
+        )}
       </header>
 
       {/* Property ImageGallery */}

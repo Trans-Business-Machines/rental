@@ -6,8 +6,10 @@ import { UnitListing } from "@/components/UnitListing";
 import { useSearchParams, useParams } from "next/navigation";
 import { usePropertyUnits } from "@/hooks/useProperties";
 import Link from "next/link";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function UnitsPage() {
+  const { isMarketer } = usePermissions();
   const searchParams = useSearchParams();
   const params = useParams();
 
@@ -75,15 +77,18 @@ export default function UnitsPage() {
             </Link>
           </Button>
         </div>
-        <Button className="space-x-2 text-white" asChild>
-          <Link
-            href={`/properties/${propertyId}/add-unit`}
-            className="flex items-center"
-          >
-            <Plus className="size-4" />
-            <span>Add unit</span>
-          </Link>
-        </Button>
+
+        {!isMarketer && (
+          <Button className="space-x-2 text-white" asChild>
+            <Link
+              href={`/properties/${propertyId}/add-unit`}
+              className="flex items-center"
+            >
+              <Plus className="size-4" />
+              <span>Add unit</span>
+            </Link>
+          </Button>
+        )}
       </header>
 
       {/* Unit Listing with filters */}

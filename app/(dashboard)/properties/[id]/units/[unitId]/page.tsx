@@ -9,8 +9,10 @@ import UnitGallery from "./unit-gallery";
 import UnitInfo from "./unit-info";
 import UnitInventory from "./unit-inventory";
 import UnitBookings from "./unit-bookings";
+import { usePermissions } from "@/hooks/usePermissions";
 
 function UnitDetailsPage() {
+  const { isMarketer } = usePermissions();
   const params = useParams();
   const propertyId = params.id as string;
   const unitId = params.unitId as string;
@@ -60,15 +62,17 @@ function UnitDetailsPage() {
           </Button>
         </div>
 
-        <Button className="gap-2 bg-chart-1 hover:bg-chart-1/90" asChild>
-          <Link
-            href={`/properties/${propertyId}/units/${unitId}/edit`}
-            className="flex items-center"
-          >
-            <Edit className="size-4" />
-            <span>Edit Unit</span>
-          </Link>
-        </Button>
+        {!isMarketer && (
+          <Button className="gap-2 bg-chart-1 hover:bg-chart-1/90" asChild>
+            <Link
+              href={`/properties/${propertyId}/units/${unitId}/edit`}
+              className="flex items-center"
+            >
+              <Edit className="size-4" />
+              <span>Edit Unit</span>
+            </Link>
+          </Button>
+        )}
       </header>
 
       {unit && <UnitGallery images={unit.media} />}
