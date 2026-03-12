@@ -39,6 +39,8 @@ import Link from "next/link";
 import { getDurationLabel } from "@/lib/utils";
 import Image from "next/image";
 import type { Unit, UnitStatus } from "@/lib/types/types";
+import { usePermissions } from "@/hooks/usePermissions";
+import { cn } from "@/lib/utils";
 
 interface UnitFilters {
   search: string;
@@ -102,6 +104,7 @@ export function UnitListing({
   hasPrev,
   initialFilters,
 }: UnitListingProps) {
+  const { isMarketer } = usePermissions();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -401,7 +404,10 @@ export function UnitListing({
                   </Button>
                   <Button
                     variant="default"
-                    className="flex-1 gap-2 bg-chart-3 hover:bg-chart-3/90"
+                    className={cn(
+                      "flex-1 gap-2 bg-chart-3 hover:bg-chart-3/90",
+                      isMarketer && "hidden",
+                    )}
                     size="sm"
                     asChild
                   >

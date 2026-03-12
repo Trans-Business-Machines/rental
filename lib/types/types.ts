@@ -79,6 +79,7 @@ export type Role = "user" | "admin" | "superAdmin" | "marketer"
 /* ---------------- Interface Definitions ---------------- */
 export interface BookingsTableAndCardsProps {
     bookings: Booking[];
+    isMarketer: boolean;
     handleClick: (bookingId: number) => void;
     setEditBooking: (booking: Booking) => void;
     setIsDialogOpen: (open: boolean) => void;

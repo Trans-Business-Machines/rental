@@ -29,6 +29,7 @@ import Link from "next/link";
 
 function BookingCards({
   bookings,
+  isMarketer,
   setEditBooking,
   setIsDialogOpen,
   handleClick,
@@ -98,7 +99,7 @@ function BookingCards({
                         <span>Edit Booking</span>
                       </DropdownMenuItem>
 
-                      {booking.status === "checked_in" && (
+                      {booking.status === "checked_in" &&  !isMarketer && (
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
