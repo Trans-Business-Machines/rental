@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { PropertyListing } from "@/components/PropertyListing";
 import Link from "next/link";
+import { getServerSession } from "@/lib/check-permissions";
+import { redirect } from "next/navigation";
 
 interface PropertiesPageParams {
   searchParams: Promise<{
@@ -14,6 +16,13 @@ interface PropertiesPageParams {
 export default async function PropertiesPage({
   searchParams,
 }: PropertiesPageParams) {
+  const session = await getServerSession();
+  const user = session?.user;
+
+  if (!user) {
+    redirect("/login");
+  }
+
   const params = await searchParams;
 
   const page = Number(params.page) || 1;
@@ -30,12 +39,15 @@ export default async function PropertiesPage({
           </h1>
           <p className="text-muted-foreground">Manage your rental properties</p>
         </div>
-        <Link href="/properties/add">
-          <Button>
-            <Plus className="size-4 mr-1" />
-            <span>Add Property</span>
-          </Button>
-        </Link>
+
+        {user.role !== "marketer" && (
+          <Link href="/properties/add">
+            <Button>
+              <Plus className="size-4 mr-1" />
+              <span>Add Property</span>
+            </Button>
+          </Link>
+        )}
       </div>
 
       <PropertyListing

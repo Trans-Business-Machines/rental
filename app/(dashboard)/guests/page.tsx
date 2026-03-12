@@ -38,6 +38,7 @@ interface GuestFilters {
 }
 
 export default function GuestsPage() {
+  const { isMarketer } = usePermissions();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -116,8 +117,6 @@ export default function GuestsPage() {
     });
   };
 
-
-
   const stats: StatCardsProps[] = [
     {
       title: "Total Guests",
@@ -151,7 +150,7 @@ export default function GuestsPage() {
               Manage guest registrations, bookings, and check-ins
             </p>
           </div>
-          <GuestDialog />
+          {!isMarketer && <GuestDialog />}
         </div>
         <div className="text-center py-8">
           <p className="text-destructive">
@@ -172,7 +171,7 @@ export default function GuestsPage() {
             </h1>
             <p className="text-muted-foreground">Manage guest registrations.</p>
           </div>
-          <GuestDialog />
+          {isMarketer && <GuestDialog />}
         </header>
 
         <StatCards stats={stats} />
@@ -196,15 +195,17 @@ export default function GuestsPage() {
           <p className="text-muted-foreground">Manage guest registrations.</p>
         </div>
 
-        <div className="flex gap-3">
-          <GuestDialog />
-          <Button asChild>
-            <Link href="/checkout" className="flex items-center gap-3">
-              <ClipboardPaste className="size-4 text-white" />
-              <span className="text-white">Checkout guest</span>
-            </Link>
-          </Button>
-        </div>
+        {!isMarketer && (
+          <div className="flex gap-3">
+            <GuestDialog />
+            <Button asChild>
+              <Link href="/checkout" className="flex items-center gap-3">
+                <ClipboardPaste className="size-4 text-white" />
+                <span className="text-white">Checkout guest</span>
+              </Link>
+            </Button>
+          </div>
+        )}
       </header>
 
       {/* Statistics Cards */}
