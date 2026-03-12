@@ -8,7 +8,9 @@ export const statement = {
     guest: ["create", "read", "update", "delete", "restore", "check-out"],
     property: ["create", "read", "update", "delete", "restore"],
     unit: ["create", "read", "update", "delete", "restore"],
-    settings: ["create", "read", "update", "delete"]
+    settings: ["create", "read", "update", "delete"],
+    inventory: ["create", "read", "update", "delete"],
+    assignments: ["create", "read", "update", "return"]
 } as const
 
 
@@ -22,12 +24,14 @@ export const user = ac.newRole({
     guest: ["create", "read", "update", "check-out"],
     property: ["create", "read", "update"],
     unit: ["create", "read", "update",],
+    inventory: ["create", "read", "update"],
+    assignments: ["create", "read", "update", "return"]
 })
 
 // Define marketer role and its permissions
 export const marketer = ac.newRole({
     user: ["set-password"],
-    booking: ["create", "read"],
+    booking: ["create", "read", "update"],
     guest: ["read"],
     property: ["read"],
     unit: ["read"],
@@ -35,11 +39,13 @@ export const marketer = ac.newRole({
 
 // Define the admin role and its permissions
 export const admin = ac.newRole({
+    ...adminAc.statements,
     booking: ["create", "read", "update"],
     guest: ["create", "read", "update", "check-out"],
     property: ["create", "read", "update"],
     unit: ["create", "read", "update",],
-    ...adminAc.statements,
+    inventory: ["create", "read", "update", "delete"],
+    assignments: ["create", "read", "update", "return"]
 })
 
 // Define the superAdmin role and its permissions
@@ -50,4 +56,6 @@ export const superAdmin = ac.newRole({
     property: ["create", "read", "update", "delete", "restore"],
     unit: ["create", "read", "update", "delete", "restore"],
     settings: ["create", "read", "update", "delete"],
+    inventory: ["create", "read", "update", "delete"],
+    assignments: ["create", "read", "update", "return"]
 })

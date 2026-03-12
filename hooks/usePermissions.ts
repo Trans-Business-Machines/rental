@@ -11,6 +11,7 @@ export function usePermissions() {
     const isSuperAdmin = userRole === "superAdmin"
     const isAdmin = userRole === "admin"
     const isUser = userRole === "user"
+    const isMarketer = userRole === "marketer"
 
     // Booking permissions
     const canCreateBooking = isAdmin || isSuperAdmin
@@ -20,7 +21,7 @@ export function usePermissions() {
     // Guest permissions
     const canCreateGuest = isAdmin || isSuperAdmin
     const canUpdateGuest = isAdmin || isSuperAdmin
-    const canCheckOutGuest = isAdmin || isSuperAdmin
+    const canCheckOutGuest = isUser || isAdmin || isSuperAdmin
     const canDeleteGuest = isSuperAdmin
 
     // Property permissions
@@ -34,7 +35,8 @@ export function usePermissions() {
     const canUpdateUnit = isAdmin || isSuperAdmin
     const canDeleteUnit = isSuperAdmin
 
-
+    // Inventory permissions
+    const canWorkWithInventory = isUser || isAdmin || isSuperAdmin
 
     // Check specific permission of the current session user
     const checkPermission = async (resource: string, action: string): Promise<boolean> => {
@@ -59,6 +61,7 @@ export function usePermissions() {
         isSessionPending: isPending,
         userId: session?.user.id,
         currentUser,
+        isMarketer,
         isSuperAdmin,
         isAdmin,
         isUser,
@@ -75,6 +78,7 @@ export function usePermissions() {
         canCreateUnit,
         canUpdateUnit,
         canDeleteUnit,
+        canWorkWithInventory,
         checkPermission
     }
 

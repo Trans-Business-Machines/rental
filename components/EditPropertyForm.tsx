@@ -30,6 +30,7 @@ import {
   EditPropertyFormData,
   EditPropertySchema,
 } from "@/lib/schemas/properties";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { Property } from "@/lib/types/types";
 
 interface ExistingImage {
@@ -49,6 +50,7 @@ export function EditPropertyForm({
   propertyId,
   initialProperty,
 }: EditPropertyFormProps) {
+  const { canUpdateProperty } = usePermissions();
   const router = useRouter();
   const [isDragActive, setIsDragActive] = useState(false);
   const [newImages, setNewImages] = useState<File[]>([]);
@@ -261,6 +263,14 @@ export function EditPropertyForm({
   /* ---------------- Form submission ---------------- */
   const onSubmit: SubmitHandler<EditPropertyFormData> = async (data) => {
     const totalImages = getTotalImageCount();
+
+    if (!canUpdateProperty) {
+      toast.error("Unauthorized, Insufficent permissions!", {
+        duration: 5000,
+      });
+
+      return;
+    }
 
     // Final validation before submit
     if (totalImages === 0) {

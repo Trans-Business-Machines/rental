@@ -74,7 +74,7 @@ export type BadgeVariant =
     | "listing"
     | "details";
 
-export type Role = "user" | "admin" | "superAdmin"
+export type Role = "user" | "admin" | "superAdmin" | "marketer"
 
 /* ---------------- Interface Definitions ---------------- */
 export interface BookingsTableAndCardsProps {

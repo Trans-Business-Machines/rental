@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "@/lib/check-permissions"
 import { LIMIT } from "@/lib/utils"
+import { requirePermission } from "@/lib/check-permissions"
 import type { CategoryItemStats } from "@/lib/types/types"
 
 
@@ -23,12 +24,48 @@ interface GetInventoryAssignmentsProps {
 	status?: string
 }
 
+interface CreateItem {
+	category: string;
+	itemName: string;
+	description: string;
+	quantity: number;
+	purchasePrice?: number;
+	currentValue?: number;
+	supplier?: string;
+	warrantyExpiry?: Date;
+	assignableOnBooking?: boolean;
+}
+
+interface UpdateItem {
+	category: string;
+	itemName: string;
+	description: string;
+	purchasePrice?: number;
+	currentValue?: number;
+	supplier?: string;
+	warrantyExpiry?: Date;
+	status: string;
+	assignableOnBooking?: boolean;
+}
+
+interface AssignItem {
+	inventoryItemId: number;
+	unitId?: number;
+	propertyId?: number;
+	serialNumber?: string;
+	notes?: string;
+}
+
+
 /* --------------------------- SERVER ACTIONS --------------------------- */
 // ============= INVENTORY ITEMS FUNCTIONS =============
 export async function getInventoryItems(
 	{ page = 1, category = "all", search = "", status = "all" }: GetInventoryItemsProps
 ) {
 	try {
+
+		await requirePermission("inventory", "read")
+
 		// Build the where clause conditionally
 		const where = {
 			// search filter
@@ -107,6 +144,8 @@ export async function getInventoryItems(
 
 export async function getInventoryItemById(id: number) {
 	try {
+		await requirePermission("inventory", "read")
+
 		const item = await prisma.inventoryItem.findUnique({
 			where: { id },
 			include: {
@@ -136,18 +175,11 @@ export async function getInventoryItemById(id: number) {
 	}
 }
 
-export async function createInventoryItem(data: {
-	category: string;
-	itemName: string;
-	description: string;
-	quantity: number;
-	purchasePrice?: number;
-	currentValue?: number;
-	supplier?: string;
-	warrantyExpiry?: Date;
-	assignableOnBooking?: boolean;
-}) {
+export async function createInventoryItem(data: CreateItem) {
 	try {
+
+		await requirePermission("inventory", "create")
+
 		const item = await prisma.inventoryItem.create({
 			data: {
 				...data,
@@ -163,21 +195,11 @@ export async function createInventoryItem(data: {
 	}
 }
 
-export async function updateInventoryItem(
-	id: number,
-	data: {
-		category: string;
-		itemName: string;
-		description: string;
-		purchasePrice?: number;
-		currentValue?: number;
-		supplier?: string;
-		warrantyExpiry?: Date;
-		status: string;
-		assignableOnBooking?: boolean;
-	}
-) {
+export async function updateInventoryItem(id: number, data: UpdateItem) {
 	try {
+
+		await requirePermission("inventory", "update")
+
 		const item = await prisma.inventoryItem.update({
 			where: { id },
 			data: data,
@@ -193,6 +215,9 @@ export async function updateInventoryItem(
 
 export async function deleteInventoryItem(id: number) {
 	try {
+
+		await requirePermission("inventory", "delete")
+
 		await prisma.inventoryItem.delete({
 			where: { id },
 		});
@@ -206,6 +231,7 @@ export async function deleteInventoryItem(id: number) {
 
 export async function getInventoryStatsByCategory() {
 	try {
+		await requirePermission("inventory", "read")
 
 		const items = await prisma.inventoryItem.findMany({
 			select: {
@@ -270,6 +296,8 @@ export async function getInventoryStatsByCategory() {
 
 export async function getInventoryMovementsForItem(itemId: number, page: number = 1) {
 	try {
+		await requirePermission("inventory", "read")
+
 		const LIMIT = 30;
 
 		const totalItemMovements = await prisma.inventoryMovement.count({
@@ -332,18 +360,15 @@ export async function validateAvailableQuantity(
 	}
 }
 
-export async function createInventoryAssignment(data: {
-	inventoryItemId: number;
-	unitId?: number;
-	propertyId?: number;
-	serialNumber?: string;
-	notes?: string;
-}) {
+export async function createInventoryAssignment(data: AssignItem) {
 
 	const session = await getServerSession()
 	const currentUser = (session?.user?.name) || "system"
 
 	try {
+
+		await requirePermission("assignments", "create")
+
 		// Use transaction to ensure atomicity
 		const result = await prisma.$transaction(async (tx) => {
 			// 1. Validate available quantity
@@ -412,6 +437,10 @@ export async function updateInventoryAssignment(
 	}
 ) {
 	try {
+
+		await requirePermission("assignments", "update")
+
+
 		const assignment = await prisma.inventoryAssignment.update({
 			where: { id },
 			data: {
@@ -443,6 +472,9 @@ export async function returnInventoryAssignment(
 	const currentUser = (session?.user?.name) || "system"
 
 	try {
+
+		await requirePermission("assignments", "return")
+
 		// Use transaction to ensure atomicity
 		const result = await prisma.$transaction(async (tx) => {
 			// 1. Get assignment details
@@ -519,6 +551,8 @@ export async function getInventoryAssignments(
 ) {
 	try {
 
+		await requirePermission("assignments", "read")
+
 		// Build where clause conditionally
 		const where = {
 			...(propertyId !== "all" && propertyId !== "" && {
@@ -588,6 +622,9 @@ export async function getInventoryAssignments(
 
 export async function getAssignmentsByUnit(unitId: number) {
 	try {
+
+		await requirePermission("assignments", "read")
+
 		const assignments = await prisma.inventoryAssignment.findMany({
 			where: {
 				unitId,

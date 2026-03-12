@@ -261,7 +261,7 @@ export async function createCheckoutReport(data: {
 					},
 				});
 
-				// 4. Update unit status to maintenance
+				// 4. Update unit status to available
 				await tx.unit.update({
 					where: { id: report.booking.unit.id },
 					data: {
@@ -294,7 +294,7 @@ export async function createCheckoutReport(data: {
 				return report;
 			},
 			{
-				timeout: 60000 * 2, // 40 seconds for complex checkout
+				timeout: 60000 * 2, // 2  minutes for complex checkout
 				maxWait: 5000,
 				isolationLevel: "ReadCommitted",
 			}
@@ -378,20 +378,3 @@ export async function getInventoryAssignmentsForUnit(unitId: number) {
 	}
 }
 
-export async function updateInventoryItemStatus(id: number, status: string) {
-	try {
-		// Note: notes are now tracked at assignment level, not template level
-		const item = await prisma.inventoryItem.update({
-			where: { id },
-			data: {
-				status,
-				// Note: lastInspected field no longer exists in template model
-			},
-		});
-		revalidatePath("/inventory");
-		return item;
-	} catch (error) {
-		console.error("Error updating inventory item status:", error);
-		throw new Error("Failed to update inventory item status");
-	}
-}

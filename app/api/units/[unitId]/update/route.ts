@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requirePermission } from "@/lib/check-permissions"
 import z from "zod";
 
 // Define schema for uploaded image data 
@@ -23,6 +24,7 @@ const updateUnitSchema = z.object({
     imagesToDelete: z.array(z.string()).optional().default([]),
 });
 
+// Interface for API route params
 interface RouteParams {
     params: Promise<{
         unitId: string;
@@ -34,6 +36,9 @@ interface RouteParams {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
     try {
+
+        await requirePermission("unit", "update")
+
         const { unitId } = await params;
         const unitIdNum = parseInt(unitId);
 
