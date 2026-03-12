@@ -30,6 +30,7 @@ import {
   EditUnitFormData,
   EditUnitSchema,
 } from "@/lib/schemas/properties";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { Unit } from "@/lib/types/types";
 
 interface ExistingImage {
@@ -47,6 +48,7 @@ interface EditUnitFormProps {
 }
 
 function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
+  const { canUpdateUnit } = usePermissions();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -273,6 +275,14 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
   /* ---------------- Form submission ---------------- */
   const onSubmit: SubmitHandler<EditUnitFormData> = async (data) => {
     const totalImages = getTotalImageCount();
+
+    if (!canUpdateUnit) {
+      toast.error("Unauthorized, Insufficent permissions!", {
+        duration: 5000,
+      });
+
+      return;
+    }
 
     if (totalImages === 0) {
       setImageError("At least one image is required.");

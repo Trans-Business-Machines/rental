@@ -11,7 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CategoryCarousel } from "@/components/CategoryCarousel";
 import { InventoryItems } from "@/components/InventoryItems";
 import { InventortyCheckoutReports } from "@/components/InventortyCheckoutReports";
+import { getServerSession } from "@/lib/check-permissions";
+import { redirect } from "next/navigation";
+import { UnauthorizedUI } from "./unauthorized-ui";
 import Link from "next/link";
+import type { Role } from "@/lib/types/types";
 
 interface InventoryPageSearchParams {
   searchParams: Promise<{
@@ -29,6 +33,19 @@ interface InventoryPageSearchParams {
 export default async function InventoryPage({
   searchParams,
 }: InventoryPageSearchParams) {
+  const session = await getServerSession();
+  const user = session?.user;
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const userRole = user.role as Role;
+
+  if (userRole === "marketer") {
+    return <UnauthorizedUI />;
+  }
+
   const params = await searchParams;
 
   const tab = params.tab || "inventory";

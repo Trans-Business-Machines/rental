@@ -204,6 +204,15 @@ function NewPropertyForm() {
 
   /* ---------------- onSubmit handler ---------------- */
   const onSubmit: SubmitHandler<NewPropertyFormData> = async (data) => {
+    // Validate user has permissions
+    if (!canCreateProperty) {
+      toast.error("Unauthorized, Insufficent permissions.", {
+        duration: 5000,
+      });
+
+      return;
+    }
+
     // Final validation before submit
     if (selectedImages.length === 0) {
       setImageError("At least one image is required.");
@@ -212,14 +221,6 @@ function NewPropertyForm() {
 
     if (selectedImages.length > 10) {
       setImageError("Maximum 10 images allowed.");
-      return;
-    }
-
-    if (!canCreateProperty) {
-      toast.error("Unauthorized, Insufficent permissions.", {
-        duration: 5000,
-      });
-
       return;
     }
 

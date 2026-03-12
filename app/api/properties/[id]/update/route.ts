@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requirePermission } from "@/lib/check-permissions"
 import z from "zod";
 
 // Define schema for uploaded image data 
@@ -32,6 +33,9 @@ interface RouteParams {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
     try {
+
+        await requirePermission("property", "update");
+
         const { id } = await params;
         const propertyId = parseInt(id);
 

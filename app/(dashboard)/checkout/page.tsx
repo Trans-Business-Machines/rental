@@ -65,7 +65,7 @@ function CheckoutLandingPage() {
 
   const handleContinue = () => {
     if (!canCheckOutGuest) {
-      toast.error("Unauthorized, insufficient permissions");
+      toast.error("Unauthorized, insufficient permissions!");
       return;
     }
 

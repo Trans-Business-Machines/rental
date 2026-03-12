@@ -208,6 +208,14 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
 
   /* ---------------- onSubmit handler ---------------- */
   const onSubmit: SubmitHandler<NewUnitFormData> = async (data) => {
+    if (!canCreateUnit) {
+      toast.error("Unauthorized, Insufficent permissions.", {
+        duration: 5000,
+      });
+
+      return;
+    }
+
     // Validate images before submit
     if (selectedImages.length === 0) {
       setImageError("At least one image is required.");
@@ -216,14 +224,6 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
 
     if (selectedImages.length > 10) {
       setImageError("Maximum 10 images allowed.");
-      return;
-    }
-
-    if (!canCreateUnit) {
-      toast.error("Unauthorized, Insufficent permissions.", {
-        duration: 5000,
-      });
-
       return;
     }
 

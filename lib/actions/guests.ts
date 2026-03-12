@@ -231,25 +231,6 @@ export async function restoreGuest(id: number) {
 	}
 }
 
-export async function checkoutGuest(bookingId: number, checkoutData: any) {
-	// Mark booking as checked-out and create a checkout report
-	const booking = await prisma.booking.update({
-		where: { id: bookingId },
-		data: { status: "checked_out" },
-	});
-	const report = await prisma.checkoutReport.create({
-		data: {
-			...checkoutData,
-			bookingId: booking.id,
-			guestId: booking.guestId,
-			checkoutDate: new Date(),
-		},
-	});
-	revalidatePath("/guests");
-	revalidatePath("/properties");
-	return { booking, report };
-}
-
 export async function getGuestStats() {
 	try {
 		const totalGuests = await prisma.guest.count({

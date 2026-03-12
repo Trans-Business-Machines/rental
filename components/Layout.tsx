@@ -34,7 +34,9 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AppSkeleton } from "./AppSkeleton";
+import type { Role } from "@/lib/types/types";
 
+/* ------------------   INTERFACES  ------------------*/
 interface LayoutProps {
   children: React.ReactNode;
 }
@@ -47,6 +49,7 @@ interface NavItem {
   roles?: string[];
 }
 
+/* ------------------   NAV ITEMS  ------------------*/
 const navigationConfig: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: ChartColumnBig },
   { id: "bookings", label: "Bookings", icon: CalendarDays },
@@ -54,7 +57,6 @@ const navigationConfig: NavItem[] = [
   { id: "inventory", label: "Inventory", icon: Box },
   { id: "properties", label: "Properties", icon: Building2 },
   { id: "users", label: "Users", icon: User, roles: ["admin", "superAdmin"] },
-  { id: "settings", label: "Settings", icon: Settings, roles: ["superAdmin"] },
 ];
 
 export function Layout({ children }: LayoutProps) {
@@ -116,6 +118,10 @@ export function Layout({ children }: LayoutProps) {
       return newSet;
     });
   };
+
+  const userName = session?.user?.name || "User";
+  const userRole = (session?.user?.role as Role) || "user";
+  const userEmail = session?.user?.email || "user@example.com"
 
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;
@@ -180,6 +186,9 @@ export function Layout({ children }: LayoutProps) {
         }}
         className={cn(
           "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2 transition-colors cursor-pointer",
+          userRole === "marketer" &&
+            ["inventory"].includes(item.id) &&
+            "hidden",
           isActive
             ? "bg-sidebar-primary font-bold"
             : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
@@ -190,9 +199,6 @@ export function Layout({ children }: LayoutProps) {
       </button>
     );
   };
-
-  const userName = session?.user?.name || "User";
-  const userRole = session?.user?.role || "User";
 
   const filteredNavigationConfig = navigationConfig.filter((item) => {
     if (item.roles && !item.roles.includes(userRole)) {
@@ -239,15 +245,36 @@ export function Layout({ children }: LayoutProps) {
           {filteredNavigationConfig.map(renderNavItem)}
         </nav>
 
-        {/* Logout Button */}
-        <div className="absolute bottom-0 border-t border-sidebar-border w-full">
-          <Button
-            className="rounded-none w-full cursor-pointer flex justify-start items-center gap-2 py-6 bg-transparent text-sidebar-primary-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            onClick={handleLogout}
+        {/* Siderbar Footer */}
+        <div className="w-full py-4 absolute bottom-0 border-t border-sidebar-border">
+          <button
+            onClick={() => {
+              router.push("/settings");
+              setSidebarOpen(false);
+            }}
+            className={cn(
+              "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2 transition-colors cursor-pointer",
+              userRole === "marketer" && "hidden",
+              pathname.includes("settings")
+                ? "bg-sidebar-primary font-bold"
+                : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            )}
           >
-            <LogOut className="size-4 ml-4" />
-            <span className="font-normal text-sm">Log out</span>
-          </Button>
+            <Settings className="size-5" />
+            <span>Settings</span>
+          </button>
+
+          <button
+            onClick={() => {
+              handleLogout();
+            }}
+            className={cn(
+              "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2 transition-colors cursor-pointer hover:bg-red-500/70",
+            )}
+          >
+            <LogOut className="size-5" />
+            <span>Log out</span>
+          </button>
         </div>
       </aside>
 
@@ -287,7 +314,7 @@ export function Layout({ children }: LayoutProps) {
                         {userName}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground capitalize">
-                        {userRole}
+                        {userEmail}
                       </p>
                     </div>
                   </DropdownMenuLabel>
