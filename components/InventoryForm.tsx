@@ -112,12 +112,12 @@ export function InventoryForm({
           <Select
             value={formData.category}
             onValueChange={(value) => handleInputChange("category", value)}
-            disabled={isEditing}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="Amenities">Amenities</SelectItem>
               <SelectItem value="Furniture">Furniture</SelectItem>
               <SelectItem value="Electronics">Electronics</SelectItem>
               <SelectItem value="Cutlery">Cutlery</SelectItem>
@@ -126,8 +126,14 @@ export function InventoryForm({
               <SelectItem value="Kitchen Accessories">
                 Kitchen Accessories
               </SelectItem>
+              <SelectItem value="Kitchen Consumables">
+                Kitchen Consumables
+              </SelectItem>
               <SelectItem value="Bedroom Accessories">
                 Bedroom Accessories
+              </SelectItem>
+              <SelectItem value="Bedroom Amenities">
+                Bedroom Amenities
               </SelectItem>
               <SelectItem value="Room Accessories">Room Accessories</SelectItem>
               <SelectItem value="Other">Other</SelectItem>
