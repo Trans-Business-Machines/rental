@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
+import { formatDateInTimezone } from "@/lib/utils";
 import Image from "next/image";
 import Header from "./Header";
 
@@ -254,7 +255,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                         Date of Birth
                       </p>
                       <p className="text-sm font-semibold text-foreground">
-                        {format(new Date(guest.dateOfBirth), "PPP")}
+                        {format(new Date(guest.dateOfBirth), "dd MMMM yyyy")}
                       </p>
                     </div>
                   </div>
@@ -302,7 +303,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                         <span className="font-medium">Uploaded:</span>{" "}
                         {format(
                           new Date(guest.media.uploadedAt),
-                          "MMM d, yyyy",
+                          "dd MMMM yyyy"
                         )}
                       </p>
                     </div>
@@ -513,10 +514,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                     Registered On
                   </p>
                   <p className="text-sm font-semibold text-foreground">
-                    {format(
-                      new Date(guest.registrationDate),
-                      "MMM d, yyyy, hh:mm a",
-                    )}
+                    {formatDateInTimezone(guest.registrationDate)}
                   </p>
                 </div>
               )}
@@ -525,7 +523,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Created</p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(guest.createdAt), "MMM d, yyyy, hh:mm a")}
+                    {formatDateInTimezone(guest.createdAt)}
                   </p>
                 </div>
               )}
@@ -536,7 +534,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                     Last Updated
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(guest.updatedAt), "MMM d, yyyy, hh:mm a")}
+                    {formatDateInTimezone(guest.updatedAt)}
                   </p>
                 </div>
               )}
