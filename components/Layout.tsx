@@ -313,7 +313,7 @@ export function Layout({ children }: LayoutProps) {
                       <p className="text-sm font-medium leading-none">
                         {userName}
                       </p>
-                      <p className="text-xs leading-none text-muted-foreground capitalize">
+                      <p className="text-xs leading-none text-muted-foreground">
                         {userEmail}
                       </p>
                     </div>
