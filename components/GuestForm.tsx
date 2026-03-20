@@ -380,7 +380,7 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
           {isSubmitting ? (
             <span className="flex items-center gap-2">
               <Loader className="animate-spin h-4 w-4" />
-              <span>{isUploading ? "Uploading..." : "Creating guest"}</span>
+              <span>{isUploading ? "Uploading image..." : "Creating guest..."}</span>
             </span>
           ) : (
             "Create Guest"

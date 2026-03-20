@@ -4,7 +4,8 @@ import { countries } from "@nexisltd/country";
 import { addDays } from "date-fns"
 import type { BookingStatus, UnitStatus, Guest, InventoryItem, PriceDuration } from "@/lib/types/types";
 
-export const LIMIT = 9
+export const LIMIT = 12
+const TIMEZONE = "Africa/Nairobi";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -138,4 +139,21 @@ export function calculateTotalAmount(
 
 export function formatPrice(price: number) {
   return `KSH ${price.toLocaleString()}`;
+}
+
+export const formatDateInTimezone = (
+  date: Date | string,
+  options?: Intl.DateTimeFormatOptions) => {
+  const defaultOptions: Intl.DateTimeFormatOptions = {
+    timeZone: TIMEZONE,
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }
+
+  return new Intl.DateTimeFormat("en-KE", options || defaultOptions).format(new Date(date))
+
 }
