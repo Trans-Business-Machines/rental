@@ -5,7 +5,7 @@ import { useTableMode } from "@/hooks/useTableMode";
 import { useSoftDeleteBooking } from "@/hooks/useBookings";
 import { AlertDialog } from "@/components/AlertDialog";
 import { Footer } from "@/components/Footer";
-import { usePermissions } from "@/hooks/usePermissions"
+import { usePermissions } from "@/hooks/usePermissions";
 import type { Booking } from "@/lib/types/types";
 
 interface BookingListingsProps {
@@ -30,7 +30,7 @@ function BookingListings({
   // Get table mode context from useTableMode Hook
   const { tableMode } = useTableMode();
 
-  const { isMarketer } = usePermissions()
+  const { isAgent } = usePermissions();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [bookingToDelete, setBookingToDelete] = useState<number | null>(null);
@@ -57,7 +57,7 @@ function BookingListings({
       {tableMode ? (
         <BookingsTable
           bookings={filteredBookings}
-           isMarketer={isMarketer}
+          isAgent={isAgent}
           setEditBooking={setEditBooking}
           setIsDialogOpen={setIsDialogOpen}
           handleClick={handleClick}
@@ -65,7 +65,7 @@ function BookingListings({
       ) : (
         <BookingCards
           bookings={filteredBookings}
-          isMarketer={isMarketer}
+          isAgent={isAgent}
           setEditBooking={setEditBooking}
           setIsDialogOpen={setIsDialogOpen}
           handleClick={handleClick}

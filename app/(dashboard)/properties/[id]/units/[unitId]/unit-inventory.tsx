@@ -22,7 +22,7 @@ interface Assignments {
 }
 
 export default function UnitInventory({ assignments, context }: Assignments) {
-  const { isMarketer } = usePermissions();
+  const { isAgent } = usePermissions();
 
   return (
     <Card className="border-border shadow-sm bg-card rounded-xl">
@@ -38,8 +38,8 @@ export default function UnitInventory({ assignments, context }: Assignments) {
               </p>
             )}
           </div>
-          
-          {!isMarketer && (
+
+          {!isAgent && (
             <InventoryAssignmentDialog
               preselectedUnitId={context.unitId}
               preselectedPropertyId={context.propertyId}

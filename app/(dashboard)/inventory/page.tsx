@@ -42,7 +42,7 @@ export default async function InventoryPage({
 
   const userRole = user.role as Role;
 
-  if (userRole === "marketer") {
+  if (userRole === "agent") {
     return <UnauthorizedUI />;
   }
 

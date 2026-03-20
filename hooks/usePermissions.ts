@@ -11,7 +11,7 @@ export function usePermissions() {
     const isSuperAdmin = userRole === "superAdmin"
     const isAdmin = userRole === "admin"
     const isUser = userRole === "user"
-    const isMarketer = userRole === "marketer"
+    const isAgent = userRole === "agent"
 
     // Booking permissions
     const canCreateBooking = isAdmin || isSuperAdmin
@@ -61,7 +61,7 @@ export function usePermissions() {
         isSessionPending: isPending,
         userId: session?.user.id,
         currentUser,
-        isMarketer,
+        isAgent,
         isSuperAdmin,
         isAdmin,
         isUser,

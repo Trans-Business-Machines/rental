@@ -51,7 +51,7 @@ export const getStatusColor = (status: BookingStatus): string => {
 
 function BookingsTable({
   bookings,
-  isMarketer,
+  isAgent,
   setEditBooking,
   setIsDialogOpen,
   handleClick,
@@ -166,7 +166,7 @@ function BookingsTable({
                         </div>
                       </DropdownMenuItem>
 
-                      {booking.status === "checked_in" && !isMarketer && (
+                      {booking.status === "checked_in" && !isAgent && (
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem

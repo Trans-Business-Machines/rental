@@ -15,7 +15,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 
 export function GuestDialog() {
-  const { isMarketer } = usePermissions();
+  const { isAgent } = usePermissions();
   const [open, setOpen] = useState(false);
 
   const handleSuccess = () => {
@@ -28,7 +28,7 @@ export function GuestDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild className={cn(isMarketer && "hidden")}>
+      <DialogTrigger asChild className={cn(isAgent && "hidden")}>
         <Button className="rounded-md">
           <Plus className="size-4 mr-1" />
           <span>Add Guest</span>
