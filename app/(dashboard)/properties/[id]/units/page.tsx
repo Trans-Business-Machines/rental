@@ -9,7 +9,7 @@ import Link from "next/link";
 import { usePermissions } from "@/hooks/usePermissions";
 
 export default function UnitsPage() {
-  const { isMarketer } = usePermissions();
+  const { isAgent } = usePermissions();
   const searchParams = useSearchParams();
   const params = useParams();
 
@@ -78,7 +78,7 @@ export default function UnitsPage() {
           </Button>
         </div>
 
-        {!isMarketer && (
+        {!isAgent && (
           <Button className="space-x-2 text-white" asChild>
             <Link
               href={`/properties/${propertyId}/add-unit`}

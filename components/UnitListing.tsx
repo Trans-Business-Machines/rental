@@ -104,7 +104,7 @@ export function UnitListing({
   hasPrev,
   initialFilters,
 }: UnitListingProps) {
-  const { isMarketer } = usePermissions();
+  const { isAgent } = usePermissions();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -406,7 +406,7 @@ export function UnitListing({
                     variant="default"
                     className={cn(
                       "flex-1 gap-2 bg-chart-3 hover:bg-chart-3/90",
-                      isMarketer && "hidden",
+                      isAgent && "hidden",
                     )}
                     size="sm"
                     asChild

@@ -29,7 +29,7 @@ export const user = ac.newRole({
 })
 
 // Define marketer role and its permissions
-export const marketer = ac.newRole({
+export const agent = ac.newRole({
     user: ["set-password"],
     booking: ["create", "read", "update"],
     guest: ["read"],

@@ -118,23 +118,23 @@ export function InventoryForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="Amenities">Amenities</SelectItem>
-              <SelectItem value="Furniture">Furniture</SelectItem>
-              <SelectItem value="Electronics">Electronics</SelectItem>
-              <SelectItem value="Cutlery">Cutlery</SelectItem>
               <SelectItem value="Bathroom">Bathroom</SelectItem>
-              <SelectItem value="Lighting">Lighting</SelectItem>
-              <SelectItem value="Kitchen Accessories">
-                Kitchen Accessories
-              </SelectItem>
-              <SelectItem value="Kitchen Consumables">
-                Kitchen Consumables
-              </SelectItem>
               <SelectItem value="Bedroom Accessories">
                 Bedroom Accessories
               </SelectItem>
               <SelectItem value="Bedroom Amenities">
                 Bedroom Amenities
               </SelectItem>
+              <SelectItem value="Cutlery">Cutlery</SelectItem>
+              <SelectItem value="Electronics">Electronics</SelectItem>
+              <SelectItem value="Furniture">Furniture</SelectItem>
+              <SelectItem value="Kitchen Accessories">
+                Kitchen Accessories
+              </SelectItem>
+              <SelectItem value="Kitchen Consumables">
+                Kitchen Consumables
+              </SelectItem>
+              <SelectItem value="Lighting">Lighting</SelectItem>
               <SelectItem value="Room Accessories">Room Accessories</SelectItem>
               <SelectItem value="Other">Other</SelectItem>
             </SelectContent>

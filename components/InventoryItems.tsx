@@ -129,7 +129,6 @@ function InventoryItems({
           </div>
 
           {/* Select Filters */}
-
           <Select
             value={filters.status}
             onValueChange={(value) =>
@@ -137,13 +136,19 @@ function InventoryItems({
             }
             disabled={isPending}
           >
-            <SelectTrigger className="w-full md:flex-1 text-black/70">
+            <SelectTrigger className="w-full md:flex-1 text-black/70 hover:cursor-pointer">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="discontinued">Discontinued</SelectItem>
+              <SelectItem value="all" className="cursor-pointer">
+                All Status
+              </SelectItem>
+              <SelectItem value="active" className="cursor-pointer">
+                Active
+              </SelectItem>
+              <SelectItem value="discontinued" className="cursor-pointer">
+                Discontinued
+              </SelectItem>
             </SelectContent>
           </Select>
 
@@ -154,23 +159,58 @@ function InventoryItems({
             }
             disabled={isPending}
           >
-            <SelectTrigger className="w-full md:flex-1 text-black/70">
+            <SelectTrigger className="w-full md:flex-1 text-black/70 hover:cursor-pointer">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="Furniture">Furniture</SelectItem>
-              <SelectItem value="Electronics">Electronics</SelectItem>
-              <SelectItem value="Cutlery">Cutlery</SelectItem>
-              <SelectItem value="Bathroom">Bathroom</SelectItem>
-              <SelectItem value="Lighting">Lighting</SelectItem>
-              <SelectItem value="Kitchen Accessories">
-                Kitchen Accessories
+              <SelectItem value="all" className="cursor-pointer">
+                All Categories
               </SelectItem>
-              <SelectItem value="Bedroom Accessories">
+              <SelectItem value="Amenities" className="cursor-pointer">
+                Amenities
+              </SelectItem>
+              <SelectItem value="Bathroom" className="cursor-pointer">
+                Bathroom
+              </SelectItem>
+              <SelectItem
+                value="Bedroom Accessories"
+                className="cursor-pointer"
+              >
                 Bedroom Accessories
               </SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
+              <SelectItem value="Bedroom Amenities" className="cursor-pointer">
+                Bedroom Amenities
+              </SelectItem>
+              <SelectItem value="Cutlery" className="cursor-pointer">
+                Cutlery
+              </SelectItem>
+              <SelectItem value="Electronics" className="cursor-pointer">
+                Electronics
+              </SelectItem>
+              <SelectItem value="Furniture" className="cursor-pointer">
+                Furniture
+              </SelectItem>
+              <SelectItem
+                value="Kitchen Accessories"
+                className="cursor-pointer"
+              >
+                Kitchen Accessories
+              </SelectItem>
+              <SelectItem
+                value="Kitchen Consumables"
+                className="cursor-pointer"
+              >
+                Kitchen Consumables
+              </SelectItem>
+              <SelectItem value="Lighting" className="cursor-pointer">
+                Lighting
+              </SelectItem>
+              <SelectItem value="Room Accessories" className="cursor-pointer">
+                Room Accessories
+              </SelectItem>
+              <SelectItem value="Other" className="cursor-pointer">
+                Other
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
