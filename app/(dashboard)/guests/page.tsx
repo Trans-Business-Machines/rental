@@ -38,7 +38,6 @@ interface GuestFilters {
 }
 
 export default function GuestsPage() {
-  const { isMarketer } = usePermissions();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -73,7 +72,7 @@ export default function GuestsPage() {
   const [showArchived, setShowArchived] = useState(false);
 
   // Get role of the current session user
-  const { isSuperAdmin } = usePermissions();
+  const { isSuperAdmin, isUser, isAdmin } = usePermissions();
 
   // Get guests with URL filters
   const {
@@ -84,6 +83,8 @@ export default function GuestsPage() {
 
   // Get guest stats
   const { guestStats } = useGuestStats();
+
+  const isAdminOrUser = isSuperAdmin || isAdmin || isUser;
 
   // Check if there are any active filters in the URL
   const hasActiveFilters = urlSearch !== "" || urlStatus !== "all";
@@ -150,7 +151,7 @@ export default function GuestsPage() {
               Manage guest registrations, bookings, and check-ins
             </p>
           </div>
-          {!isMarketer && <GuestDialog />}
+          {isAdminOrUser && <GuestDialog />}
         </div>
         <div className="text-center py-8">
           <p className="text-destructive">
@@ -171,7 +172,7 @@ export default function GuestsPage() {
             </h1>
             <p className="text-muted-foreground">Manage guest registrations.</p>
           </div>
-          {isMarketer && <GuestDialog />}
+          {isAdminOrUser && <GuestDialog />}
         </header>
 
         <StatCards stats={stats} />
@@ -195,7 +196,7 @@ export default function GuestsPage() {
           <p className="text-muted-foreground">Manage guest registrations.</p>
         </div>
 
-        {!isMarketer && (
+        {isAdminOrUser && (
           <div className="flex gap-3">
             <GuestDialog />
             <Button asChild>
