@@ -5,7 +5,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Moon, Calendar, Minus, Plus } from "lucide-react";
+import {
+  Moon,
+  Calendar,
+  CalendarDays,
+  CalendarRange,
+  Minus,
+  Plus,
+} from "lucide-react";
 import { getUnitPricingOptions } from "@/lib/actions/pricing";
 import {
   getDurationLabel,
@@ -13,6 +20,10 @@ import {
   getPeriodLabel,
   calculateTotalNights,
   calculateTotalAmount,
+  calculateDiscountedPrice,
+  hasDiscount,
+  formatDate,
+  cn,
 } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
@@ -26,9 +37,14 @@ interface BookingPricingSelectorProps {
   onPeriodChange: (period: number) => void;
 }
 
-const durationIcons = {
+const durationIcons: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
   one_night: Moon,
   weekly: Calendar,
+  monthly: CalendarDays,
+  custom: CalendarRange,
 };
 
 export function BookingPricingSelector({
@@ -49,6 +65,14 @@ export function BookingPricingSelector({
   const selectedPricing = pricingOptions?.find(
     (p) => p.duration === selectedDuration,
   );
+
+  // Calculate discounted price if discount exists
+  const unitPriceAfterDiscount = selectedPricing
+    ? calculateDiscountedPrice(
+        selectedPricing.price,
+        selectedPricing.discountRate,
+      )
+    : 0;
 
   if (isLoading) {
     return (
@@ -76,24 +100,32 @@ export function BookingPricingSelector({
           const pricing = pricingOptions.find((p) => p.duration === value);
           if (pricing) {
             onSelect(pricing);
-            onPeriodChange(1); // Reset period when changing duration
+            // Reset period to 1, except for custom which is always 1
+            onPeriodChange(1);
           }
         }}
-        className="md:grid-cols-2"
+        className="grid md:grid-cols-2 gap-3"
       >
         {pricingOptions.map((pricing) => {
-          const Icon =
-            durationIcons[pricing.duration as keyof typeof durationIcons];
+          const Icon = durationIcons[pricing.duration] || Calendar;
           const isSelected = selectedDuration === pricing.duration;
+          const discountedPrice = calculateDiscountedPrice(
+            pricing.price,
+            pricing.discountRate,
+          );
+          const showDiscount = hasDiscount(pricing.discountRate);
 
           return (
             <Label
               key={pricing.id}
               htmlFor={pricing.duration}
-              className="cursor-pointer"
+              className={cn(
+                "cursor-pointer",
+                pricing.duration === "monthly" && "md:col-span-2",
+              )}
             >
               <Card
-                className={`transition-all flex-1 ring-0 py-2 ${
+                className={`transition-all flex-1 ring-0 py-2  ${
                   isSelected ? "border-primary" : "hover:border-primary/50"
                 }`}
               >
@@ -117,18 +149,47 @@ export function BookingPricingSelector({
                   </div>
 
                   <div className="flex-1">
-                    <p className="font-medium text-foreground">
-                      {getDurationLabel(pricing.duration)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {pricing.nights}{" "}
-                      {pricing.nights === 1 ? "night" : "nights"} stay
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-foreground">
+                        {getDurationLabel(pricing.duration)}
+                      </p>
+                      {showDiscount && (
+                        <span className="text-xs font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">
+                          {Math.round((pricing.discountRate || 0) * 100)}% off
+                        </span>
+                      )}
+                    </div>
+                    {pricing.duration === "custom" &&
+                    pricing.fromDate &&
+                    pricing.toDate ? (
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(pricing.fromDate)} -{" "}
+                        {formatDate(pricing.toDate)}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {pricing.nights}{" "}
+                        {pricing.nights === 1 ? "night" : "nights"} stay
+                      </p>
+                    )}
                   </div>
 
-                  <p className="text-lg font-bold text-foreground">
-                    {formatPrice(pricing.price)}
-                  </p>
+                  <div className="text-right">
+                    {showDiscount ? (
+                      <div className="space-y-0.5">
+                        <p className="text-sm text-muted-foreground line-through">
+                          {formatPrice(pricing.price)}
+                        </p>
+                        <p className="text-lg font-bold text-primary">
+                          {formatPrice(discountedPrice)}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-lg font-bold text-foreground">
+                        {formatPrice(pricing.price)}
+                      </p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </Label>
@@ -136,8 +197,8 @@ export function BookingPricingSelector({
         })}
       </RadioGroup>
 
-      {/* Period Selector - Only show when duration is selected */}
-      {selectedDuration && selectedPricing && (
+      {/* Period Selector - Only show when duration is selected and not custom */}
+      {selectedDuration && selectedPricing && selectedDuration !== "custom" && (
         <div className="space-y-3 pt-2">
           <Label>How many {getPeriodLabel(selectedDuration)}?</Label>
           <div className="flex items-center gap-3">
@@ -146,6 +207,7 @@ export function BookingPricingSelector({
               variant="outline"
               size="icon"
               onClick={() => onPeriodChange(Math.max(1, period - 1))}
+              className="cursor-pointer w-1/12"
               disabled={period <= 1}
             >
               <Minus className="size-4" />
@@ -160,7 +222,7 @@ export function BookingPricingSelector({
                   onPeriodChange(val);
                 }
               }}
-              className="w-min text-center"
+              className="w-10/12 text-center"
               min={1}
             />
 
@@ -168,6 +230,7 @@ export function BookingPricingSelector({
               type="button"
               variant="outline"
               size="icon"
+              className="w-1/12 cursor-pointer"
               onClick={() => onPeriodChange(period + 1)}
             >
               <Plus className="size-4" />
@@ -182,7 +245,7 @@ export function BookingPricingSelector({
           <div className="p-4 rounded-lg bg-muted">
             <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
               <span>
-                {formatPrice(selectedPricing.price)} × {period}{" "}
+                {formatPrice(unitPriceAfterDiscount)} × {period}{" "}
                 {getPeriodLabel(selectedDuration)}
               </span>
               <span>
@@ -193,10 +256,41 @@ export function BookingPricingSelector({
               <span className="font-medium">Total Amount</span>
               <span className="text-2xl font-bold text-foreground">
                 {formatPrice(
-                  calculateTotalAmount(selectedPricing.price, period),
+                  calculateTotalAmount(unitPriceAfterDiscount, period),
                 )}
               </span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Duration - Show fixed total (period is always 1) */}
+      {selectedDuration === "custom" && selectedPricing && (
+        <div className="p-4 rounded-lg bg-muted">
+          <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
+            <span>
+              {selectedPricing.fromDate && selectedPricing.toDate && (
+                <>
+                  {formatDate(selectedPricing.fromDate)} -{" "}
+                  {formatDate(selectedPricing.toDate)}
+                </>
+              )}
+            </span>
+            <span>
+              {calculateTotalNights(
+                selectedDuration,
+                1,
+                selectedPricing.fromDate,
+                selectedPricing.toDate,
+              )}{" "}
+              nights total
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-medium">Total Amount</span>
+            <span className="text-2xl font-bold text-foreground">
+              {formatPrice(unitPriceAfterDiscount)}
+            </span>
           </div>
         </div>
       )}

@@ -14,6 +14,7 @@ import {
   cn,
   calculateCheckoutDate,
   calculateTotalAmount,
+  calculateDiscountedPrice,
 } from "@/lib/utils";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Info, Loader } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 import { BookingFormSchema, type BookingFormData } from "@/lib/schemas/booking";
 import { format } from "date-fns";
 import type { PriceDuration, UnitTypePricing } from "@/lib/types/types";
@@ -42,7 +44,6 @@ export function BookingForm({
   preselectedPropertyId,
   preselectedUnitId,
 }: BookingFormProps) {
-
   // Get prefetched data from react query cache
   const { data: formDataCache, isLoading } = useQuery({
     queryKey: ["booking-form-data"],
@@ -52,10 +53,12 @@ export function BookingForm({
   // Get today's date
   const today = new Date().toISOString().split("T")[0];
 
+  // Get user role
+  const { isAgent } = usePermissions();
+
   // State for pricing selection
-  const [selectedPricing, setSelectedPricing] = useState<UnitTypePricing | null>(
-    null
-  );
+  const [selectedPricing, setSelectedPricing] =
+    useState<UnitTypePricing | null>(null);
   const [period, setPeriod] = useState<number>(1);
 
   // Get the create booking mutation object
@@ -83,6 +86,7 @@ export function BookingForm({
       priceDuration: "one_night",
       period: 1,
       unitPrice: 0,
+      discountRate: null,
       paymentMethod: "",
       status: "pending",
       specialRequests: "",
@@ -96,13 +100,13 @@ export function BookingForm({
   const selectedProperty = formDataCache?.properties.find(
     (p) =>
       p.id.toString() ===
-      (preselectedPropertyId?.toString() || formData.propertyId)
+      (preselectedPropertyId?.toString() || formData.propertyId),
   );
 
   // Derived unit state from property selections
   const selectedUnit = selectedProperty?.units.find(
     (u) =>
-      u.id.toString() === (preselectedUnitId?.toString() || formData.unitId)
+      u.id.toString() === (preselectedUnitId?.toString() || formData.unitId),
   );
 
   // Validation flags for cascading enables/disables
@@ -122,10 +126,14 @@ export function BookingForm({
   useEffect(() => {
     if (formData.checkInDate && selectedPricing) {
       const checkIn = new Date(formData.checkInDate);
+      const actualPeriod = selectedPricing.duration === "custom" ? 1 : period;
+
       const checkOut = calculateCheckoutDate(
         checkIn,
         selectedPricing.duration as PriceDuration,
-        period
+        actualPeriod,
+        selectedPricing.fromDate,
+        selectedPricing.toDate,
       );
       setValue("checkOutDate", format(checkOut, "yyyy-MM-dd"));
     }
@@ -135,7 +143,22 @@ export function BookingForm({
   const handlePricingSelect = (pricing: UnitTypePricing) => {
     setSelectedPricing(pricing);
     setValue("priceDuration", pricing.duration as PriceDuration);
-    setValue("unitPrice", pricing.price);
+
+    // Store the discounted price as unitPrice
+    const discountedPrice = calculateDiscountedPrice(
+      pricing.price,
+      pricing.discountRate,
+    );
+    setValue("unitPrice", discountedPrice);
+
+    // Store discount rate for snapshot
+    setValue("discountRate", pricing.discountRate);
+
+    // For custom duration, period is always 1
+    if (pricing.duration === "custom") {
+      setPeriod(1);
+      setValue("period", 1);
+    }
   };
 
   // Handle period change
@@ -148,7 +171,13 @@ export function BookingForm({
   const onSubmit: SubmitHandler<BookingFormData> = (data) => {
     if (!selectedPricing) return;
 
-    const totalAmount = calculateTotalAmount(selectedPricing.price, period);
+    const discountedPrice = calculateDiscountedPrice(
+      selectedPricing.price,
+      selectedPricing.discountRate,
+    );
+
+    const actualPeriod = selectedPricing.duration === "custom" ? 1 : period;
+    const totalAmount = calculateTotalAmount(discountedPrice, actualPeriod);
 
     const newBooking = {
       guestId: parseInt(data.guestId),
@@ -158,8 +187,9 @@ export function BookingForm({
       checkOutDate: new Date(data.checkOutDate),
       numberOfGuests: data.numberOfGuests,
       priceDuration: data.priceDuration,
-      unitPrice: data.unitPrice,
-      period: data.period,
+      unitPrice: discountedPrice, // Store discounted price
+      period: actualPeriod,
+      discountRate: selectedPricing.discountRate, // Store discount snapshot
       totalAmount,
       source: "direct" as const,
       purpose: "personal" as const,
@@ -189,6 +219,7 @@ export function BookingForm({
     setValue("priceDuration", undefined as unknown as PriceDuration);
     setValue("unitPrice", 0);
     setValue("period", 1);
+    setValue("discountRate", null);
     setSelectedPricing(null);
     setPeriod(1);
   };
@@ -203,6 +234,7 @@ export function BookingForm({
     setValue("priceDuration", undefined as unknown as PriceDuration);
     setValue("unitPrice", 0);
     setValue("period", 1);
+    setValue("discountRate", null);
     setSelectedPricing(null);
     setPeriod(1);
   };
@@ -267,7 +299,7 @@ export function BookingForm({
                 <SelectTrigger
                   className={cn(
                     "w-full",
-                    errors.propertyId && "border-red-400"
+                    errors.propertyId && "border-red-400",
                   )}
                 >
                   <SelectValue placeholder="Select property" />
@@ -313,7 +345,7 @@ export function BookingForm({
                     <SelectTrigger
                       className={cn(
                         "w-full",
-                        errors.unitId && "border-red-400"
+                        errors.unitId && "border-red-400",
                       )}
                     >
                       <SelectValue placeholder="Select unit" />
@@ -325,7 +357,7 @@ export function BookingForm({
                           value={unit.id.toString()}
                           className={cn(
                             unit.status !== "available" &&
-                              "cursor-not-allowed opacity-50"
+                              "cursor-not-allowed opacity-50",
                           )}
                         >
                           {unit.name}{" "}
@@ -395,10 +427,12 @@ export function BookingForm({
         {/* Pricing Selection - Disabled until valid guest count */}
         {isUnitSelected && isMaxGuestsValid && selectedUnit && (
           <article className="space-y-2">
-            <Label>Select Stay Duration & Period</Label>
+            <Label>Select Stay Duration & Pricing</Label>
             <BookingPricingSelector
               unitId={selectedUnit.id}
-              selectedDuration={selectedPricing?.duration as PriceDuration | null}
+              selectedDuration={
+                selectedPricing?.duration as PriceDuration | null
+              }
               period={period}
               onSelect={handlePricingSelect}
               onPeriodChange={handlePeriodChange}
@@ -420,9 +454,18 @@ export function BookingForm({
                 id="checkInDate"
                 type="date"
                 min={today}
-                className={cn(errors.checkInDate && "border border-red-400")}
+                disabled={selectedPricing?.duration === "custom"}
+                className={cn(
+                  errors.checkInDate && "border border-red-400",
+                  selectedPricing?.duration === "custom" && "bg-muted",
+                )}
                 {...register("checkInDate")}
               />
+              {selectedPricing?.duration === "custom" && (
+                <p className="text-xs text-muted-foreground">
+                  Fixed dates for custom pricing period
+                </p>
+              )}
               {errors.checkInDate && (
                 <p className="text-sm text-red-400">
                   {errors.checkInDate.message}
@@ -458,7 +501,7 @@ export function BookingForm({
                   <SelectTrigger
                     className={cn(
                       "w-full",
-                      errors.paymentMethod && "border-red-400"
+                      errors.paymentMethod && "border-red-400",
                     )}
                   >
                     <SelectValue placeholder="Select payment method" />
@@ -500,7 +543,12 @@ export function BookingForm({
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="reserved">Reserved</SelectItem>
-                    <SelectItem value="checked_in">Checked In</SelectItem>
+                    <SelectItem
+                      value="checked_in"
+                      className={cn(isAgent && "hidden")}
+                    >
+                      Checked In
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               )}

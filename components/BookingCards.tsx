@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import type { BookingsTableAndCardsProps } from "@/lib/types/types";
 import { getStatusColor } from "./BookingsTable";
 import { useRouter } from "next/navigation";
+import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
 
 function BookingCards({
@@ -194,7 +195,7 @@ function BookingCards({
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">{`${numOfNights} ${numOfNights === 1 ? "total stay" : "total stays"}`}</p>
                     <p className="font-semibold text-foreground">
-                      ${booking.totalAmount}
+                      {formatPrice(booking.totalAmount)}
                     </p>
                   </div>
                 </div>

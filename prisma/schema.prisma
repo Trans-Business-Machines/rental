@@ -8,10 +8,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/**
+ * ------------------------ ENUMS ------------------------
+ */
+
 enum PriceDuration {
   one_night
   weekly
+  monthly
+  custom
 }
+
+enum Unit_Status {
+  booked
+  reserved
+  maintenance
+  available
+  occupied
+}
+
+enum IdType {
+  national_id
+  passport
+}
+
+enum Booking_Status {
+  pending
+  reserved
+  checked_in
+  checked_out
+  cancelled
+}
+
+enum CheckoutItemStatus {
+  good
+  damaged
+  missing
+}
+
+/**
+ * ------------------------ MODELS ------------------------
+ */
 
 model User {
   id            String       @id
@@ -106,14 +143,6 @@ model Property {
   @@map("properties")
 }
 
-enum Unit_Status {
-  booked
-  reserved
-  maintenance
-  available
-  occupied
-}
-
 model Unit {
   id         Int         @id @default(autoincrement())
   name       String
@@ -169,11 +198,6 @@ model Amenity {
   @@map("amenities")
 }
 
-enum IdType {
-  national_id
-  passport
-}
-
 model Guest {
   id                       Int       @id @default(autoincrement())
   firstName                String
@@ -213,14 +237,6 @@ model Guest {
   @@map("guests")
 }
 
-enum Booking_Status {
-  pending
-  reserved
-  checked_in
-  checked_out
-  cancelled
-}
-
 model Booking {
   id         Int      @id @default(autoincrement())
   guestId    Int
@@ -230,18 +246,20 @@ model Booking {
   unitId     Int
   unit       Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
+  // Pricing snapshot at time of booking
   priceDuration PriceDuration @default(one_night)
-  unitPrice     Int // Price snapshot at time of booking
-  period        Int           @default(1) // Number of weeks to stay
+  unitPrice     Int
+  period        Int           @default(1)
+  discountRate  Float? // Discount snapshot (e.g., 0.10 for 10%)
+  totalAmount   Int // Final amount after discount
 
   checkInDate  DateTime
   checkOutDate DateTime
 
   numberOfGuests  Int
-  totalAmount     Int
-  source          String // direct, booking.com, airbnb, etc.
-  purpose         String // business, leisure, etc.
-  paymentMethod   String? // mpesa_till, credit_card, debit_card
+  source          String
+  purpose         String
+  paymentMethod   String?
   specialRequests String?
   status          Booking_Status @default(pending)
   createdAt       DateTime       @default(now())
@@ -332,12 +350,6 @@ model CheckoutReport {
   @@map("checkout_reports")
 }
 
-enum CheckoutItemStatus {
-  good
-  damaged
-  missing
-}
-
 model CheckoutItem {
   id Int @id @default(autoincrement())
 
@@ -396,14 +408,21 @@ model Media {
 
 model UnitTypePricing {
   id       Int           @id @default(autoincrement())
-  unitType String
-  duration PriceDuration // one_night weekly
-  price    Int // Price in KSH
-  nights   Int // 1 for one_night, 7 for weekly
+  unitType String // "1 bedroom", "2 bedroom"
+  duration PriceDuration
+  price    Int
+  nights   Int? // 1, 7, 30, or null (calculated for custom)
 
+  // For custom duration (seasonal pricing)
+  fromDate DateTime? // Required if duration = custom
+  toDate   DateTime? // Required if duration = custom
+
+  // Discount per pricing entry
+  discountRate Float? // e.g., 0.10 for 10%, null = no discount
+
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([unitType, duration])
   @@map("unit_type_pricing")
 }

@@ -21,11 +21,18 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  Percent,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import Header from "./Header";
 import type { BookingStatus } from "@/lib/types/types";
-import { cn, getPeriodLabelSingular, formatPrice } from "@/lib/utils";
+import {
+  cn,
+  getPeriodLabelSingular,
+  formatPrice,
+  hasDiscount,
+  getDurationLabel,
+} from "@/lib/utils";
 
 const getStatusColor = (status: BookingStatus): string => {
   switch (status) {
@@ -65,6 +72,18 @@ async function BookingDetails({ params }: BookingDetailsPros) {
   const checkInDate = new Date(booking.checkInDate);
   const checkOutDate = new Date(booking.checkOutDate);
   const nights = differenceInDays(checkOutDate, checkInDate);
+
+  // Calculate original price before discount (if discount was applied)
+  const discountRate = booking.discountRate || 0;
+  const hasDiscountApplied = hasDiscount(discountRate);
+
+  // unitPrice is already the discounted price, so we need to calculate original
+  const originalUnitPrice = hasDiscountApplied
+    ? Math.round(booking.unitPrice / (1 - discountRate))
+    : booking.unitPrice;
+
+  const originalTotalAmount = originalUnitPrice * booking.period;
+  const savings = originalTotalAmount - booking.totalAmount;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -113,12 +132,6 @@ async function BookingDetails({ params }: BookingDetailsPros) {
               </Badge>
             </div>
           </div>
-          {/* <div className="text-right">
-            <p className="text-sm text-muted-foreground">Total Amount</p>
-            <p className="text-2xl font-bold text-foreground">
-              Ksh. {(booking.unit.rent * nights).toLocaleString()}
-            </p>
-          </div> */}
         </CardContent>
       </Card>
 
@@ -266,7 +279,14 @@ async function BookingDetails({ params }: BookingDetailsPros) {
 
               <Separator />
 
-              <div className="grid grid-cols-3 gap-4">
+              <div
+                className={cn(
+                  "grid gap-4",
+                  hasDiscountApplied
+                    ? "grid-cols-2 md:grid-cols-4"
+                    : "grid-cols-3",
+                )}
+              >
                 <div className="text-center p-3 rounded-lg bg-muted/60">
                   <Bed className="size-5 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm font-medium text-foreground">
@@ -283,13 +303,35 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted/60">
                   <Banknote className="size-5 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">
-                    Ksh. {booking.unitPrice}
-                  </p>
+                  <div>
+                    {hasDiscountApplied ? (
+                      <>
+                        <p className="text-xs text-muted-foreground line-through">
+                          {formatPrice(originalUnitPrice)}
+                        </p>
+                        <p className="text-sm font-medium text-primary">
+                          {formatPrice(booking.unitPrice)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm font-medium text-foreground">
+                        {formatPrice(booking.unitPrice)}
+                      </p>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Per {getPeriodLabelSingular(booking.priceDuration)}
                   </p>
                 </div>
+                {hasDiscountApplied && (
+                  <div className="text-center p-3 rounded-lg bg-green-50">
+                    <Percent className="size-5 text-green-600 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-green-600">
+                      {Math.round(discountRate * 100)}%
+                    </p>
+                    <p className="text-xs text-green-600">Discount</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -357,9 +399,17 @@ async function BookingDetails({ params }: BookingDetailsPros) {
 
               <Separator />
 
-              <div className="p-3 rounded-lg bg-muted/60 text-center">
-                <p className="text-sm text-muted-foreground">Total Nights</p>
-                <p className="text-2xl font-bold text-foreground">{nights}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/60 text-center">
+                  <p className="text-sm text-muted-foreground">Duration</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {getDurationLabel(booking.priceDuration)}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/60 text-center">
+                  <p className="text-sm text-muted-foreground">Total Nights</p>
+                  <p className="text-lg font-bold text-foreground">{nights}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -401,20 +451,71 @@ async function BookingDetails({ params }: BookingDetailsPros) {
               <Separator />
 
               <div className="space-y-2">
+                {/* Unit Price */}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Ksh.{booking.unitPrice} &#x78; {nights} nights
+                    {getDurationLabel(booking.priceDuration)} Rate
+                  </span>
+                  <span className="text-foreground">
+                    {hasDiscountApplied ? (
+                      <span className="flex items-center gap-2">
+                        <span className="line-through text-muted-foreground">
+                          {formatPrice(originalUnitPrice)}
+                        </span>
+                        <span className="text-primary font-medium">
+                          {formatPrice(booking.unitPrice)}
+                        </span>
+                      </span>
+                    ) : (
+                      formatPrice(booking.unitPrice)
+                    )}
+                  </span>
+                </div>
+
+                {/* Discount Row */}
+                {hasDiscountApplied && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600">
+                      Discount ({Math.round(discountRate * 100)}%)
+                    </span>
+                    <span className="text-green-600 font-medium">
+                      -{formatPrice(originalUnitPrice - booking.unitPrice)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Period Calculation */}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {formatPrice(booking.unitPrice)} × {booking.period}{" "}
+                    {getPeriodLabelSingular(booking.priceDuration)}
+                    {booking.period > 1 ? "s" : ""}
                   </span>
                   <span className="text-foreground">
                     {formatPrice(booking.totalAmount)}
                   </span>
                 </div>
+
                 <Separator />
-                <div className="flex justify-between">
+
+                {/* Total Savings */}
+                {hasDiscountApplied && savings > 0 && (
+                  <div className="flex justify-between text-sm p-2 rounded-lg bg-green-50">
+                    <span className="text-green-600 font-medium">
+                      Total Savings
+                    </span>
+                    <span className="text-green-600 font-bold">
+                      {formatPrice(savings)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Total Amount */}
+                <div className="flex justify-between pt-2">
                   <span className="font-semibold text-foreground">
                     Total Amount
                   </span>
-                  <span className="text-base font-bold text-foreground">
+                  <span className="text-xl font-bold text-foreground">
                     {formatPrice(booking.totalAmount)}
                   </span>
                 </div>

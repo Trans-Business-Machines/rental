@@ -4,7 +4,7 @@ import { ArrowLeft, SquarePen, Plus } from "lucide-react";
 import { PropertyDetails } from "@/components/PropertyDetails";
 //import { PropertyAmenities } from "@/components/PropertyAmenities";
 import { PropertyGallery } from "@/components/PropertyGallery";
-import { getCachedProperty } from "@/lib/actions/properties";
+import { getPropertyById } from "@/lib/actions/properties";
 import { notFound } from "next/navigation";
 //import { amenities } from "@/lib/data/properties";
 import Link from "next/link";
@@ -27,7 +27,7 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
   const id = (await params).id;
 
   // fetch the property from the database
-  const { property, pricings } = await getCachedProperty(Number(id));
+  const { property, pricings } = await getPropertyById(Number(id));
 
   if (!property || property === null) {
     notFound();

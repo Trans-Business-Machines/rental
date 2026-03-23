@@ -1,10 +1,10 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { countries } from "@nexisltd/country";
-import { addDays } from "date-fns"
+import { addDays, differenceInDays } from "date-fns"
 import type { BookingStatus, UnitStatus, Guest, InventoryItem, PriceDuration } from "@/lib/types/types";
 
-export const LIMIT = 12
+export const LIMIT = 9;
 const TIMEZONE = "Africa/Nairobi";
 
 export function cn(...inputs: ClassValue[]) {
@@ -70,75 +70,142 @@ export function getInventoryStatus(item: InventoryItem) {
   }
 }
 
-export function getDurationLabel(duration: PriceDuration) {
-  switch (duration) {
-    case "one_night":
-      return "One Night";
-    case "weekly":
-      return "Weekly (7 nights)";
-    default:
-      return duration;
-  }
+// ================= UNIT PRICING UTILITIES =================
+// Get human-readable label for duration
+export function getDurationLabel(duration: PriceDuration | string): string {
+  const labels: Record<string, string> = {
+    one_night: "One Night",
+    weekly: "Weekly",
+    monthly: "Monthly",
+    custom: "Custom",
+  };
+  return labels[duration] || duration;
 }
 
-export function getDurationNights(duration: PriceDuration) {
+//Get number of nights for a duration
+export function getDurationNights(
+  duration: PriceDuration | string,
+  fromDate?: Date | string | null,
+  toDate?: Date | string | null
+): number {
   switch (duration) {
     case "one_night":
       return 1;
     case "weekly":
       return 7;
+    case "monthly":
+      return 30;
+    case "custom":
+      if (fromDate && toDate) {
+        const from = typeof fromDate === "string" ? new Date(fromDate) : fromDate;
+        const to = typeof toDate === "string" ? new Date(toDate) : toDate;
+        return differenceInDays(to, from);
+      }
+      return 0;
     default:
       return 1;
   }
 }
 
-export function getPeriodLabel(duration: PriceDuration) {
-  switch (duration) {
-    case "one_night":
-      return "nights";
-    case "weekly":
-      return "weeks";
-    default:
-      return "nights";
-  }
+//Get plural period label (nights, weeks, months)
+export function getPeriodLabel(duration: PriceDuration | string): string {
+  const labels: Record<string, string> = {
+    one_night: "nights",
+    weekly: "weeks",
+    monthly: "months",
+    custom: "stays",
+  };
+  return labels[duration] || "nights";
 }
 
-export function getPeriodLabelSingular(duration: PriceDuration) {
-  switch (duration) {
-    case "one_night":
-      return "night";
-    case "weekly":
-      return "week";
-    default:
-      return "night";
-  }
+// Get singular period label (night, week, month)
+export function getPeriodLabelSingular(duration: PriceDuration | string): string {
+  const labels: Record<string, string> = {
+    one_night: "night",
+    weekly: "week",
+    monthly: "month",
+    custom: "stay",
+  };
+  return labels[duration] || "night";
 }
 
+// Calculate checkout date based on check-in, duration, and period
 export function calculateCheckoutDate(
-  checkInDate: Date,
-  duration: PriceDuration,
-  period: number = 1
-) {
-  const nights = getDurationNights(duration) * period;
-  return addDays(checkInDate, nights);
+  checkInDate: Date | string,
+  duration: PriceDuration | string,
+  period: number,
+  fromDate?: Date | string | null,
+  toDate?: Date | string | null
+): Date {
+  const checkIn = typeof checkInDate === "string" ? new Date(checkInDate) : checkInDate;
+  const nights = getDurationNights(duration, fromDate, toDate);
+  return addDays(checkIn, nights * period);
 }
 
+// Calculate total nights for a booking
 export function calculateTotalNights(
-  duration: PriceDuration,
-  period: number
-) {
-  return getDurationNights(duration) * period;
+  duration: PriceDuration | string,
+  period: number,
+  fromDate?: Date | string | null,
+  toDate?: Date | string | null
+): number {
+  const nights = getDurationNights(duration, fromDate, toDate);
+  return nights * period;
 }
 
+// Apply discount to a price
+export function calculateDiscountedPrice(
+  price: number,
+  discountRate: number | null | undefined
+): number {
+  if (!discountRate || discountRate <= 0) {
+    return price;
+  }
+
+  return Math.round(price * (1 - discountRate));
+}
+
+// Calculate total amount with discount applied
 export function calculateTotalAmount(
   unitPrice: number,
-  period: number
-) {
-  return unitPrice * period;
+  period: number,
+  discountRate?: number | null
+): number {
+  const subtotal = unitPrice * period;
+  return calculateDiscountedPrice(subtotal, discountRate);
 }
 
-export function formatPrice(price: number) {
-  return `KSH ${price.toLocaleString()}`;
+//  Format discount rate as percentage string
+export function formatDiscount(discountRate: number | null | undefined): string {
+  if (!discountRate || discountRate <= 0) {
+    return "";
+  }
+  return `${Math.round(discountRate * 100)}% off`;
+}
+
+// Check if a discount exists
+export function hasDiscount(discountRate: number | null | undefined): boolean {
+  return !!discountRate && discountRate > 0;
+}
+
+// ================= FORMAT UTILITIES =================
+
+export function formatPrice(price: number): string {
+  return new Intl.NumberFormat("en-KE", {
+    style: "currency",
+    currency: "KES",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(price);
+}
+
+export function formatDate(date: Date | string): string {
+  return new Intl.DateTimeFormat("en-KE", {
+    timeZone: TIMEZONE,
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(date));
 }
 
 export const formatDateInTimezone = (

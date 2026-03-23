@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { auth } from "../auth";
-import { unstable_cache } from "next/cache";
 
 interface GetPropertiesParams {
 	page?: number;
@@ -73,37 +72,31 @@ export async function getProperties({
 	}
 }
 
-export const getCachedProperty = unstable_cache(
-	async (propertyId: number) => {
-		const property = await prisma.property.findUnique({
-			where: { id: propertyId, deletedAt: null, },
-			include: {
-				tenants: true,
-				amenities: true,
-				media: true,
-				_count: {
-					select: {
-						units: true
-					}
+export const getPropertyById = async (propertyId: number) => {
+	const property = await prisma.property.findUnique({
+		where: { id: propertyId, deletedAt: null, },
+		include: {
+			tenants: true,
+			amenities: true,
+			media: true,
+			_count: {
+				select: {
+					units: true
 				}
+			}
+		},
+	});
 
-			},
-		});
-
-		const pricings = await prisma.unitTypePricing.findMany()
+	const pricings = await prisma.unitTypePricing.findMany()
 
 
-		return {
-			property,
-			pricings
-		}
-	},
-	["property"],
-	{
-		revalidate: 60,
-		tags: ["property"],
+	return {
+		property,
+		pricings
 	}
-)
+}
+
+
 
 export async function getPropertyNames() {
 	try {
