@@ -23,16 +23,30 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Edit, Moon, Calendar, Minus, Plus, Loader2 } from "lucide-react";
+import {
+  Edit,
+  Moon,
+  Calendar,
+  CalendarDays,
+  CalendarRange,
+  Minus,
+  Plus,
+  Loader2,
+} from "lucide-react";
 import { updateBooking } from "@/lib/actions/bookings";
 import { getUnitPricingOptions } from "@/lib/actions/pricing";
 import {
+  cn,
   formatPrice,
+  formatDiscount,
+  formatDate,
+  hasDiscount,
   getDurationLabel,
   getPeriodLabel,
   calculateCheckoutDate,
   calculateTotalNights,
   calculateTotalAmount,
+  calculateDiscountedPrice,
 } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -51,9 +65,11 @@ interface BookingEditDialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-const durationIcons = {
+const durationIcons: Record<PriceDuration, React.ElementType> = {
   one_night: Moon,
   weekly: Calendar,
+  monthly: CalendarDays,
+  custom: CalendarRange,
 };
 
 export function BookingEditDialog({
@@ -82,6 +98,7 @@ export function BookingEditDialog({
     priceDuration: booking.priceDuration,
     unitPrice: booking.unitPrice,
     period: booking.period,
+    discountRate: booking.discountRate,
     totalAmount: booking.totalAmount,
     source: booking.source,
     purpose: booking.purpose || "personal",
@@ -115,20 +132,28 @@ export function BookingEditDialog({
   useEffect(() => {
     if (selectedPricing && formData.checkInDate) {
       const checkIn = new Date(formData.checkInDate);
+      const actualPeriod =
+        selectedPricing.duration === "custom" ? 1 : formData.period;
+
       const checkOut = calculateCheckoutDate(
         checkIn,
         selectedPricing.duration as PriceDuration,
-        formData.period,
+        actualPeriod,
+        selectedPricing.fromDate,
+        selectedPricing.toDate,
       );
-      const total = calculateTotalAmount(
+
+      const discountedPrice = calculateDiscountedPrice(
         selectedPricing.price,
-        formData.period,
+        selectedPricing.discountRate,
       );
+      const total = calculateTotalAmount(discountedPrice, actualPeriod);
 
       setFormData((prev) => ({
         ...prev,
         checkOutDate: format(checkOut, "yyyy-MM-dd"),
-        unitPrice: selectedPricing.price,
+        unitPrice: discountedPrice,
+        discountRate: selectedPricing.discountRate,
         totalAmount: total,
       }));
     }
@@ -150,16 +175,24 @@ export function BookingEditDialog({
 
   const handlePricingSelect = (pricing: UnitTypePricing) => {
     setSelectedPricing(pricing);
+    const discountedPrice = calculateDiscountedPrice(
+      pricing.price,
+      pricing.discountRate,
+    );
+
     setFormData((prev) => ({
       ...prev,
       priceDuration: pricing.duration as PriceDuration,
-      unitPrice: pricing.price,
+      unitPrice: discountedPrice,
+      discountRate: pricing.discountRate,
       period: 1, // Reset period when changing duration
     }));
   };
 
   const handlePeriodChange = (newPeriod: number) => {
     if (newPeriod < 1) return;
+    // For custom pricing, period is always 1
+    if (selectedPricing?.duration === "custom") return;
     setFormData((prev) => ({
       ...prev,
       period: newPeriod,
@@ -214,6 +247,22 @@ export function BookingEditDialog({
   };
 
   const isCheckedIn = booking.status === "checked_in";
+  const isCustomDuration = selectedPricing?.duration === "custom";
+
+  // Calculate display values
+  const discountedPrice = selectedPricing
+    ? calculateDiscountedPrice(
+        selectedPricing.price,
+        selectedPricing.discountRate,
+      )
+    : 0;
+
+  const actualPeriod = isCustomDuration ? 1 : formData.period;
+
+  const savings = selectedPricing
+    ? calculateTotalAmount(selectedPricing.price, actualPeriod) -
+      calculateTotalAmount(discountedPrice, actualPeriod)
+    : 0;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -260,29 +309,36 @@ export function BookingEditDialog({
                     );
                     if (pricing) handlePricingSelect(pricing);
                   }}
-                  className="items-center md:grid-cols-2"
+                  className="grid gap-3 md:grid-cols-2"
                   disabled={isCheckedIn}
                 >
                   {pricingOptions.map((pricing) => {
                     const Icon =
-                      durationIcons[
-                        pricing.duration as keyof typeof durationIcons
-                      ];
+                      durationIcons[pricing.duration as PriceDuration];
                     const isSelected =
                       formData.priceDuration === pricing.duration;
+                    const pricingDiscountedPrice = calculateDiscountedPrice(
+                      pricing.price,
+                      pricing.discountRate,
+                    );
 
                     return (
                       <Label
                         key={pricing.id}
                         htmlFor={`edit-${pricing.duration}`}
-                        className={`cursor-pointer ${isCheckedIn ? "opacity-50 cursor-not-allowed" : ""}`}
+                        className={cn(
+                          "cursor-pointer",
+                          pricing.duration === "monthly" && "md:col-span-2",
+                          isCheckedIn && "opacity-50 cursor-not-allowed",
+                        )}
                       >
                         <Card
-                          className={`transition-all py-2 w-full ${
+                          className={cn(
+                            "transition-all py-2 w-full",
                             isSelected
                               ? "border-primary ring-2 ring-primary/20"
-                              : "hover:border-primary/50"
-                          }`}
+                              : "hover:border-primary/50",
+                          )}
                         >
                           <CardContent className="flex items-center gap-4 p-4">
                             <RadioGroupItem
@@ -293,32 +349,67 @@ export function BookingEditDialog({
                             />
 
                             <div
-                              className={`size-10 rounded-lg flex items-center justify-center ${
-                                isSelected ? "bg-primary/10" : "bg-muted"
-                              }`}
+                              className={cn(
+                                "size-10 rounded-lg flex items-center justify-center",
+                                isSelected ? "bg-primary/10" : "bg-muted",
+                              )}
                             >
                               <Icon
-                                className={`size-5 ${
+                                className={cn(
+                                  "size-5",
                                   isSelected
                                     ? "text-primary"
-                                    : "text-muted-foreground"
-                                }`}
+                                    : "text-muted-foreground",
+                                )}
                               />
                             </div>
 
                             <div className="flex-1">
-                              <p className="font-medium text-foreground">
-                                {getDurationLabel(pricing.duration)}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-foreground">
+                                  {getDurationLabel(pricing.duration)}
+                                </p>
+                                {hasDiscount(pricing.discountRate) && (
+                                  <span className="text-xs font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">
+                                    {formatDiscount(pricing.discountRate)}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-sm text-muted-foreground">
-                                {pricing.nights}{" "}
-                                {pricing.nights === 1 ? "night" : "nights"} stay
+                                {pricing.duration === "custom" &&
+                                pricing.fromDate &&
+                                pricing.toDate ? (
+                                  <>
+                                    {formatDate(pricing.fromDate)} -{" "}
+                                    {formatDate(pricing.toDate)} (
+                                    {pricing.nights} nights)
+                                  </>
+                                ) : (
+                                  <>
+                                    {pricing.nights}{" "}
+                                    {pricing.nights === 1 ? "night" : "nights"}{" "}
+                                    stay
+                                  </>
+                                )}
                               </p>
                             </div>
 
-                            <p className="text-lg font-bold text-foreground">
-                              {formatPrice(pricing.price)}
-                            </p>
+                            <div className="text-right">
+                              {hasDiscount(pricing.discountRate) ? (
+                                <>
+                                  <p className="text-sm text-muted-foreground line-through">
+                                    {formatPrice(pricing.price)}
+                                  </p>
+                                  <p className="text-lg font-bold text-primary">
+                                    {formatPrice(pricingDiscountedPrice)}
+                                  </p>
+                                </>
+                              ) : (
+                                <p className="text-lg font-bold text-foreground">
+                                  {formatPrice(pricing.price)}
+                                </p>
+                              )}
+                            </div>
                           </CardContent>
                         </Card>
                       </Label>
@@ -326,8 +417,8 @@ export function BookingEditDialog({
                   })}
                 </RadioGroup>
 
-                {/* Period Selector */}
-                {selectedPricing && (
+                {/* Period Selector (not for custom) */}
+                {selectedPricing && !isCustomDuration && (
                   <div className="space-y-3">
                     <Label>
                       How many {getPeriodLabel(formData.priceDuration)}?
@@ -339,6 +430,7 @@ export function BookingEditDialog({
                         size="icon"
                         onClick={() => handlePeriodChange(formData.period - 1)}
                         disabled={formData.period <= 1 || isCheckedIn}
+                        className="cursor-pointer w-1/12"
                       >
                         <Minus className="size-4" />
                       </Button>
@@ -352,7 +444,7 @@ export function BookingEditDialog({
                             handlePeriodChange(val);
                           }
                         }}
-                        className="w-min text-center"
+                        className="w-10/12 text-center"
                         min={1}
                         disabled={isCheckedIn}
                       />
@@ -363,6 +455,7 @@ export function BookingEditDialog({
                         size="icon"
                         onClick={() => handlePeriodChange(formData.period + 1)}
                         disabled={isCheckedIn}
+                        className="w-1/12 cursor-pointer"
                       >
                         <Plus className="size-4" />
                       </Button>
@@ -371,30 +464,39 @@ export function BookingEditDialog({
                         {getPeriodLabel(formData.priceDuration)}
                       </span>
                     </div>
+                  </div>
+                )}
 
-                    {/* Total Calculation */}
-                    <div className="p-4 rounded-lg bg-muted">
-                      <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
-                        <span>
-                          {formatPrice(selectedPricing.price)} ×{" "}
-                          {formData.period}{" "}
-                          {getPeriodLabel(formData.priceDuration)}
-                        </span>
-                        <span>
-                          {calculateTotalNights(
-                            formData.priceDuration,
-                            formData.period,
-                          )}{" "}
-                          nights total
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">Total Amount</span>
-                        <span className="text-2xl font-bold text-foreground">
-                          {formatPrice(formData.totalAmount)}
-                        </span>
-                      </div>
+                {/* Total Calculation */}
+                {selectedPricing && (
+                  <div className="p-4 rounded-lg bg-muted">
+                    <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
+                      <span>
+                        {formatPrice(discountedPrice)} × {actualPeriod}{" "}
+                        {getPeriodLabel(formData.priceDuration)}
+                      </span>
+                      <span>
+                        {calculateTotalNights(
+                          formData.priceDuration,
+                          actualPeriod,
+                          selectedPricing.fromDate,
+                          selectedPricing.toDate,
+                        )}{" "}
+                        nights total
+                      </span>
                     </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Total Amount</span>
+                      <span className="text-2xl font-bold text-foreground">
+                        {formatPrice(formData.totalAmount)}
+                      </span>
+                    </div>
+                    {hasDiscount(selectedPricing.discountRate) &&
+                      savings > 0 && (
+                        <p className="text-xs text-green-600 mt-1 text-right">
+                          You save {formatPrice(savings)}
+                        </p>
+                      )}
                   </div>
                 )}
               </div>
@@ -417,9 +519,15 @@ export function BookingEditDialog({
                   type="date"
                   value={formData.checkInDate}
                   onChange={handleChange}
-                  disabled={isCheckedIn}
+                  disabled={isCheckedIn || isCustomDuration}
+                  className={cn(isCustomDuration && "bg-muted")}
                   required
                 />
+                {isCustomDuration && (
+                  <p className="text-xs text-muted-foreground">
+                    Fixed dates for custom pricing period
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="checkOutDate">Check-out Date</Label>
@@ -497,7 +605,7 @@ export function BookingEditDialog({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="paymentMethod">Payment Method</Label>
                 <Select
                   value={formData.paymentMethod}
@@ -563,7 +671,7 @@ export function BookingEditDialog({
           </article>
 
           {/* Actions */}
-          <article className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-4">
             <Button
               type="button"
               onClick={() => setOpen(false)}
@@ -586,7 +694,7 @@ export function BookingEditDialog({
                 "Save Changes"
               )}
             </Button>
-          </article>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

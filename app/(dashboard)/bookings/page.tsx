@@ -20,9 +20,10 @@ import {
   QueryClient,
 } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { getServerSession } from "@/lib/check-permissions";
 import { redirect } from "next/navigation";
+import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface BookingsPageProps {
   searchParams: Promise<{
@@ -98,6 +99,8 @@ export default async function BookingsPage({
     },
   ];
 
+  const isAgent = user.role === "agent";
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <section className="space-y-6">
@@ -113,12 +116,12 @@ export default async function BookingsPage({
 
           <div className="flex gap-3">
             <BookingDialog />
-            {user.role !== "marketer" && <Button asChild>
+            <Button asChild className={cn(isAgent && "hidden")}>
               <Link href="/checkout" className="flex items-center gap-3">
                 <ClipboardPaste className="size-4 text-white" />
                 <span className="text-white">Checkout guest</span>
               </Link>
-            </Button>}
+            </Button>
           </div>
         </header>
 

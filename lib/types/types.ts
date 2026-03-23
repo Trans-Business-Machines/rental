@@ -1,7 +1,7 @@
 import { getBookingById } from "@/lib/actions/bookings";
 import { getInventoryItems, getInventoryAssignments } from "@/lib/actions/inventory"
 import { getCheckoutReportById, getBookingsForCheckout, getInventoryAssignmentsForUnit } from "@/lib/actions/checkout";
-import { getProperties, getPropertyNames, getCachedProperty } from "@/lib/actions/properties";
+import { getProperties, getPropertyNames, getPropertyById } from "@/lib/actions/properties";
 import { getGuests, } from "@/lib/actions/guests";
 import { getUnitPricingOptions } from "@/lib/actions/pricing"
 
@@ -18,8 +18,8 @@ type PropertyResponse = Awaited<ReturnType<typeof getProperties>>
 export type Property = PropertyResponse["properties"][number]
 export type Media = Property["media"][number]
 
-export type UniqueProperty = NonNullable<Awaited<ReturnType<typeof getCachedProperty>>>["property"]
-export type PropertyPricings = NonNullable<Awaited<ReturnType<typeof getCachedProperty>>>["pricings"]
+export type UniqueProperty = NonNullable<Awaited<ReturnType<typeof getPropertyById>>>["property"]
+export type PropertyPricings = NonNullable<Awaited<ReturnType<typeof getPropertyById>>>["pricings"]
 
 type AssignmentResponse = Awaited<ReturnType<typeof getInventoryAssignments>>
 export type Assignment = AssignmentResponse["assignments"][number]
@@ -30,6 +30,15 @@ export type InventoryItem = InvetoryItemResponse["items"][number]
 export type BookingsForCheckout = NonNullable<Awaited<ReturnType<typeof getBookingsForCheckout>>>
 export type InventoryAssignmentForUnit = NonNullable<Awaited<ReturnType<typeof getInventoryAssignmentsForUnit>>>
 export type UnitTypePricing = NonNullable<Awaited<ReturnType<typeof getUnitPricingOptions>>>[number]
+
+export type BookingStatus = "pending" | "reserved" | "checked_in" | "checked_out" | "cancelled"
+export type UnitStatus = "booked" | "reserved" | "maintenance" | "available" | "occupied"
+export type PriceDuration = "one_night" | "weekly" | "monthly" | "custom"
+
+export type BadgeVariant = "dashboard" | "listing" | "details";
+
+export type Role = "user" | "admin" | "superAdmin" | "agent"
+
 
 interface IdDocumentData {
     filename: string;
@@ -65,16 +74,20 @@ export type CreateNewGuest = {
     idDocument?: IdDocumentData;
 }
 
-export type BookingStatus = "pending" | "reserved" | "checked_in" | "checked_out" | "cancelled"
-export type UnitStatus = "booked" | "reserved" | "maintenance" | "available" | "occupied"
-export type PriceDuration = "one_night" | "weekly"
+export type GroupedAssigments = {
+    inventoryItemId: number;
+    itemName: string;
+    category: string;
+    quantity: number;
+}[];
 
-export type BadgeVariant =
-    | "dashboard"
-    | "listing"
-    | "details";
+export type CategoryItemStats = {
+    category: string;
+    totalItems: number;
+    assigned: number;
+    available: number;
+}[]
 
-export type Role = "user" | "admin" | "superAdmin" | "agent"
 
 /* ---------------- Interface Definitions ---------------- */
 export interface BookingsTableAndCardsProps {
@@ -83,13 +96,6 @@ export interface BookingsTableAndCardsProps {
     handleClick: (bookingId: number) => void;
     setEditBooking: (booking: Booking) => void;
     setIsDialogOpen: (open: boolean) => void;
-}
-
-export interface UpdatePricingParams {
-    id: number;
-    duration: PriceDuration;
-    price: number;
-    nights: number;
 }
 
 
@@ -127,7 +133,7 @@ export interface Unit {
         id: number;
     },
     media: Media[],
-    pricingOptions: UnitPricingOptions[]
+    pricingOptions: UnitTypePricing[]
 }
 
 export interface User {
@@ -142,15 +148,6 @@ export interface User {
     banExpires: Date | null;
     createdAt: Date;
     updatedAt: Date;
-}
-
-
-export interface UsersResponse {
-    totalPages: number,
-    currentPage: number,
-    users: User[],
-    hasNext: boolean,
-    hasPrev: boolean,
 }
 
 export interface UsersTableAndCardsProps {
@@ -224,17 +221,19 @@ export interface CreateBookingData {
     guestId: number;
     propertyId: number;
     unitId: number;
+    priceDuration: PriceDuration;
+    unitPrice: number;
+    period: number;
+    discountRate?: number | null;
+    totalAmount: number;
     checkInDate: Date;
     checkOutDate: Date;
     numberOfGuests: number;
-    totalAmount: number;
-    unitPrice: number;
     source: string;
     purpose: string;
-    paymentMethod: string;
-    status: BookingStatus
+    paymentMethod?: string;
     specialRequests?: string;
-
+    status: BookingStatus;
 }
 
 export type UnitDetailsResponse = {
@@ -273,24 +272,34 @@ export type UnitDetailsResponse = {
     }>;
 };
 
+export interface CreatePricingParams {
+    unitType: string;
+    duration: PriceDuration;
+    price: number;
+    nights?: number | null;
+    fromDate?: Date | null;
+    toDate?: Date | null;
+    discountRate?: number | null;
+    isActive?: boolean;
+}
+
+export interface UpdatePricingParams {
+    id: number;
+    unitType?: string;
+    duration?: PriceDuration;
+    price?: number;
+    nights?: number | null;
+    fromDate?: Date | null;
+    toDate?: Date | null;
+    discountRate?: number | null;
+    isActive?: boolean;
+}
+
 export type UnitProperty = UnitDetailsResponse["property"];
 
 export type UnitMedia = UnitDetailsResponse["media"][number];
 
 export type UnitBooking = UnitDetailsResponse["bookings"][number];
 
-export type GroupedAssigments = {
-    inventoryItemId: number;
-    itemName: string;
-    category: string;
-    quantity: number;
-}[];
-
-export type CategoryItemStats = {
-    category: string;
-    totalItems: number;
-    assigned: number;
-    available: number;
-}[]
 
 

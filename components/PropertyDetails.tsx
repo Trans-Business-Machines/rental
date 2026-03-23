@@ -4,12 +4,35 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardContent, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
-import { Home, Users, Eye, Moon, Calendar, Bed } from "lucide-react";
+import {
+  Home,
+  Users,
+  Eye,
+  Moon,
+  Calendar,
+  CalendarDays,
+  CalendarRange,
+  Bed,
+} from "lucide-react";
 import Link from "next/link";
 import { propertyUnitKeys } from "@/hooks/useProperties";
-import { getOccupancyRate, formatPrice, getDurationLabel } from "@/lib/utils";
+import {
+  getOccupancyRate,
+  formatPrice,
+  getDurationLabel,
+  formatDate,
+  hasDiscount,
+  calculateDiscountedPrice,
+} from "@/lib/utils";
 import { notFound } from "next/navigation";
 import type { UniqueProperty, PropertyPricings } from "@/lib/types/types";
+
+const durationIcons: Record<string, React.ElementType> = {
+  one_night: Moon,
+  weekly: Calendar,
+  monthly: CalendarDays,
+  custom: CalendarRange,
+};
 
 function PropertyDetails({
   property,
@@ -47,6 +70,69 @@ function PropertyDetails({
   // Group pricings by unit type
   const oneBedroomPricings = pricings.filter((p) => p.unitType === "1 bedroom");
   const twoBedroomPricings = pricings.filter((p) => p.unitType === "2 bedroom");
+
+  // Render pricing item
+  const renderPricingItem = (
+    pricing: PropertyPricings[number],
+    colorClass: string,
+  ) => {
+    const Icon = durationIcons[pricing.duration] || Calendar;
+    const showDiscount = hasDiscount(pricing.discountRate);
+    const discountedPrice = calculateDiscountedPrice(
+      pricing.price,
+      pricing.discountRate,
+    );
+
+    return (
+      <div
+        key={pricing.id}
+        className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
+      >
+        <div className="flex items-center gap-2">
+          <Icon className="size-4 text-muted-foreground" />
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-foreground">
+                {getDurationLabel(pricing.duration)}
+              </p>
+              {showDiscount && (
+                <span className="text-xs font-medium text-green-600 bg-green-100 px-1.5 py-0.5 rounded">
+                  {Math.round((pricing.discountRate || 0) * 100)}% off
+                </span>
+              )}
+            </div>
+            {pricing.duration === "custom" &&
+            pricing.fromDate &&
+            pricing.toDate ? (
+              <p className="text-xs text-muted-foreground">
+                {formatDate(pricing.fromDate)} - {formatDate(pricing.toDate)}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {pricing.nights} {pricing.nights === 1 ? "night" : "nights"}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="text-right">
+          {showDiscount ? (
+            <>
+              <p className="text-xs text-muted-foreground line-through">
+                {formatPrice(pricing.price)}
+              </p>
+              <p className={`text-lg font-bold ${colorClass}`}>
+                {formatPrice(discountedPrice)}
+              </p>
+            </>
+          ) : (
+            <p className={`text-lg font-bold ${colorClass}`}>
+              {formatPrice(pricing.price)}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Card
@@ -95,32 +181,9 @@ function PropertyDetails({
                   </div>
 
                   <div className="space-y-2">
-                    {oneBedroomPricings.map((pricing) => (
-                      <div
-                        key={pricing.id}
-                        className="flex items-center justify-between p-3 rounded-lg"
-                      >
-                        <div className="flex items-center gap-2">
-                          {pricing.duration === "one_night" ? (
-                            <Moon className="size-4 text-muted-foreground" />
-                          ) : (
-                            <Calendar className="size-4 text-muted-foreground" />
-                          )}
-                          <div>
-                            <p className="text-sm font-medium text-foreground">
-                              {getDurationLabel(pricing.duration)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {pricing.nights}{" "}
-                              {pricing.nights === 1 ? "night" : "nights"}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-lg font-bold text-azure">
-                          {formatPrice(pricing.price)}
-                        </p>
-                      </div>
-                    ))}
+                    {oneBedroomPricings.map((pricing) =>
+                      renderPricingItem(pricing, "text-azure"),
+                    )}
                   </div>
                 </div>
               )}
@@ -138,32 +201,9 @@ function PropertyDetails({
                   </div>
 
                   <div className="space-y-2">
-                    {twoBedroomPricings.map((pricing) => (
-                      <div
-                        key={pricing.id}
-                        className="flex items-center justify-between p-3 rounded-lg"
-                      >
-                        <div className="flex items-center gap-2">
-                          {pricing.duration === "one_night" ? (
-                            <Moon className="size-4 text-muted-foreground" />
-                          ) : (
-                            <Calendar className="size-4 text-muted-foreground" />
-                          )}
-                          <div>
-                            <p className="text-sm font-medium text-foreground">
-                              {getDurationLabel(pricing.duration)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {pricing.nights}{" "}
-                              {pricing.nights === 1 ? "night" : "nights"}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-lg font-bold text-medium-jungle">
-                          {formatPrice(pricing.price)}
-                        </p>
-                      </div>
-                    ))}
+                    {twoBedroomPricings.map((pricing) =>
+                      renderPricingItem(pricing, "text-medium-jungle"),
+                    )}
                   </div>
                 </div>
               )}

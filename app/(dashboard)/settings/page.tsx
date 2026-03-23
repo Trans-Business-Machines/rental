@@ -8,6 +8,9 @@ import {
 } from "@tanstack/react-query";
 import { getUnitTypePricings } from "@/lib/actions/settings";
 import { SettingsTable } from "./settings-table";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { PricingCreateDialog } from "@/components/PricingCreateDialog";
 
 async function Settings() {
   // Get the user session
@@ -41,10 +44,17 @@ async function Settings() {
         <header className="flex flex-col gap-3 md:gap-0 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-normal text-foreground">
-              Settings
+              Pricing Settings
             </h1>
             <p className="text-muted-foreground">Manage unit type pricings.</p>
           </div>
+
+          <PricingCreateDialog>
+            <Button size="lg" className="px-10 cursor-pointer">
+              <Plus className="text-white size-4" />
+              <span>Add unit pricing</span>
+            </Button>
+          </PricingCreateDialog>
         </header>
 
         {/* pricings table goes here */}

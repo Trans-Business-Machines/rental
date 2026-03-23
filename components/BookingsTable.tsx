@@ -30,6 +30,7 @@ import type {
   BookingStatus,
 } from "@/lib/types/types";
 import { useRouter } from "next/navigation";
+import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
 
 export const getStatusColor = (status: BookingStatus): string => {
@@ -79,8 +80,8 @@ function BookingsTable({
               <TableHead className="font-semibold text-foreground">
                 Check-out
               </TableHead>
-              <TableHead className="font-semibold text-center text-foreground">
-                total stays
+              <TableHead className="font-semibold  text-foreground">
+                Total Cost
               </TableHead>
               <TableHead className="font-semibold  text-foreground">
                 Status
@@ -104,13 +105,7 @@ function BookingsTable({
                 <TableCell>
                   {format(new Date(booking.checkOutDate), "dd/MM/yyyy")}
                 </TableCell>
-                <TableCell className="grid place-items-center">
-                  {/* {differenceInDays(
-                    new Date(booking.checkOutDate),
-                    new Date(booking.checkInDate)
-                  )} */}
-                  {booking.guest.totalStays}
-                </TableCell>
+                <TableCell>{formatPrice(booking.totalAmount)}</TableCell>
                 <TableCell>
                   <Badge
                     variant="secondary"

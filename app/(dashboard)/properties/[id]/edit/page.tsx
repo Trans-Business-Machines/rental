@@ -1,5 +1,5 @@
 import { EditPropertyForm } from "@/components/EditPropertyForm";
-import { getCachedProperty } from "@/lib/actions/properties";
+import { getPropertyById } from "@/lib/actions/properties";
 import { notFound } from "next/navigation";
 
 interface EditPropertyPageParams {
@@ -10,7 +10,7 @@ export default async function EditPropertyPage({
   params,
 }: EditPropertyPageParams) {
   const { id } = await params;
-  const { property } = await getCachedProperty(Number(id));
+  const { property } = await getPropertyById(Number(id));
 
   if (!property) {
     notFound();
