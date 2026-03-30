@@ -1,4 +1,4 @@
-import { getBookingById } from "@/lib/actions/bookings";
+import { getBookingById,  } from "@/lib/actions/bookings";
 import { getInventoryItems, getInventoryAssignments } from "@/lib/actions/inventory"
 import { getCheckoutReportById, getBookingsForCheckout, getInventoryAssignmentsForUnit } from "@/lib/actions/checkout";
 import { getProperties, getPropertyNames, getPropertyById } from "@/lib/actions/properties";
@@ -172,6 +172,8 @@ export interface BanUserData {
     expiresIn: number;
 }
 
+type IdType = "national_id" | "passport"
+
 export interface GuestUpdateFormData {
     firstName: string;
     lastName: string;
@@ -179,7 +181,7 @@ export interface GuestUpdateFormData {
     phone: string;
     dateOfBirth: string,
     nationality: string;
-    idType: "national_id" | "passport",
+    idType: IdType,
     idNumber: string | null;
     passportNumber: string | null;
     notes?: string;
@@ -302,4 +304,123 @@ export type UnitMedia = UnitDetailsResponse["media"][number];
 export type UnitBooking = UnitDetailsResponse["bookings"][number];
 
 
+export interface CreateBookingRequestParams {
+    // Guest Details
+    guestFirstName: string;
+    guestLastName: string;
+    guestEmail: string;
+    guestPhone: string;
+    guestDateOfBirth: string;
+    guestNationality: string;
+    guestIdType: IdType;
+    guestIdNumber?: string | null;
+    guestPassportNumber?: string | null;
+    guestNotes?: string | null;
 
+    // ID Document
+    idDocumentFilename: string;
+    idDocumentOriginalName: string;
+    idDocumentMimeType: string;
+    idDocumentFileSize: number;
+    idDocumentUrl:string;
+
+    // Booking Details
+    propertyId: number;
+    unitId: number;
+    checkInDate: Date;
+    checkOutDate: Date;
+    numberOfGuests: number;
+    priceDuration: PriceDuration;
+    unitPrice: number;
+    period: number;
+    discountRate?: number | null;
+    totalAmount: number;
+    purpose?: string | null;
+    specialRequests?: string | null;
+
+}
+
+export interface GetBookingRequestsParams {
+    page?: number;
+    status?: "pending" | "approved" | "rejected" | "cancelled";
+    search?: string;
+}
+
+export interface UpdateBookingRequestParams {
+    id: number;
+
+    // Guest Details (all optional for partial updates)
+    guestFirstName?: string;
+    guestLastName?: string;
+    guestEmail?: string;
+    guestPhone?: string;
+    guestDateOfBirth?: string;
+    guestNationality?: string;
+    guestIdType?: IdType;
+    guestIdNumber?: string | null;
+    guestPassportNumber?: string | null;
+    guestNotes?: string | null;
+
+    // ID Document (optional - only if replacing)
+    idDocumentFilename?: string;
+    idDocumentOriginalName?: string;
+    idDocumentMimeType?: string;
+    idDocumentFileSize?: number;
+
+    // Booking Details
+    propertyId?: number;
+    unitId?: number;
+    checkInDate?: Date;
+    checkOutDate?: Date;
+    numberOfGuests?: number;
+    priceDuration?: PriceDuration;
+    unitPrice?: number;
+    period?: number;
+    discountRate?: number | null;
+    totalAmount?: number;
+    purpose?: string | null;
+    specialRequests?: string | null;
+}
+
+export type BookingRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
+
+
+export interface BookingRequestListItem {
+  id: number;
+  guestFirstName: string;
+  guestLastName: string;
+  guestEmail: string;
+  guestPhone: string;
+  status: BookingRequestStatus;
+  checkInDate: Date;
+  checkOutDate: Date;
+  totalAmount: number;
+  createdAt: Date;
+  // ID Document fields
+  idDocumentFilename: string;
+  idDocumentOriginalName: string;
+  idDocumentMimeType: string;
+  idDocumentFileSize: number;
+  idDocumentUrl: string;
+  // Relations
+  property: {
+    id: number;
+    name: string;
+  };
+  unit: {
+    id: number;
+    name: string;
+  };
+  requestedBy: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface ApproveMediaData {
+    mediaUrl: string;
+    mediaFilename: string;
+    mediaOriginalName: string;
+    mediaMimeType: string;
+    mediaSize: number;
+}

@@ -85,12 +85,11 @@ export async function getUnits({
                 bookings: {
                     where: {
                         OR: [
-                            // Always show checked_in guests (even if overstayed)
+
                             { status: "checked_in" },
-                            // Show upcoming reservations with future checkout
+
                             {
                                 status: { in: ["pending", "reserved"] },
-                                checkOutDate: { gte: new Date() },
                             },
                         ],
                     },
@@ -156,6 +155,16 @@ export async function getRecentBookings(
                 guest: true,
                 property: true,
                 unit: true,
+                requestedBy: {
+                    select: {
+                        name: true
+                    }
+                },
+                approvedBy: {
+                    select: {
+                        name: true
+                    }
+                },
             },
             orderBy: {
                 createdAt: "desc",

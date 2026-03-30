@@ -46,12 +46,12 @@ export async function requirePermission(resource: string, action: string) {
 
 }
 
-export async function requireRole(allowedRoles: Role[]) {
+export async function requireRole(allowedRoles: Role[], message?: string) {
 	const session = await getServerSession();
 	const userRole = (session?.user?.role as Role) || "user"
 
 	if (!allowedRoles.includes(userRole)) {
-		throw new Error("Unauthorized: Insufficent role.")
+		throw new Error(message ? message : "Unauthorized: Insufficent role.")
 	}
 
 }

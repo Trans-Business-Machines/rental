@@ -3,9 +3,10 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { evaluateUnitStatus } from "@/lib/utils"
-import { requirePermission } from "@/lib/check-permissions"
+import { requirePermission, getServerSession } from "@/lib/check-permissions"
 import { LIMIT } from "@/lib/utils"
-import type { BookingStatus, CreateBookingData, } from "@/lib/types/types"
+import type { BookingStatus, CreateBookingData, Role } from "@/lib/types/types"
+import { redirect } from "next/navigation";
 
 interface GetBookingsParams {
 	page?: number;
@@ -21,9 +22,24 @@ export async function getBookings({
 	propertyId = "all",
 }: GetBookingsParams = {}) {
 	try {
+		const session = await getServerSession();
+		const user = session?.user
+
+		if (!user) {
+			redirect("/login")
+		}
+
+		const userRole = user.role as Role
+
+
 		const where = {
 			// Exclude soft-deleted bookings
 			deletedAt: null,
+
+			// Show only the bookings made by an agent if user is agent
+			...(userRole === "agent" && {
+				requestedById: user.id
+			}),
 
 			// Search by guest name or unit name
 			...(search && {
@@ -52,6 +68,16 @@ export async function getBookings({
 					guest: true,
 					property: true,
 					unit: true,
+					requestedBy: {
+						select: {
+							name: true
+						}
+					},
+					approvedBy: {
+						select: {
+							name: true
+						}
+					},
 				},
 				orderBy: {
 					createdAt: "desc",
@@ -98,6 +124,16 @@ export async function getSoftDeletedBookings() {
 				guest: true,
 				property: true,
 				unit: true,
+				requestedBy: {
+					select: {
+						name: true
+					}
+				},
+				approvedBy: {
+					select: {
+						name: true
+					}
+				},
 			},
 		})
 
@@ -111,12 +147,37 @@ export async function getSoftDeletedBookings() {
 
 export async function getBookingById(id: number) {
 	try {
+		const session = await getServerSession();
+		const user = session?.user
+
+		if (!user) {
+			redirect("/login")
+		}
+
+		const userRole = user.role as Role
+
 		const booking = await prisma.booking.findUnique({
-			where: { id, deletedAt: null },
+			where: {
+				id,
+				deletedAt: null,
+				...(userRole === "agent" && {
+					requestedById: user.id
+				}),
+			},
 			include: {
 				guest: true,
 				property: true,
 				unit: true,
+				requestedBy: {
+					select: {
+						name: true
+					}
+				},
+				approvedBy: {
+					select: {
+						name: true
+					}
+				}
 			},
 		});
 		return booking;
@@ -127,108 +188,108 @@ export async function getBookingById(id: number) {
 }
 
 export async function createBooking(booking: CreateBookingData) {
-  try {
-    // Confirm that the current session user has permission to create a booking
-    await requirePermission("booking", "create");
+	try {
+		// Confirm that the current session user has permission to create a booking
+		await requirePermission("booking", "create");
 
-    // Prevent double booking: check if any booking exists for this property with checkInDate on the same day
-    const startOfDay = new Date(booking.checkInDate);
-    startOfDay.setHours(0, 0, 0, 0);
+		// Prevent double booking: check if any booking exists for this property with checkInDate on the same day
+		const startOfDay = new Date(booking.checkInDate);
+		startOfDay.setHours(0, 0, 0, 0);
 
-    const endOfDay = new Date(booking.checkInDate);
-    endOfDay.setHours(23, 59, 59, 999);
+		const endOfDay = new Date(booking.checkInDate);
+		endOfDay.setHours(23, 59, 59, 999);
 
-    const existingBooking = await prisma.booking.findFirst({
-      where: {
-        propertyId: booking.propertyId,
-        unitId: booking.unitId,
-        status: {
-          in: ["pending", "reserved", "checked_in"],
-        },
-        checkInDate: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-      },
-    });
+		const existingBooking = await prisma.booking.findFirst({
+			where: {
+				propertyId: booking.propertyId,
+				unitId: booking.unitId,
+				status: {
+					in: ["pending", "reserved", "checked_in"],
+				},
+				checkInDate: {
+					gte: startOfDay,
+					lte: endOfDay,
+				},
+			},
+		});
 
-    if (existingBooking) {
-      throw new Error(
-        "A booking already exists for this property on the selected check-in date."
-      );
-    }
+		if (existingBooking) {
+			throw new Error(
+				"A booking already exists for this property on the selected check-in date."
+			);
+		}
 
-    // Get the corresponding unit status based on booking status
-    const unitStatus = evaluateUnitStatus(booking.status);
+		// Get the corresponding unit status based on booking status
+		const unitStatus = evaluateUnitStatus(booking.status);
 
-    // use a prisma transaction to create booking and then update unit status
-    const result = await prisma.$transaction(
-      async (tx) => {
-        // create booking
-        const newBooking = await tx.booking.create({
-          data: {
-            guestId: booking.guestId,
-            propertyId: booking.propertyId,
-            unitId: booking.unitId,
-            priceDuration: booking.priceDuration,
-            unitPrice: booking.unitPrice,
-            period: booking.period,
-            discountRate: booking.discountRate || null,
-            totalAmount: booking.totalAmount,
-            checkInDate: booking.checkInDate,
-            checkOutDate: booking.checkOutDate,
-            numberOfGuests: booking.numberOfGuests,
-            source: booking.source,
-            purpose: booking.purpose,
-            paymentMethod: booking.paymentMethod,
-            specialRequests: booking.specialRequests,
-            status: booking.status,
-          },
-          include: {
-            unit: true,
-            guest: true,
-          },
-        });
+		// use a prisma transaction to create booking and then update unit status
+		const result = await prisma.$transaction(
+			async (tx) => {
+				// create booking
+				const newBooking = await tx.booking.create({
+					data: {
+						guestId: booking.guestId,
+						propertyId: booking.propertyId,
+						unitId: booking.unitId,
+						priceDuration: booking.priceDuration,
+						unitPrice: booking.unitPrice,
+						period: booking.period,
+						discountRate: booking.discountRate || null,
+						totalAmount: booking.totalAmount,
+						checkInDate: booking.checkInDate,
+						checkOutDate: booking.checkOutDate,
+						numberOfGuests: booking.numberOfGuests,
+						source: booking.source,
+						purpose: booking.purpose,
+						paymentMethod: booking.paymentMethod,
+						specialRequests: booking.specialRequests,
+						status: booking.status,
+					},
+					include: {
+						unit: true,
+						guest: true,
+					},
+				});
 
-        // update unit status
-        await tx.unit.update({
-          where: {
-            id: newBooking.unit.id,
-            propertyId: newBooking.propertyId,
-          },
-          data: {
-            status: unitStatus,
-          },
-        });
+				// update unit status
+				await tx.unit.update({
+					where: {
+						id: newBooking.unit.id,
+						propertyId: newBooking.propertyId,
+					},
+					data: {
+						status: unitStatus,
+					},
+				});
 
-        // increment property occupied count
-        if (["checked_in", "reserved"].includes(booking.status)) {
-          await tx.property.update({
-            where: {
-              id: booking.propertyId,
-            },
-            data: {
-              occupied: {
-                increment: 1,
-              },
-            },
-          });
-        }
+				// increment property occupied count
+				if (["checked_in", "reserved"].includes(booking.status)) {
+					await tx.property.update({
+						where: {
+							id: booking.propertyId,
+						},
+						data: {
+							occupied: {
+								increment: 1,
+							},
+						},
+					});
+				}
 
-        return newBooking;
-      },
-      { timeout: 10000, maxWait: 3000, isolationLevel: "ReadCommitted" }
-    );
+				return newBooking;
+			},
+			{ timeout: 10000, maxWait: 3000, isolationLevel: "ReadCommitted" }
+		);
 
-    revalidatePath("/bookings");
-    revalidatePath("/dashboard");
-    revalidatePath("/properties");
+		revalidatePath("/bookings");
+		revalidatePath("/dashboard");
+		revalidatePath("/properties");
 
-    return result;
-  } catch (error) {
-    console.error("Error creating booking:", error);
-    throw error;
-  }
+		return result;
+	} catch (error) {
+		console.error("Error creating booking:", error);
+		throw error;
+	}
 }
 
 export async function updateBooking(

@@ -80,6 +80,12 @@ function BookingsTable({
               <TableHead className="font-semibold text-foreground">
                 Check-out
               </TableHead>
+              <TableHead className="font-semibold text-foreground">
+                Requested By
+              </TableHead>
+              <TableHead className="font-semibold text-foreground">
+                Approved By
+              </TableHead>
               <TableHead className="font-semibold  text-foreground">
                 Total Cost
               </TableHead>
@@ -104,6 +110,12 @@ function BookingsTable({
                 </TableCell>
                 <TableCell>
                   {format(new Date(booking.checkOutDate), "dd/MM/yyyy")}
+                </TableCell>
+                <TableCell className="capitalize">
+                  {booking.requestedBy ? booking.requestedBy.name : "-"}
+                </TableCell>
+                <TableCell className="capitalize">
+                  {booking.approvedBy ? booking.approvedBy.name : "-"}
                 </TableCell>
                 <TableCell>{formatPrice(booking.totalAmount)}</TableCell>
                 <TableCell>

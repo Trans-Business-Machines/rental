@@ -46,26 +46,42 @@ enum CheckoutItemStatus {
   missing
 }
 
+enum BookingRequestStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
 /**
  * ------------------------ MODELS ------------------------
  */
 
 model User {
-  id            String       @id
+  id            String    @id
   name          String
   email         String
   emailVerified Boolean
   image         String?
-  role          String       @default("user")
-  banned        Boolean      @default(false)
+  role          String    @default("user")
+  banned        Boolean   @default(false)
   banReason     String?
   banExpires    DateTime?
   createdAt     DateTime
   updatedAt     DateTime
-  sessions      Session[]
-  accounts      Account[]
-  invitations   Invitation[] @relation("UserInvitations")
-  invitedBy     Invitation[] @relation("InvitedBy")
+
+  sessions    Session[]
+  accounts    Account[]
+  invitations Invitation[] @relation("UserInvitations")
+  invitedBy   Invitation[] @relation("InvitedBy")
+
+  // Booking request relations
+  bookingRequestsCreated  BookingRequest[] @relation("RequestedBy")
+  bookingRequestsReviewed BookingRequest[] @relation("ReviewedBy")
+
+  // Booking relations
+  bookingsRequested Booking[] @relation("BookingRequestedBy")
+  bookingsApproved  Booking[] @relation("BookingApprovedBy")
 
   @@unique([email])
   @@map("user")
@@ -133,12 +149,13 @@ model Property {
   maxBedrooms  Int?
   maxBathrooms Int?
 
-  tenants     Tenant[]
-  amenities   Amenity[]
-  bookings    Booking[]
-  units       Unit[]
-  assignments InventoryAssignment[]
-  media       Media[]
+  tenants         Tenant[]
+  amenities       Amenity[]
+  bookings        Booking[]
+  units           Unit[]
+  assignments     InventoryAssignment[]
+  media           Media[]
+  bookingRequests BookingRequest[]
 
   @@map("properties")
 }
@@ -157,11 +174,12 @@ model Unit {
   bathrooms  Int?
   maxGuests  Int?
 
-  bookings      Booking[]
-  fromMovements InventoryMovement[]   @relation("FromUnit")
-  toMovements   InventoryMovement[]   @relation("ToUnit")
-  assignments   InventoryAssignment[]
-  media         Media[]
+  bookings        Booking[]
+  fromMovements   InventoryMovement[]   @relation("FromUnit")
+  toMovements     InventoryMovement[]   @relation("ToUnit")
+  assignments     InventoryAssignment[]
+  media           Media[]
+  bookingRequests BookingRequest[]
 
   @@map("units")
 }
@@ -246,12 +264,11 @@ model Booking {
   unitId     Int
   unit       Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
-  // Pricing snapshot at time of booking
   priceDuration PriceDuration @default(one_night)
   unitPrice     Int
   period        Int           @default(1)
-  discountRate  Float? // Discount snapshot (e.g., 0.10 for 10%)
-  totalAmount   Int // Final amount after discount
+  discountRate  Float?
+  totalAmount   Int
 
   checkInDate  DateTime
   checkOutDate DateTime
@@ -262,9 +279,16 @@ model Booking {
   paymentMethod   String?
   specialRequests String?
   status          Booking_Status @default(pending)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  deletedAt       DateTime?
+
+  requestedById String?
+  requestedBy   User?     @relation("BookingRequestedBy", fields: [requestedById], references: [id])
+  approvedById  String?
+  approvedBy    User?     @relation("BookingApprovedBy", fields: [approvedById], references: [id])
+  approvedAt    DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   checkoutReport CheckoutReport?
 
@@ -425,4 +449,65 @@ model UnitTypePricing {
   updatedAt DateTime @updatedAt
 
   @@map("unit_type_pricing")
+}
+
+model BookingRequest {
+  id Int @id @default(autoincrement())
+
+  // Agent who created the request
+  requestedById String
+  requestedBy   User   @relation("RequestedBy", fields: [requestedById], references: [id])
+
+  // User who approved/rejected (null while pending)
+  reviewedById String?
+  reviewedBy   User?     @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+
+  // Request status
+  status          BookingRequestStatus @default(pending)
+  rejectionReason String?
+
+  // ============ Guest Details (embedded) ============
+  guestFirstName      String
+  guestLastName       String
+  guestEmail          String
+  guestPhone          String
+  guestDateOfBirth    String
+  guestNationality    String
+  guestIdType         IdType  @default(national_id)
+  guestIdNumber       String?
+  guestPassportNumber String?
+  guestNotes          String?
+
+  // ID Document (required, stored temporarily until approval)
+  idDocumentFilename     String
+  idDocumentOriginalName String
+  idDocumentMimeType     String
+  idDocumentFileSize     Int
+  idDocumentUrl          String
+
+  // ============ Booking Details ============
+  propertyId Int
+  property   Property @relation(fields: [propertyId], references: [id])
+  unitId     Int
+  unit       Unit     @relation(fields: [unitId], references: [id])
+
+  checkInDate    DateTime
+  checkOutDate   DateTime
+  numberOfGuests Int
+
+  priceDuration PriceDuration
+  unitPrice     Int
+  period        Int           @default(1)
+  discountRate  Float?
+  totalAmount   Int
+
+  purpose         String?
+  specialRequests String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("booking_requests")
 }
