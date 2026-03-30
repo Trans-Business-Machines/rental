@@ -1,0 +1,750 @@
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "@/lib/check-permissions";
+import { revalidatePath } from "next/cache";
+import { LIMIT } from "@/lib/utils";
+import type {
+    CreateBookingRequestParams,
+    GetBookingRequestsParams,
+    UpdateBookingRequestParams,
+    Role,
+    ApproveMediaData
+} from "@/lib/types/types";
+
+export async function createBookingRequest(data: CreateBookingRequestParams) {
+    try {
+        const session = await getServerSession();
+
+        if (!session?.user?.id) {
+            throw new Error("Unauthorized, You must be logged in!");
+        }
+
+        // Only agents can create booking requests
+        if (session.user.role !== "agent") {
+            throw new Error("Unauthorized, Only agents can create booking requests!");
+        }
+
+        // Verify property exists
+        const property = await prisma.property.findUnique({
+            where: { id: data.propertyId },
+        });
+
+        if (!property) {
+            throw new Error("Property not found!");
+        }
+
+        // Verify unit exists and belongs to property
+        const unit = await prisma.unit.findUnique({
+            where: { id: data.unitId },
+        });
+
+        if (!unit) {
+            throw new Error("Unit not found!");
+        }
+
+        if (unit.propertyId !== data.propertyId) {
+            throw new Error("Unit does not belong to the selected property!");
+        }
+
+        // Create the booking requests
+        const bookingRequest = await prisma.bookingRequest.create({
+            data: {
+                requestedById: session.user.id,
+
+                guestFirstName: data.guestFirstName,
+                guestLastName: data.guestLastName,
+                guestEmail: data.guestEmail,
+                guestPhone: data.guestPhone,
+                guestDateOfBirth: data.guestDateOfBirth,
+                guestNationality: data.guestNationality,
+                guestIdType: data.guestIdType,
+                guestIdNumber: data.guestIdNumber || null,
+                guestPassportNumber: data.guestPassportNumber || null,
+                guestNotes: data.guestNotes || null,
+
+                idDocumentFilename: data.idDocumentFilename,
+                idDocumentOriginalName: data.idDocumentOriginalName,
+                idDocumentMimeType: data.idDocumentMimeType,
+                idDocumentFileSize: data.idDocumentFileSize,
+                idDocumentUrl: data.idDocumentUrl,
+
+                propertyId: data.propertyId,
+                unitId: data.unitId,
+                checkInDate: data.checkInDate,
+                checkOutDate: data.checkOutDate,
+                numberOfGuests: data.numberOfGuests,
+                priceDuration: data.priceDuration,
+                unitPrice: data.unitPrice,
+                period: data.period,
+                discountRate: data.discountRate || null,
+                totalAmount: data.totalAmount,
+                purpose: data.purpose || null,
+                specialRequests: data.specialRequests || null,
+                status: "pending"
+            },
+            include: {
+                property: true,
+                unit: true,
+                requestedBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        })
+
+        revalidatePath("/booking-requests")
+        return { success: true, bookingRequest };
+
+    } catch (error) {
+        console.error("Error creating booking request:", error);
+        throw error;
+    }
+
+}
+
+export async function getBookingRequests(params: GetBookingRequestsParams = {}) {
+    try {
+        const session = await getServerSession();
+
+        if (!session?.user?.id) {
+            throw new Error("Unauthorized, You must be logged in!");
+        }
+
+        const { page = 1, status, search } = params;
+        const skip = (page - 1) * LIMIT;
+
+        // Build where clause based on role
+        const whereClause: {
+            requestedById?: string;
+            status?: "pending" | "approved" | "rejected" | "cancelled";
+            OR?: Array<{
+                guestFirstName?: { contains: string; mode: "insensitive" };
+                guestLastName?: { contains: string; mode: "insensitive" };
+                guestEmail?: { contains: string; mode: "insensitive" };
+                guestPhone?: { contains: string; mode: "insensitive" };
+            }>;
+        } = {};
+
+        // Agents can only see their own requests
+        if (session.user.role === "agent") {
+            whereClause.requestedById = session.user.id;
+        }
+
+        // Filter by status if provided
+        if (status) {
+            whereClause.status = status;
+        }
+
+        // Search filter
+        if (search) {
+            whereClause.OR = [
+                { guestFirstName: { contains: search, mode: "insensitive" } },
+                { guestLastName: { contains: search, mode: "insensitive" } },
+                { guestEmail: { contains: search, mode: "insensitive" } },
+                { guestPhone: { contains: search, mode: "insensitive" } },
+            ];
+        }
+
+        // Get total count
+        const totalCount = await prisma.bookingRequest.count({
+            where: whereClause,
+        });
+
+        // Get booking requests
+        const bookingRequests = await prisma.bookingRequest.findMany({
+            where: whereClause,
+            include: {
+                property: {
+                    select: {
+                        id: true,
+                        name: true,
+                        address: true,
+                    },
+                },
+                unit: {
+                    select: {
+                        id: true,
+                        name: true,
+                        type: true,
+                    },
+                },
+                requestedBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                reviewedBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+            skip,
+            take: LIMIT,
+        });
+
+        const totalPages = Math.ceil(totalCount / LIMIT);
+
+        return {
+            bookingRequests,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalCount,
+                hasNext: page < totalPages,
+                hasPrev: page > 1,
+            },
+        };
+    } catch (error) {
+        console.error("Error fetching booking requests:", error);
+        throw error;
+    }
+}
+
+export async function getBookingRequestById(id: number) {
+    try {
+        const session = await getServerSession();
+
+        if (!session?.user?.id) {
+            throw new Error("Unauthorized, You must be logged in!");
+        }
+
+        const bookingRequest = await prisma.bookingRequest.findUnique({
+            where: { id },
+            include: {
+                property: {
+                    select: {
+                        id: true,
+                        name: true,
+                        address: true,
+                        type: true,
+                    },
+                },
+                unit: {
+                    select: {
+                        id: true,
+                        name: true,
+                        type: true,
+                        bedrooms: true,
+                        maxGuests: true,
+                    },
+                },
+                requestedBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                reviewedBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+
+        if (!bookingRequest) {
+            throw new Error("Booking request not found");
+        }
+
+        // Agents can only view their own requests
+        if (
+            session.user.role === "agent" &&
+            bookingRequest.requestedById !== session.user.id
+        ) {
+            throw new Error("Unauthorized: You can only view your own requests");
+        }
+
+        return bookingRequest;
+    } catch (error) {
+        console.error("Error fetching booking request:", error);
+        throw error;
+    }
+}
+
+export async function getBookingRequestFormData() {
+    try {
+        const session = await getServerSession();
+
+        if (!session?.user?.id) {
+            throw new Error("Unauthorized: You must be logged in");
+        }
+
+        // Only agents can access this form data
+        if (session.user.role !== "agent") {
+            throw new Error("Unauthorized: Only agents can create booking requests");
+        }
+
+        const properties = await prisma.property.findMany({
+            where: {
+                deletedAt: null,
+            },
+            select: {
+                id: true,
+                name: true,
+                units: {
+                    where: {
+                        deletedAt: null,
+                    },
+                    select: {
+                        id: true,
+                        name: true,
+                        type: true,
+                        maxGuests: true,
+                        status: true,
+                    },
+                    orderBy: {
+                        name: "asc",
+                    },
+                },
+            },
+            orderBy: {
+                name: "asc",
+            },
+        });
+
+        // Get all active pricing options
+        const pricingOptions = await prisma.unitTypePricing.findMany({
+            where: {
+                isActive: true,
+            },
+            orderBy: [{ unitType: "asc" }, { price: "asc" }],
+        });
+
+        // Map pricing options to each property's units based on unit type
+        const propertiesWithPricing = properties.map((property) => ({
+            ...property,
+            units: property.units.map((unit) => ({
+                ...unit,
+                pricingOptions: pricingOptions.filter(
+                    (pricing) => pricing.unitType === unit.type
+                ),
+            })),
+        }));
+
+        return {
+            properties: propertiesWithPricing,
+        };
+    } catch (error) {
+        console.error("Error fetching booking request form data:", error);
+        throw error;
+    }
+}
+
+export async function updateBookingRequest(data: UpdateBookingRequestParams) {
+    try {
+        const session = await getServerSession();
+
+        if (!session?.user?.id) {
+            throw new Error("Unauthorized: You must be logged in");
+        }
+
+        // Get existing booking request
+        const existingRequest = await prisma.bookingRequest.findUnique({
+            where: { id: data.id },
+        });
+
+        if (!existingRequest) {
+            throw new Error("Booking request not found");
+        }
+
+        // Only agents can update their own requests
+        if (session.user.role !== "agent") {
+            throw new Error("Unauthorized, Only agents can update booking requests!");
+        }
+
+        // Agents can only update their own requests
+        if (existingRequest.requestedById !== session.user.id) {
+            throw new Error("Unauthorized, You can only update your own requests!");
+        }
+
+        // Can only update pending requests
+        if (existingRequest.status !== "pending") {
+            throw new Error(
+                `Cannot update a ${existingRequest.status} request. Only pending requests can be updated.`
+            );
+        }
+
+        // If property or unit is being changed, validate them
+        if (data.propertyId) {
+            const property = await prisma.property.findUnique({
+                where: { id: data.propertyId },
+            });
+
+            if (!property) {
+                throw new Error("Property not found");
+            }
+        }
+
+        if (data.unitId) {
+            const unit = await prisma.unit.findUnique({
+                where: { id: data.unitId },
+            });
+
+            if (!unit) {
+                throw new Error("Unit not found");
+            }
+
+            // Verify unit belongs to the property
+            const propertyId = data.propertyId || existingRequest.propertyId;
+            if (unit.propertyId !== propertyId) {
+                throw new Error("Unit does not belong to the selected property");
+            }
+        }
+
+        // Build update data (only include provided fields)
+        const updateData: Record<string, unknown> = {};
+
+        // Guest details
+        if (data.guestFirstName !== undefined)
+            updateData.guestFirstName = data.guestFirstName;
+        if (data.guestLastName !== undefined)
+            updateData.guestLastName = data.guestLastName;
+        if (data.guestEmail !== undefined) updateData.guestEmail = data.guestEmail;
+        if (data.guestPhone !== undefined) updateData.guestPhone = data.guestPhone;
+        if (data.guestDateOfBirth !== undefined)
+            updateData.guestDateOfBirth = data.guestDateOfBirth;
+        if (data.guestNationality !== undefined)
+            updateData.guestNationality = data.guestNationality;
+        if (data.guestIdType !== undefined)
+            updateData.guestIdType = data.guestIdType;
+        if (data.guestIdNumber !== undefined)
+            updateData.guestIdNumber = data.guestIdNumber;
+        if (data.guestPassportNumber !== undefined)
+            updateData.guestPassportNumber = data.guestPassportNumber;
+        if (data.guestNotes !== undefined) updateData.guestNotes = data.guestNotes;
+
+        // ID Document (if replacing)
+        if (data.idDocumentFilename !== undefined)
+            updateData.idDocumentFilename = data.idDocumentFilename;
+        if (data.idDocumentOriginalName !== undefined)
+            updateData.idDocumentOriginalName = data.idDocumentOriginalName;
+        if (data.idDocumentMimeType !== undefined)
+            updateData.idDocumentMimeType = data.idDocumentMimeType;
+        if (data.idDocumentFileSize !== undefined)
+            updateData.idDocumentFileSize = data.idDocumentFileSize;
+
+        // Booking details
+        if (data.propertyId !== undefined) updateData.propertyId = data.propertyId;
+        if (data.unitId !== undefined) updateData.unitId = data.unitId;
+        if (data.checkInDate !== undefined)
+            updateData.checkInDate = data.checkInDate;
+        if (data.checkOutDate !== undefined)
+            updateData.checkOutDate = data.checkOutDate;
+        if (data.numberOfGuests !== undefined)
+            updateData.numberOfGuests = data.numberOfGuests;
+        if (data.priceDuration !== undefined)
+            updateData.priceDuration = data.priceDuration;
+        if (data.unitPrice !== undefined) updateData.unitPrice = data.unitPrice;
+        if (data.period !== undefined) updateData.period = data.period;
+        if (data.discountRate !== undefined)
+            updateData.discountRate = data.discountRate;
+        if (data.totalAmount !== undefined)
+            updateData.totalAmount = data.totalAmount;
+        if (data.purpose !== undefined) updateData.purpose = data.purpose;
+        if (data.specialRequests !== undefined)
+            updateData.specialRequests = data.specialRequests;
+
+        // Update the booking request
+        const updatedRequest = await prisma.bookingRequest.update({
+            where: { id: data.id },
+            data: updateData,
+            include: {
+                property: {
+                    select: {
+                        id: true,
+                        name: true,
+                        address: true,
+                    },
+                },
+                unit: {
+                    select: {
+                        id: true,
+                        name: true,
+                        type: true,
+                    },
+                },
+                requestedBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+
+        revalidatePath("/booking-requests");
+        revalidatePath(`/booking-requests/${data.id}`);
+
+        return { success: true, bookingRequest: updatedRequest };
+    } catch (error) {
+        console.error("Error updating booking request:", error);
+        throw error;
+    }
+}
+
+export async function approveBookingRequest(id: number, mediaData: ApproveMediaData) {
+    try {
+        const session = await getServerSession();
+
+        if (!session?.user?.id) {
+            throw new Error("Unauthorized");
+        }
+
+        const userRole = session.user.role as Role
+
+        if (!["user", "admin", "superAdmin"].includes(userRole)) {
+            throw new Error("Unauthorized: Insufficient permissions");
+        }
+
+        const bookingRequest = await prisma.bookingRequest.findUnique({
+            where: { id },
+            include: {
+                property: true,
+                unit: true,
+            },
+        });
+
+        if (!bookingRequest) {
+            throw new Error("Booking request not found");
+        }
+
+        if (bookingRequest.status !== "pending") {
+            throw new Error("Only pending requests can be approved");
+        }
+
+        // Create everything in a transaction
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Create guest
+            const guest = await tx.guest.create({
+                data: {
+                    firstName: bookingRequest.guestFirstName,
+                    lastName: bookingRequest.guestLastName,
+                    email: bookingRequest.guestEmail,
+                    phone: bookingRequest.guestPhone,
+                    dateOfBirth: bookingRequest.guestDateOfBirth,
+                    nationality: bookingRequest.guestNationality,
+                    idType: bookingRequest.guestIdType,
+                    idNumber: bookingRequest.guestIdNumber,
+                    passportNumber: bookingRequest.guestPassportNumber,
+                    notes: bookingRequest.guestNotes,
+                    verificationStatus: "verified",
+                },
+            });
+
+            // 2. Create media record with moved file data
+            await tx.media.create({
+                data: {
+                    guestId: guest.id,
+                    filePath: mediaData.mediaUrl,
+                    filename: mediaData.mediaFilename,
+                    originalName: mediaData.mediaOriginalName,
+                    mimeType: mediaData.mediaMimeType,
+                    fileSize: mediaData.mediaSize,
+                },
+            });
+
+            // 3. Create booking
+            const booking = await tx.booking.create({
+                data: {
+                    guestId: guest.id,
+                    propertyId: bookingRequest.propertyId,
+                    unitId: bookingRequest.unitId,
+                    checkInDate: bookingRequest.checkInDate,
+                    checkOutDate: bookingRequest.checkOutDate,
+                    numberOfGuests: bookingRequest.numberOfGuests,
+                    priceDuration: bookingRequest.priceDuration,
+                    unitPrice: bookingRequest.unitPrice,
+                    period: bookingRequest.period,
+                    discountRate: bookingRequest.discountRate,
+                    totalAmount: bookingRequest.totalAmount,
+                    purpose: bookingRequest.purpose || "personal",
+                    specialRequests: bookingRequest.specialRequests,
+                    source: "agent_request",
+                    status: "reserved",
+                    requestedById: bookingRequest.requestedById,
+                    approvedById: session.user.id,
+                    approvedAt: new Date(),
+                },
+            });
+
+            // 4. Update unit status
+            await tx.unit.update({
+                where: { id: bookingRequest.unitId },
+                data: { status: "reserved" },
+            });
+
+            // 5. Update booking request status
+            await tx.bookingRequest.update({
+                where: { id },
+                data: {
+                    status: "approved",
+                    reviewedById: session.user.id,
+                    reviewedAt: new Date(),
+                },
+            });
+
+            // 6. Increment property occupied count
+            await tx.property.update({
+                where: {
+                    id: booking.propertyId,
+                },
+                data: {
+                    occupied: {
+                        increment: 1,
+                    },
+                },
+            });
+
+
+            return { guest, booking };
+        });
+
+        return {
+            success: true,
+            guestId: result.guest.id,
+            bookingId: result.booking.id,
+        };
+    } catch (error) {
+        console.error("Error approving booking request:", error);
+        throw error;
+    }
+}
+
+export async function rejectBookingRequest(id: number, rejectionReason: string) {
+    try {
+        const session = await getServerSession();
+
+        if (!session?.user?.id) {
+            throw new Error("Unauthorized: You must be logged in");
+        }
+
+        const userRole = session.user.role as Role;
+
+        // Only user, admin, superAdmin can reject
+        if (!["user", "admin", "superAdmin"].includes(userRole)) {
+            throw new Error("Unauthorized: You don't have permission to reject requests");
+        }
+
+        // Validate rejection reason
+        if (!rejectionReason || rejectionReason.trim().length === 0) {
+            throw new Error("Rejection reason is required");
+        }
+
+        // Get the booking request
+        const bookingRequest = await prisma.bookingRequest.findUnique({
+            where: { id },
+        });
+
+        if (!bookingRequest) {
+            throw new Error("Booking request not found");
+        }
+
+        // Can only reject pending requests
+        if (bookingRequest.status !== "pending") {
+            throw new Error(
+                `Cannot reject a ${bookingRequest.status} request. Only pending requests can be rejected.`
+            );
+        }
+
+        // Update the booking request status
+        const updatedRequest = await prisma.bookingRequest.update({
+            where: { id },
+            data: {
+                status: "rejected",
+                rejectionReason: rejectionReason.trim(),
+                reviewedById: session.user.id,
+                reviewedAt: new Date(),
+            },
+            include: {
+                requestedBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+
+        revalidatePath("/booking-requests");
+        revalidatePath(`/booking-requests/${id}`);
+
+        return {
+            success: true,
+            bookingRequest: updatedRequest,
+            // Return filename for client to delete the file
+            fileToDelete: bookingRequest.idDocumentFilename,
+        };
+    } catch (error) {
+        console.error("Error rejecting booking request:", error);
+        throw error;
+    }
+}
+
+export async function cancelBookingRequest(id: number) {
+    try {
+        const session = await getServerSession();
+
+        if (!session?.user?.id) {
+            throw new Error("Unauthorized: You must be logged in");
+        }
+
+        // Get the booking request
+        const bookingRequest = await prisma.bookingRequest.findUnique({
+            where: { id },
+        });
+
+        if (!bookingRequest) {
+            throw new Error("Booking request not found");
+        }
+
+        // Only the agent who created the request can cancel it
+        if (bookingRequest.requestedById !== session.user.id) {
+            throw new Error("Unauthorized: You can only cancel your own requests");
+        }
+
+        // Can only cancel pending requests
+        if (bookingRequest.status !== "pending") {
+            throw new Error(
+                `Cannot cancel a ${bookingRequest.status} request. Only pending requests can be cancelled.`
+            );
+        }
+
+        // Update the booking request status
+        const updatedRequest = await prisma.bookingRequest.update({
+            where: { id },
+            data: {
+                status: "cancelled",
+            },
+        });
+
+        revalidatePath("/booking-requests");
+        revalidatePath(`/booking-requests/${id}`);
+
+        return {
+            success: true,
+            bookingRequest: updatedRequest,
+            // Return filename for client to delete the file
+            fileToDelete: bookingRequest.idDocumentFilename,
+        };
+    } catch (error) {
+        console.error("Error cancelling booking request:", error);
+        throw error;
+    }
+}

@@ -62,10 +62,6 @@ export default async function DashboardPage({
     unitsStatsPromise,
   ]);
 
-  const occupancyRate = Math.round(
-    (unitsStatsResponse.occupied / unitsStatsResponse.total) * 100,
-  );
-
   // In your page.tsx where you transform units
   const unitsForTable = unitsResponse.units.map((unit) => {
     const currentBooking = unit.bookings[0];
@@ -97,11 +93,12 @@ export default async function DashboardPage({
       isOverstayed,
     };
   });
+
   const stats: StatCardsProps[] = [
     {
       title: "Total units",
       value: unitsStatsResponse.total,
-      subtitle: `${occupancyRate}% occupancy rate`,
+      subtitle: `All property units`,
       icon: Home,
       color: "blue",
     },

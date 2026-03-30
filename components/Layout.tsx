@@ -29,6 +29,7 @@ import {
   Settings,
   User,
   Users,
+  CalendarCheck2,
   X,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -53,6 +54,7 @@ interface NavItem {
 const navigationConfig: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: ChartColumnBig },
   { id: "bookings", label: "Bookings", icon: CalendarDays },
+  { id: "booking-requests", label: "Onboarding", icon: CalendarCheck2 },
   { id: "guests", label: "Guests", icon: Users },
   { id: "inventory", label: "Inventory", icon: Box },
   { id: "properties", label: "Properties", icon: Building2 },
@@ -121,7 +123,7 @@ export function Layout({ children }: LayoutProps) {
 
   const userName = session?.user?.name || "User";
   const userRole = (session?.user?.role as Role) || "user";
-  const userEmail = session?.user?.email || "user@example.com"
+  const userEmail = session?.user?.email || "user@example.com";
 
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;
@@ -186,9 +188,7 @@ export function Layout({ children }: LayoutProps) {
         }}
         className={cn(
           "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2 transition-colors cursor-pointer",
-          userRole === "agent" &&
-            ["inventory"].includes(item.id) &&
-            "hidden",
+          userRole === "agent" && ["inventory"].includes(item.id) && "hidden",
           isActive
             ? "bg-sidebar-primary font-bold"
             : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",

@@ -1,7 +1,7 @@
 import z from "zod"
 
 const nameRegex = /^[A-Za-z]+$/;
-const phoneRegex = /^[0-9+\-\s]+$/;
+const phoneRegex = /^\+?[0-9]\d{1,14}$/;
 
 export const GuestSchema = z.discriminatedUnion("idType", [
     z.object({
@@ -16,14 +16,7 @@ export const GuestSchema = z.discriminatedUnion("idType", [
             .regex(nameRegex, "Only letters are allowed")
             .max(20, "At most 20 characters."),
         email: z.string().email("Please enter a valid email address."),
-        phone: z
-            .string()
-            .regex(
-                phoneRegex,
-                "Only digits, plus (+), dash (-), and spaces are allowed.",
-            )
-            .min(10, "At least 10 digits.")
-            .max(15, "At most 15 digits."),
+        phone: z.string().regex(phoneRegex, "Invalid phone number."),
         nationality: z.string().min(1, "Nationality is required."),
         idType: z.literal("national_id"),
         dateOfBirth: z

@@ -29,13 +29,7 @@ const ALLOWED_IMAGE_MIMETYPES = [
     "image/avif",
 ];
 
-const ALLOWED_DOCUMENT_MIMETYPES = [
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/webp",
-    "image/avif",
-];
+const ALLOWED_DOCUMENT_MIMETYPES = ALLOWED_IMAGE_MIMETYPES.slice(0)
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_DOCUMENT_SIZE = 5 * 1024 * 1024;
@@ -83,7 +77,7 @@ export class ClientMediaService {
         return { valid: true };
     }
 
-    /* Validate document file (ID documents - images or PDFs) */
+    /* Validate document file (ID documents - images) */
     static validateDocument(file: File): { valid: boolean; error?: string } {
         if (!ALLOWED_DOCUMENT_MIMETYPES.includes(file.type)) {
             return {
@@ -238,5 +232,157 @@ export class ClientMediaService {
         if (error) {
             console.error("Failed to delete guest document:", error);
         }
+    }
+}
+
+/* Upload booking request ID document (single file) */
+export async function uploadBookingRequestDocument(file: File) {
+    try {
+        // Step 1: Validate the document
+        const validation = ClientMediaService.validateDocument(file);
+        if (!validation.valid) {
+            return { success: false, error: validation.error };
+        }
+
+        // Step 2: Compress if it's an image
+        const processedFile = await ClientMediaService.compressImage(file);
+
+        // Step 3: Generate unique filename
+        const fileExtension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const filename = `request-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+        const filePath = `booking-requests/${filename}`;
+
+        // Step 4: Upload to Supabase in booking-requests folder 
+        const { error: uploadError, } = await supabase.storage
+            .from("media")
+            .upload(filePath, processedFile, {
+                contentType: processedFile.type,
+                cacheControl: "3600",
+                upsert: false,
+            });
+
+        if (uploadError) {
+            console.error("Error uploading document:", uploadError);
+            return { success: false, error: uploadError.message };
+        }
+
+        // Step 5. Get the public URL
+        const { data: urlData } = supabase.storage
+            .from("media")
+            .getPublicUrl(filePath);
+
+        return {
+            success: true,
+            filename,
+            originalName: file.name,
+            mimeType: processedFile.type,
+            fileSize: processedFile.size,
+            publicUrl: urlData.publicUrl,
+        };
+    } catch (error) {
+        console.error("Error uploading booking request document:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+        };
+    }
+}
+
+/* Move document from booking-requests to guest-documents folder */
+export async function moveBookingRequestDocument(
+    oldFilename: string,
+    guestId: number
+) {
+    try {
+        const oldPath = `booking-requests/${oldFilename}`;
+
+        // Generate new filename
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 8);
+        const extension = oldFilename.split(".").pop() || "jpg";
+        const newFilename = `guest-${guestId}-${timestamp}-${randomString}.${extension}`;
+        const newPath = `guest-documents/${newFilename}`;
+
+        // Download the file
+        const { data: fileData, error: downloadError } = await supabase.storage
+            .from("media")
+            .download(oldPath);
+
+        if (downloadError || !fileData) {
+            console.error("Download error:", downloadError);
+            return {
+                success: false,
+                error: downloadError?.message || "Failed to download file",
+            };
+        }
+
+        // Upload to new location
+        const { error: uploadError } = await supabase.storage
+            .from("media")
+            .upload(newPath, fileData, {
+                cacheControl: "3600",
+                upsert: false,
+            });
+
+        if (uploadError) {
+            console.error("Upload error:", uploadError);
+            return {
+                success: false,
+                error: uploadError.message,
+            };
+        }
+
+        // Delete old file
+        const { error: deleteError } = await supabase.storage
+            .from("media")
+            .remove([oldPath]);
+
+        if (deleteError) {
+            console.error("Delete error (non-fatal):", deleteError);
+        }
+
+        // Get new public URL
+        const { data: urlData } = supabase.storage
+            .from("media")
+            .getPublicUrl(newPath);
+
+        return {
+            success: true,
+            newUrl: urlData.publicUrl,
+            newFilename,
+        };
+    } catch (error) {
+        console.error("Error moving booking request document:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Move failed",
+        };
+    }
+}
+
+/* Delete document from booking-requests folder */
+export async function deleteBookingRequestDocument(filename: string) {
+    try {
+        const filePath = `booking-requests/${filename}`;
+
+        const { error } = await supabase.storage
+            .from("media")
+            .remove([filePath]);
+
+        if (error) {
+            console.error("Delete error:", error);
+            return {
+                success: false,
+                error: error.message,
+            };
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting booking request document:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Delete failed",
+        };
     }
 }
