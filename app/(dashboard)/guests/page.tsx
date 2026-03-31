@@ -29,6 +29,7 @@ import { SearchNotFound } from "@/components/SearchNotFound";
 import { cn } from "@/lib/utils";
 import { ArchivedGuestsTable } from "@/components/ArchivedGuestsTable";
 import { usePermissions } from "@/hooks/usePermissions";
+import { UnauthorizedUI } from "./unauthorised-ui";
 import GuestListings from "@/components/GuestListings";
 import Link from "next/link";
 
@@ -38,6 +39,11 @@ interface GuestFilters {
 }
 
 export default function GuestsPage() {
+  // Get role of the current session user
+  const { isSuperAdmin, isUser, isAdmin, isAgent } = usePermissions();
+  const isAdminOrUser = isSuperAdmin || isAdmin || isUser;
+
+  // Get URL params object and router object
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -46,7 +52,7 @@ export default function GuestsPage() {
   const urlSearch = searchParams.get("search") || "";
   const urlStatus = searchParams.get("status") || "all";
 
-  // Separate transitions for apply and clear
+  // Separate transitions for apply and clear actions
   const [isApplyPending, startApplyTransition] = useTransition();
   const [isClearPending, startClearTransition] = useTransition();
   const isPending = isApplyPending || isClearPending;
@@ -71,9 +77,6 @@ export default function GuestsPage() {
   // Define the state for toggling archived
   const [showArchived, setShowArchived] = useState(false);
 
-  // Get role of the current session user
-  const { isSuperAdmin, isUser, isAdmin } = usePermissions();
-
   // Get guests with URL filters
   const {
     data: guestsResponse,
@@ -84,7 +87,9 @@ export default function GuestsPage() {
   // Get guest stats
   const { guestStats } = useGuestStats();
 
-  const isAdminOrUser = isSuperAdmin || isAdmin || isUser;
+  if (isAgent) {
+    return <UnauthorizedUI />;
+  }
 
   // Check if there are any active filters in the URL
   const hasActiveFilters = urlSearch !== "" || urlStatus !== "all";
