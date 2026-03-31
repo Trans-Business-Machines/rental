@@ -4,13 +4,122 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/check-permissions";
 import { revalidatePath } from "next/cache";
 import { LIMIT } from "@/lib/utils";
+import { NewBookingRequestEmail } from "@/lib/emails/NewBookingRequestEmail";
+import { formatPrice, formatDate, calculateTotalNights } from "@/lib/utils";
+import resend from "@/lib/emailClient"
 import type {
     CreateBookingRequestParams,
     GetBookingRequestsParams,
     UpdateBookingRequestParams,
     Role,
-    ApproveMediaData
+    PriceDuration,
+    ApproveMediaData,
+    NotifyAdminsOfBookingRequestParams
 } from "@/lib/types/types";
+
+export async function notifyAdminsOfNewBookingRequest({
+    requestId,
+    guestFirstName,
+    guestLastName,
+    guestEmail,
+    guestPhone,
+    propertyName,
+    unitName,
+    checkInDate,
+    checkOutDate,
+    priceDuration,
+    period,
+    totalAmount,
+    requestedByName,
+}: NotifyAdminsOfBookingRequestParams) {
+    try {
+
+        /* role: {
+                    in: ["admin"],
+        }, */
+
+        // Get admins to notify
+        const admins = await prisma.user.findMany({
+            where: {
+                id: "oTiw0bsOpSxaLWNNPEGyAY2Ucnqq0JDT",
+                banned: false,
+            },
+            select: {
+                name: true,
+                email: true,
+            },
+            take: 40,
+        });
+
+        if (admins.length === 0) {
+            console.log("No admins found to notify of booking request");
+            return { success: true, notified: 0 };
+        }
+
+        // Build the request URL
+        const requestUrl = `${process.env.NEXT_PUBLIC_APP_URL}/booking-requests/${requestId}`;
+
+        // Calculate total nights
+        const totalNights = calculateTotalNights(
+            priceDuration as PriceDuration,
+            period
+        );
+
+        // Format dates and amount
+        const formattedCheckIn = formatDate(checkInDate);
+        const formattedCheckOut = formatDate(checkOutDate);
+        const formattedAmount = formatPrice(totalAmount);
+        const guestName = `${guestFirstName} ${guestLastName}`;
+
+        // Create email promises
+        const emailPromises = admins.map((admin) => {
+            return resend.emails.send({
+                from:
+                    process.env.EMAIL_FROM ||
+                    "Rentals Manager <noreply@rentalsmanager.app>",
+                to: admin.email,
+                subject: `New Booking Request - ${guestName} at ${propertyName}`,
+                react: NewBookingRequestEmail({
+                    adminName: admin.name,
+                    guestName,
+                    guestEmail,
+                    guestPhone,
+                    propertyName,
+                    unitName,
+                    checkInDate: formattedCheckIn,
+                    checkOutDate: formattedCheckOut,
+                    totalNights,
+                    totalAmount: formattedAmount,
+                    requestedBy: requestedByName,
+                    requestUrl,
+                }),
+            });
+        });
+
+        // Execute the promises
+        const results = await Promise.allSettled(emailPromises);
+
+        // Get the success count
+        const successCount = results.filter(
+            (result) => result.status === "fulfilled"
+        ).length;
+
+        // Log emails that failed
+        results.forEach((result, index) => {
+            if (result.status === "rejected") {
+                console.error(
+                    `Failed to notify admin ${admins[index].email} of booking request:`,
+                    result.reason
+                );
+            }
+        });
+
+        return { success: true, notified: successCount };
+    } catch (error) {
+        console.error("Error notifying admins of booking request:", error);
+        return { success: false, notified: 0 };
+    }
+}
 
 export async function createBookingRequest(data: CreateBookingRequestParams) {
     try {
@@ -96,7 +205,25 @@ export async function createBookingRequest(data: CreateBookingRequestParams) {
             },
         })
 
-        revalidatePath("/booking-requests")
+        revalidatePath("/booking-requests");
+
+        // Notify admin of the request
+        notifyAdminsOfNewBookingRequest({
+            requestId: bookingRequest.id,
+            guestFirstName: data.guestFirstName,
+            guestLastName: data.guestLastName,
+            guestEmail: data.guestEmail,
+            guestPhone: data.guestPhone,
+            propertyName: bookingRequest.property.name,
+            unitName: unit.name,
+            checkInDate: new Date(data.checkInDate),
+            checkOutDate: new Date(data.checkOutDate),
+            priceDuration: data.priceDuration,
+            period: data.period,
+            totalAmount: data.totalAmount,
+            requestedByName: session.user.name,
+        })
+
         return { success: true, bookingRequest };
 
     } catch (error) {

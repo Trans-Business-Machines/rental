@@ -1,4 +1,4 @@
-import { getBookingById,  } from "@/lib/actions/bookings";
+import { getBookingById, } from "@/lib/actions/bookings";
 import { getInventoryItems, getInventoryAssignments } from "@/lib/actions/inventory"
 import { getCheckoutReportById, getBookingsForCheckout, getInventoryAssignmentsForUnit } from "@/lib/actions/checkout";
 import { getProperties, getPropertyNames, getPropertyById } from "@/lib/actions/properties";
@@ -322,7 +322,7 @@ export interface CreateBookingRequestParams {
     idDocumentOriginalName: string;
     idDocumentMimeType: string;
     idDocumentFileSize: number;
-    idDocumentUrl:string;
+    idDocumentUrl: string;
 
     // Booking Details
     propertyId: number;
@@ -386,35 +386,33 @@ export type BookingRequestStatus = "pending" | "approved" | "rejected" | "cancel
 
 
 export interface BookingRequestListItem {
-  id: number;
-  guestFirstName: string;
-  guestLastName: string;
-  guestEmail: string;
-  guestPhone: string;
-  status: BookingRequestStatus;
-  checkInDate: Date;
-  checkOutDate: Date;
-  totalAmount: number;
-  createdAt: Date;
-  // ID Document fields
-  idDocumentFilename: string;
-  idDocumentOriginalName: string;
-  idDocumentMimeType: string;
-  idDocumentFileSize: number;
-  idDocumentUrl: string;
-  // Relations
-  property: {
     id: number;
-    name: string;
-  };
-  unit: {
-    id: number;
-    name: string;
-  };
-  requestedBy: {
-    id: string;
-    name: string;
-  };
+    guestFirstName: string;
+    guestLastName: string;
+    guestEmail: string;
+    guestPhone: string;
+    status: BookingRequestStatus;
+    checkInDate: Date;
+    checkOutDate: Date;
+    totalAmount: number;
+    createdAt: Date;
+    idDocumentFilename: string;
+    idDocumentOriginalName: string;
+    idDocumentMimeType: string;
+    idDocumentFileSize: number;
+    idDocumentUrl: string;
+    property: {
+        id: number;
+        name: string;
+    };
+    unit: {
+        id: number;
+        name: string;
+    };
+    requestedBy: {
+        id: string;
+        name: string;
+    };
 }
 
 export interface ApproveMediaData {
@@ -423,4 +421,20 @@ export interface ApproveMediaData {
     mediaOriginalName: string;
     mediaMimeType: string;
     mediaSize: number;
+}
+
+export interface NotifyAdminsOfBookingRequestParams {
+    requestId: number;
+    guestFirstName: string;
+    guestLastName: string;
+    guestEmail: string;
+    guestPhone: string;
+    propertyName: string;
+    unitName: string;
+    checkInDate: Date;
+    checkOutDate: Date;
+    priceDuration: string;
+    period: number;
+    totalAmount: number;
+    requestedByName: string;
 }

@@ -47,6 +47,7 @@ import {
   useCancelBookingRequest,
 } from "@/hooks/useBookingRequests";
 import {
+  cn,
   formatPrice,
   formatFileSize,
   formatDiscount,
@@ -57,42 +58,12 @@ import {
   calculateTotalNights,
 } from "@/lib/utils";
 import { BookingRequestDetailsSkeleton } from "@/components/BookingRequestDetailsSkeleton";
-import type { BookingRequestStatus, PriceDuration } from "@/lib/types/types";
+import type { PriceDuration, Role } from "@/lib/types/types";
 
 interface BookingRequestDetailsProps {
   requestId: number;
-  userRole: string;
+  userRole: Role;
 }
-
-const statusConfig: Record<
-  BookingRequestStatus,
-  {
-    label: string;
-    variant: "default" | "secondary" | "destructive" | "outline";
-    icon: React.ReactNode;
-  }
-> = {
-  pending: {
-    label: "Pending Review",
-    variant: "secondary",
-    icon: <Hourglass className="size-4" />,
-  },
-  approved: {
-    label: "Approved",
-    variant: "default",
-    icon: <CheckCircle2 className="size-4" />,
-  },
-  rejected: {
-    label: "Rejected",
-    variant: "destructive",
-    icon: <XCircle className="size-4" />,
-  },
-  cancelled: {
-    label: "Cancelled",
-    variant: "outline",
-    icon: <Ban className="size-4" />,
-  },
-};
 
 export function BookingRequestDetails({
   requestId,
@@ -143,7 +114,7 @@ export function BookingRequestDetails({
     ["user", "admin", "superAdmin"].includes(userRole) && isPending;
   const canCancel = isAgent && isPending;
 
-  const statusInfo = statusConfig[bookingRequest.status];
+  const status = bookingRequest.status;
 
   // Calculate pricing details using utils
   const totalNights = calculateTotalNights(
@@ -170,6 +141,7 @@ export function BookingRequestDetails({
           <Button
             variant="ghost"
             size="icon"
+            className="cursor-pointer"
             onClick={() => router.push("/booking-requests")}
           >
             <ArrowLeft className="size-5" />
@@ -183,46 +155,21 @@ export function BookingRequestDetails({
           </div>
         </div>
         <Badge
-          variant={statusInfo.variant}
-          className="flex items-center gap-1.5 w-fit px-3 py-1.5"
+          className={cn(
+            "capitalize border py-2 px-8 text-sm",
+            status === "pending" &&
+              "border-princeton-orange bg-princeton-orange/10 text-princeton-orange",
+            status === "cancelled" &&
+              "border-lipstick-red bg-lipstick-red/10 text-lipstick-red",
+            status === "rejected" &&
+              "border-red-500 bg-red-500/10 text-red-500",
+            status === "approved" &&
+              "border-medium-jungle bg-medium-jungle/10 text-medium-jungle",
+          )}
         >
-          {statusInfo.icon}
-          {statusInfo.label}
+          {status}
         </Badge>
       </div>
-
-      {/* Action Buttons */}
-      {(canApproveReject || canCancel) && (
-        <Card>
-          <CardContent className="flex flex-wrap gap-3 pt-6">
-            {canApproveReject && (
-              <>
-                <Button onClick={() => setApproveDialogOpen(true)}>
-                  <CheckCircle2 className="size-4 mr-2" />
-                  Approve Request
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => setRejectDialogOpen(true)}
-                >
-                  <XCircle className="size-4 mr-2" />
-                  Reject Request
-                </Button>
-              </>
-            )}
-            {canCancel && (
-              <Button
-                variant="destructive"
-                onClick={() => setCancelDialogOpen(true)}
-                className="cursor-pointer"
-              >
-                <Ban className="size-4 mr-2" />
-                Cancel Request
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Rejection Reason */}
       {bookingRequest.status === "rejected" &&
@@ -709,6 +656,51 @@ export function BookingRequestDetails({
           </div>
         </CardContent>
       </Card>
+
+      {/* Action Buttons */}
+      {(canApproveReject || canCancel) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Request Actions
+            </CardTitle>
+            <CardDescription>
+              You can either approve or reject this booking request.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-3">
+            {canApproveReject && (
+              <>
+                <Button
+                  onClick={() => setApproveDialogOpen(true)}
+                  className="cursor-pointer w-4/12"
+                >
+                  <CheckCircle2 className="size-5 mr-2" />
+                  Approve Request
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setRejectDialogOpen(true)}
+                  className="cursor-pointer w-4/12"
+                >
+                  <XCircle className="size-5 mr-2" />
+                  Reject Request
+                </Button>
+              </>
+            )}
+            {canCancel && (
+              <Button
+                variant="destructive"
+                onClick={() => setCancelDialogOpen(true)}
+                className="cursor-pointer"
+              >
+                <Ban className="size-5 mr-2" />
+                Cancel Request
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dialogs */}
       {isPending && (

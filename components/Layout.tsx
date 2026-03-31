@@ -29,7 +29,7 @@ import {
   Settings,
   User,
   Users,
-  CalendarCheck2,
+  UserPlus,
   X,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -54,7 +54,7 @@ interface NavItem {
 const navigationConfig: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: ChartColumnBig },
   { id: "bookings", label: "Bookings", icon: CalendarDays },
-  { id: "booking-requests", label: "Onboarding", icon: CalendarCheck2 },
+  { id: "booking-requests", label: "Onboarding", icon: UserPlus },
   { id: "guests", label: "Guests", icon: Users },
   { id: "inventory", label: "Inventory", icon: Box },
   { id: "properties", label: "Properties", icon: Building2 },
