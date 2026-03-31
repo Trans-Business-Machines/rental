@@ -188,7 +188,9 @@ export function Layout({ children }: LayoutProps) {
         }}
         className={cn(
           "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2 transition-colors cursor-pointer",
-          userRole === "agent" && ["inventory"].includes(item.id) && "hidden",
+          userRole === "agent" &&
+            ["inventory", "guests"].includes(item.id) &&
+            "hidden",
           isActive
             ? "bg-sidebar-primary font-bold"
             : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",

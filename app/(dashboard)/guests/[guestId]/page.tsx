@@ -3,6 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { notFound, redirect } from "next/navigation";
+import { format } from "date-fns";
+import { formatDateInTimezone } from "@/lib/utils";
+import { getServerSession } from "@/lib/check-permissions";
+import { UnauthorizedUI } from "../unauthorised-ui";
 import {
   Calendar,
   Shield,
@@ -20,11 +25,9 @@ import {
   FileText,
   Image as ImageIcon,
 } from "lucide-react";
-import { notFound } from "next/navigation";
-import { format } from "date-fns";
-import { formatDateInTimezone } from "@/lib/utils";
 import Image from "next/image";
 import Header from "./Header";
+import type { Role } from "@/lib/types/types";
 
 interface GuestDetailsPageProps {
   params: Promise<{ guestId: string | number }>;
@@ -44,6 +47,19 @@ const getVerificationColor = (status: string) => {
 };
 
 async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
+  const session = await getServerSession();
+  const user = session?.user;
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const userRole = user.role as Role;
+
+  if (userRole === "agent") {
+    return <UnauthorizedUI />;
+  }
+
   const { guestId } = await params;
 
   // Ensure that guest Id is a number
@@ -303,7 +319,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                         <span className="font-medium">Uploaded:</span>{" "}
                         {format(
                           new Date(guest.media.uploadedAt),
-                          "dd MMMM yyyy"
+                          "dd MMMM yyyy",
                         )}
                       </p>
                     </div>
