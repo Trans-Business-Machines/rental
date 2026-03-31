@@ -1,4 +1,3 @@
-// components/BookingRequestsContent.tsx
 "use client";
 
 import { useState } from "react";
@@ -20,25 +19,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import Pagination from "@/components/Pagination";
-import { ApproveRequestDialog } from "@/components/ApproveRequestDialog";
-import { RejectRequestDialog } from "@/components/RejectRequestDialog";
 import { CancelRequestDialog } from "@/components/CancelRequestDialog";
 import { DebouncedSearch } from "@/components/DebouncedSearch";
 import {
   Plus,
   MoreHorizontal,
   Eye,
-  CheckCircle,
-  XCircle,
   Ban,
   Loader2,
   FileText,
@@ -46,45 +42,23 @@ import {
 } from "lucide-react";
 import {
   useBookingRequests,
-  useApproveBookingRequest,
-  useRejectBookingRequest,
   useCancelBookingRequest,
 } from "@/hooks/useBookingRequests";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type {
   BookingRequestStatus,
   BookingRequestListItem,
+  Role,
 } from "@/lib/types/types";
 
-interface BookingRequestsContentProps {
-  userRole: string;
-}
-
-const statusConfig: Record<
-  BookingRequestStatus,
-  {
-    label: string;
-    variant: "default" | "secondary" | "destructive" | "outline";
-  }
-> = {
-  pending: { label: "Pending", variant: "secondary" },
-  approved: { label: "Approved", variant: "default" },
-  rejected: { label: "Rejected", variant: "destructive" },
-  cancelled: { label: "Cancelled", variant: "outline" },
-};
-
-export function BookingRequestsContent({
-  userRole,
-}: BookingRequestsContentProps) {
+export function BookingRequestsContent({ userRole }: { userRole: Role }) {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<BookingRequestStatus | "all">("all");
   const [search, setSearch] = useState("");
 
   // Dialog states
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   // Store full request data for dialogs
@@ -94,9 +68,7 @@ export function BookingRequestsContent({
   const isAgent = userRole === "agent";
   const canApproveReject = ["user", "admin", "superAdmin"].includes(userRole);
 
-  // Mutations - needed to check isPending for dialog control
-  const approveMutation = useApproveBookingRequest();
-  const rejectMutation = useRejectBookingRequest();
+  // Cancel Request Mutations - needed to check isPending for dialog control
   const cancelMutation = useCancelBookingRequest();
 
   const { data, isLoading, error, refetch } = useBookingRequests({
@@ -113,16 +85,6 @@ export function BookingRequestsContent({
   const handleStatusChange = (value: string) => {
     setStatus(value as BookingRequestStatus | "all");
     setPage(1);
-  };
-
-  const openApproveDialog = (request: BookingRequestListItem) => {
-    setSelectedRequest(request);
-    setApproveDialogOpen(true);
-  };
-
-  const openRejectDialog = (request: BookingRequestListItem) => {
-    setSelectedRequest(request);
-    setRejectDialogOpen(true);
   };
 
   const openCancelDialog = (request: BookingRequestListItem) => {
@@ -238,7 +200,7 @@ export function BookingRequestsContent({
           <div className="rounded-lg border overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableRow className="bg-muted/50 py-2 hover:bg-muted/50">
                   <TableHead className="font-semibold">Guest</TableHead>
                   <TableHead className="font-semibold">Property</TableHead>
                   <TableHead className="font-semibold">Phone</TableHead>
@@ -250,14 +212,14 @@ export function BookingRequestsContent({
                       Requested By
                     </TableHead>
                   )}
-                  <TableHead className="font-semibold text-right">
+                  <TableHead className="font-semibold text-center">
                     Actions
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {requests.map((request) => {
-                  const statusInfo = statusConfig[request.status];
+                  const status = request.status;
                   const isPending = request.status === "pending";
 
                   return (
@@ -291,7 +253,7 @@ export function BookingRequestsContent({
                       </TableCell>
 
                       {/* Phone */}
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-night">
                         {request.guestPhone}
                       </TableCell>
 
@@ -306,14 +268,26 @@ export function BookingRequestsContent({
                       </TableCell>
 
                       {/* Total */}
-                      <TableCell className="font-semibold text-primary">
+                      <TableCell className="font-medium">
                         {formatPrice(request.totalAmount)}
                       </TableCell>
 
                       {/* Status */}
                       <TableCell>
-                        <Badge variant={statusInfo.variant}>
-                          {statusInfo.label}
+                        <Badge
+                          className={cn(
+                            "capitalize border py-1",
+                            status === "pending" &&
+                              "border-princeton-orange bg-princeton-orange/10 text-princeton-orange",
+                            status === "cancelled" &&
+                              "border-lipstick-red bg-lipstick-red/10 text-lipstick-red",
+                            status === "rejected" &&
+                              "border-red-500 bg-red-500/10 text-red-500",
+                            status === "approved" &&
+                              "border-medium-jungle bg-medium-jungle/10 text-medium-jungle",
+                          )}
+                        >
+                          {status}
                         </Badge>
                       </TableCell>
 
@@ -326,62 +300,56 @@ export function BookingRequestsContent({
 
                       {/* Actions */}
                       <TableCell className="text-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            asChild
-                            className="cursor-pointer"
+                        {canApproveReject ? (
+                          <Button
+                            size="lg"
+                            variant="ghost"
+                            className="group gap-2 cursor-pointer"
+                            onClick={() =>
+                              router.push(`/booking-requests/${request.id}`)
+                            }
                           >
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="size-4 rotate-90" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {/* View Details - All users */}
-                            <DropdownMenuItem
-                              onClick={() =>
-                                router.push(`/booking-requests/${request.id}`)
-                              }
-                            >
-                              <Eye className="size-4 mr-2" />
+                            <Eye className="size-4 group-hover:text-azure" />
+                            <span className="group-hover:text-azure">
                               View Details
-                            </DropdownMenuItem>
-
-                            {/* Approve/Reject - Only for user/admin/superAdmin on pending requests */}
-                            {canApproveReject && isPending && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => openApproveDialog(request)}
-                                  className="text-green-600 focus:text-green-600 hover:bg-green-600/10 focus:bg-green-600/10 group"
-                                >
-                                  <CheckCircle className="size-4 mr-2 group-hover:text-green-600" />
-                                  Approve
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => openRejectDialog(request)}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <XCircle className="size-4 mr-2" />
-                                  Reject
-                                </DropdownMenuItem>
-                              </>
-                            )}
-
-                            {/* Cancel - Only for agents on their own pending requests */}
-                            {isAgent && isPending && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => openCancelDialog(request)}
-                                  className="text-destructive focus:text-destructive hover:bg-destructive/10 focus:bg-destructive/10 group"
-                                >
-                                  <Ban className="size-4 mr-2 group-hover:text-destructive" />
-                                  Cancel Request
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                            </span>
+                          </Button>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              asChild
+                              className="cursor-pointer"
+                            >
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="size-4 rotate-90" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  router.push(`/booking-requests/${request.id}`)
+                                }
+                              >
+                                <Eye className="size-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              {isAgent && isPending && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => openCancelDialog(request)}
+                                    className="text-destructive focus:text-destructive hover:bg-destructive/10 focus:bg-destructive/10 group"
+                                  >
+                                    <Ban className="size-4 mr-2 group-hover:text-destructive" />
+                                    Cancel Request
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -406,34 +374,6 @@ export function BookingRequestsContent({
       {/* Dialogs - Only render when selectedRequest exists */}
       {selectedRequest && (
         <>
-          <ApproveRequestDialog
-            requestId={selectedRequest.id}
-            guestId={selectedRequest.id}
-            idDocumentFilename={selectedRequest.idDocumentFilename}
-            idDocumentOriginalName={selectedRequest.idDocumentOriginalName}
-            idDocumentMimeType={selectedRequest.idDocumentMimeType}
-            idDocumentFileSize={selectedRequest.idDocumentFileSize}
-            open={approveDialogOpen}
-            onOpenChange={(open) => {
-              if (!approveMutation.isPending) {
-                setApproveDialogOpen(open);
-                if (!open) setSelectedRequest(null);
-              }
-            }}
-            mutation={approveMutation}
-          />
-          <RejectRequestDialog
-            requestId={selectedRequest.id}
-            idDocumentFilename={selectedRequest.idDocumentFilename}
-            open={rejectDialogOpen}
-            onOpenChange={(open) => {
-              if (!rejectMutation.isPending) {
-                setRejectDialogOpen(open);
-                if (!open) setSelectedRequest(null);
-              }
-            }}
-            mutation={rejectMutation}
-          />
           <CancelRequestDialog
             requestId={selectedRequest.id}
             idDocumentFilename={selectedRequest.idDocumentFilename}
