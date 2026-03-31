@@ -17,6 +17,7 @@ import type {
     NotifyAdminsOfBookingRequestParams
 } from "@/lib/types/types";
 
+
 export async function notifyAdminsOfNewBookingRequest({
     requestId,
     guestFirstName,
@@ -33,15 +34,12 @@ export async function notifyAdminsOfNewBookingRequest({
     requestedByName,
 }: NotifyAdminsOfBookingRequestParams) {
     try {
-
-        /* role: {
-                    in: ["admin"],
-        }, */
-
         // Get admins to notify
         const admins = await prisma.user.findMany({
             where: {
-                id: "oTiw0bsOpSxaLWNNPEGyAY2Ucnqq0JDT",
+                role: {
+                    in: ["admin"],
+                },
                 banned: false,
             },
             select: {
