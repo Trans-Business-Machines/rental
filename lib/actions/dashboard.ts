@@ -2,7 +2,9 @@
 
 import { prisma } from "@/lib/prisma"
 import { LIMIT } from "@/lib/utils"
-import type { UnitStatus, BookingStatus } from "@/lib/types/types"
+import { getServerSession } from "@/lib/check-permissions"
+import type { UnitStatus, BookingStatus, Role } from "@/lib/types/types";
+
 
 interface GetRecentBookingsParams {
     page?: number;
@@ -54,7 +56,6 @@ export async function getDashboardStats() {
         maintenance: maintenanceUnits
     };
 }
-
 
 export async function getUnits({
     page = 1,
@@ -131,7 +132,22 @@ export async function getRecentBookings(
         search = "",
         status = "all",
     }: GetRecentBookingsParams = {}) {
+
+    const session = await getServerSession();
+    const user = session?.user
+
+    if (!user) {
+        throw new Error("Unauthorized: Login required");
+    }
+
+    const userRole = user?.role as Role;
+
     const where = {
+        // if agent, include own bookings
+        ...(userRole === "agent" && {
+            requestedById: user.id
+        }),
+
         // Search by guest name, property name, or unit name
         ...(search && {
             OR: [

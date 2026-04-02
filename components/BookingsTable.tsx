@@ -78,9 +78,6 @@ function BookingsTable({
                 Check-in
               </TableHead>
               <TableHead className="font-semibold text-foreground">
-                Check-out
-              </TableHead>
-              <TableHead className="font-semibold text-foreground">
                 Requested By
               </TableHead>
               <TableHead className="font-semibold text-foreground">
@@ -88,6 +85,9 @@ function BookingsTable({
               </TableHead>
               <TableHead className="font-semibold  text-foreground">
                 Total Cost
+              </TableHead>
+              <TableHead className="font-semibold  text-foreground">
+                Payment Code
               </TableHead>
               <TableHead className="font-semibold  text-foreground">
                 Status
@@ -108,9 +108,6 @@ function BookingsTable({
                 <TableCell>
                   {format(new Date(booking.checkInDate), "dd/MM/yyyy")}
                 </TableCell>
-                <TableCell>
-                  {format(new Date(booking.checkOutDate), "dd/MM/yyyy")}
-                </TableCell>
                 <TableCell className="capitalize">
                   {booking.requestedBy ? booking.requestedBy.name : "-"}
                 </TableCell>
@@ -118,6 +115,7 @@ function BookingsTable({
                   {booking.approvedBy ? booking.approvedBy.name : "-"}
                 </TableCell>
                 <TableCell>{formatPrice(booking.totalAmount)}</TableCell>
+                <TableCell>{booking.paymentCode}</TableCell>
                 <TableCell>
                   <Badge
                     variant="secondary"

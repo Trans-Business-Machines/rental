@@ -194,9 +194,15 @@ function BookingCards({
 
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">{`${numOfNights} ${numOfNights === 1 ? "total stay" : "total stays"}`}</p>
-                    <p className="font-semibold text-foreground">
-                      {formatPrice(booking.totalAmount)}
-                    </p>
+                    <div className="flex gap-2 item-center">
+                      <p className="font-semibold text-foreground">
+                        {formatPrice(booking.totalAmount)}
+                      </p>
+                      &middot;
+                      <p className="font-semibold text-sm">
+                        {booking.paymentCode}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>

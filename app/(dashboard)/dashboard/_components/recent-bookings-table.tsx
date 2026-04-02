@@ -33,6 +33,7 @@ import { ItemsNotFound } from "@/components/ItemsNotFound";
 import { Footer } from "@/components/Footer";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { format } from "date-fns";
+import { formatPrice } from "@/lib/utils";
 import type { Booking } from "@/lib/types/types";
 
 interface BookingFilters {
@@ -150,6 +151,9 @@ export function RecentBookingsTable({
                     Amount
                   </TableHead>
                   <TableHead className="font-semibold text-foreground">
+                    Payment Code
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">
                     Actions
                   </TableHead>
                 </TableRow>
@@ -168,7 +172,8 @@ export function RecentBookingsTable({
                     <TableCell>
                       {format(new Date(booking.checkOutDate), "dd/MM/yyyy")}
                     </TableCell>
-                    <TableCell>Ksh. {booking.totalAmount}</TableCell>
+                    <TableCell>{formatPrice(booking.totalAmount)}</TableCell>
+                    <TableCell>{booking.paymentCode}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <BookingViewDialog booking={booking}>
@@ -176,11 +181,14 @@ export function RecentBookingsTable({
                             <Eye className="size-4" />
                           </Button>
                         </BookingViewDialog>
-                        <BookingEditDialog booking={booking}>
-                          <Button variant="ghost" size="icon">
-                            <Edit className="size-4" />
-                          </Button>
-                        </BookingEditDialog>
+
+                        {["pending", "reserved"].includes(booking.status) && (
+                          <BookingEditDialog booking={booking}>
+                            <Button variant="ghost" size="icon">
+                              <Edit className="size-4" />
+                            </Button>
+                          </BookingEditDialog>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

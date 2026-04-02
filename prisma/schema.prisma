@@ -273,10 +273,14 @@ model Booking {
   checkInDate  DateTime
   checkOutDate DateTime
 
-  numberOfGuests  Int
-  source          String
-  purpose         String
-  paymentMethod   String?
+  numberOfGuests Int
+  source         String
+  purpose        String
+
+  // Payment details
+  paymentCode   String @unique
+  paymentMethod String
+
   specialRequests String?
   status          Booking_Status @default(pending)
 
@@ -501,6 +505,9 @@ model BookingRequest {
   period        Int           @default(1)
   discountRate  Float?
   totalAmount   Int
+
+  paymentCode   String @unique
+  paymentMethod String
 
   purpose         String?
   specialRequests String?

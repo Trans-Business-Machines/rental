@@ -510,13 +510,21 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                   </div>
                 )}
 
-                {/* Total Amount */}
+                {/* Billing */}
                 <div className="flex justify-between pt-2">
                   <span className="font-semibold text-foreground">
                     Total Amount
                   </span>
                   <span className="text-xl font-bold text-foreground">
                     {formatPrice(booking.totalAmount)}
+                  </span>
+                </div>
+                <div className="flex justify-between pt-2">
+                  <span className="font-semibold text-foreground">
+                   Payment code
+                  </span>
+                  <span className="text-sm font-semibold">
+                    {booking.paymentCode}
                   </span>
                 </div>
               </div>

@@ -186,6 +186,8 @@ export async function createBookingRequest(data: CreateBookingRequestParams) {
                 period: data.period,
                 discountRate: data.discountRate || null,
                 totalAmount: data.totalAmount,
+                paymentCode: data.paymentCode,
+                paymentMethod: data.paymentMethod,
                 purpose: data.purpose || null,
                 specialRequests: data.specialRequests || null,
                 status: "pending"
@@ -698,6 +700,8 @@ export async function approveBookingRequest(id: number, mediaData: ApproveMediaD
                     period: bookingRequest.period,
                     discountRate: bookingRequest.discountRate,
                     totalAmount: bookingRequest.totalAmount,
+                    paymentCode: bookingRequest.paymentCode,
+                    paymentMethod: bookingRequest.paymentMethod,
                     purpose: bookingRequest.purpose || "personal",
                     specialRequests: bookingRequest.specialRequests,
                     source: "agent_request",
@@ -739,6 +743,9 @@ export async function approveBookingRequest(id: number, mediaData: ApproveMediaD
 
             return { guest, booking };
         });
+
+        revalidatePath("/booking-requests");
+        revalidatePath(`/booking-requests/${bookingRequest.id}`)
 
         return {
             success: true,
