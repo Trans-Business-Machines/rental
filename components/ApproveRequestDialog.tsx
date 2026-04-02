@@ -1,4 +1,3 @@
-// components/ApproveRequestDialog.tsx
 "use client";
 
 import { CheckCircle, Loader2 } from "lucide-react";
@@ -68,8 +67,8 @@ export function ApproveRequestDialog({
 
         <div className="mt-3 flex justify-end gap-2">
           <Button
-            variant="outline"
             disabled={mutation.isPending}
+            className="cursor-pointer bg-lipstick-red hover:bg-crimson-red w-1/5 px-10"
             onClick={() => onOpenChange(false)}
           >
             Cancel
@@ -80,7 +79,7 @@ export function ApproveRequestDialog({
               handleApprove();
             }}
             disabled={mutation.isPending}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-green-600 cursor-pointer w-3/5 hover:bg-green-700"
           >
             {mutation.isPending ? (
               <span className="flex items-center gap-2">

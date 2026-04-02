@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -79,6 +80,7 @@ export function BookingEditDialog({
   onOpenChange: controlledOnOpenChange,
 }: BookingEditDialogProps) {
   const queryClient = useQueryClient();
+  const { isAgent } = usePermissions();
 
   // Dialog control state
   const [internalOpen, setInternalOpen] = useState(false);
@@ -572,7 +574,7 @@ export function BookingEditDialog({
                 <Label htmlFor="source">Booking Source</Label>
                 <Select
                   value={formData.source}
-                  disabled={isCheckedIn}
+                  disabled={isCheckedIn || isAgent}
                   onValueChange={(value) => handleSelectChange("source", value)}
                 >
                   <SelectTrigger className="w-full">
@@ -580,6 +582,7 @@ export function BookingEditDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="direct">Direct</SelectItem>
+                    <SelectItem value="agent_request">From Agent</SelectItem>
                     <SelectItem value="booking.com">Booking.com</SelectItem>
                     <SelectItem value="airbnb">Airbnb</SelectItem>
                     <SelectItem value="expedia">Expedia</SelectItem>
@@ -602,6 +605,7 @@ export function BookingEditDialog({
                     <SelectItem value="leisure">Leisure</SelectItem>
                     <SelectItem value="business">Business</SelectItem>
                     <SelectItem value="family">Family</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -609,6 +613,7 @@ export function BookingEditDialog({
                 <Label htmlFor="paymentMethod">Payment Method</Label>
                 <Select
                   value={formData.paymentMethod}
+                  disabled={isAgent}
                   onValueChange={(value) =>
                     handleSelectChange("paymentMethod", value)
                   }
@@ -617,10 +622,9 @@ export function BookingEditDialog({
                     <SelectValue placeholder="Select payment method" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="mpesa_till">M-Pesa Till</SelectItem>
+                    <SelectItem value="mpesa_till">Mpesa Till No.</SelectItem>
                     <SelectItem value="credit_card">Credit Card</SelectItem>
                     <SelectItem value="debit_card">Debit Card</SelectItem>
-                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -635,7 +639,7 @@ export function BookingEditDialog({
               <Select
                 value={formData.status}
                 onValueChange={(value) => handleSelectChange("status", value)}
-                disabled={isCheckedIn}
+                disabled={isCheckedIn || isAgent}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />

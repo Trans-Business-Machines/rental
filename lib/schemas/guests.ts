@@ -1,7 +1,27 @@
-import z from "zod"
+import z from "zod";
+import { differenceInYears } from "date-fns";
 
 const nameRegex = /^[A-Za-z]+$/;
 const phoneRegex = /^\+?[0-9]\d{1,14}$/;
+
+// Helper function to validate age
+const isAtLeast18 = (dateString: string): boolean => {
+    const birthDate = new Date(dateString);
+    const today = new Date();
+    return differenceInYears(today, birthDate) >= 18;
+};
+
+// Reusable dateOfBirth schema
+const dateOfBirthSchema = z
+    .string()
+    .refine(
+        (dateString) => new Date(dateString) < new Date(),
+        "Date of birth must be in the past."
+    )
+    .refine(
+        (dateString) => isAtLeast18(dateString),
+        "Guest must be at least 18 years old."
+    );
 
 export const GuestSchema = z.discriminatedUnion("idType", [
     z.object({
@@ -19,12 +39,7 @@ export const GuestSchema = z.discriminatedUnion("idType", [
         phone: z.string().regex(phoneRegex, "Invalid phone number."),
         nationality: z.string().min(1, "Nationality is required."),
         idType: z.literal("national_id"),
-        dateOfBirth: z
-            .string()
-            .refine(
-                (dateString) => new Date(dateString) < new Date(),
-                "Date of birth must be in the past.",
-            ),
+        dateOfBirth: dateOfBirthSchema,
         idNumber: z
             .string()
             .min(8, "At least 8 characters are required.")
@@ -57,16 +72,11 @@ export const GuestSchema = z.discriminatedUnion("idType", [
             .string()
             .regex(
                 phoneRegex,
-                "Only digits, plus (+), dash (-), and spaces are allowed.",
+                "Only digits, plus (+), dash (-), and spaces are allowed."
             )
             .min(10, "At least 10 digits.")
             .max(15, "At most 15 digits"),
-        dateOfBirth: z
-            .string()
-            .refine(
-                (dateString) => new Date(dateString) < new Date(),
-                "Date of birth must be in the past.",
-            ),
+        dateOfBirth: dateOfBirthSchema,
         nationality: z.string().min(1, "Nationality is required."),
         idType: z.literal("passport"),
         idNumber: z.string().optional(),

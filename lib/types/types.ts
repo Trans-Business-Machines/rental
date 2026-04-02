@@ -233,7 +233,8 @@ export interface CreateBookingData {
     numberOfGuests: number;
     source: string;
     purpose: string;
-    paymentMethod?: string;
+    paymentCode: string;
+    paymentMethod: string;
     specialRequests?: string;
     status: BookingStatus;
 }
@@ -334,6 +335,8 @@ export interface CreateBookingRequestParams {
     unitPrice: number;
     period: number;
     discountRate?: number | null;
+    paymentMethod: string;
+    paymentCode: string;
     totalAmount: number;
     purpose?: string | null;
     specialRequests?: string | null;

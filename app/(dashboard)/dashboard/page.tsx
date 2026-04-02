@@ -12,6 +12,9 @@ import {
   getRecentBookings,
   getInventoryItems,
 } from "@/lib/actions/dashboard";
+import { getServerSession } from "@/lib/check-permissions";
+import type { Role } from "@/lib/types/types";
+import { redirect } from "next/navigation";
 
 interface DashboardSearchParamsProps {
   searchParams: Promise<{
@@ -25,8 +28,16 @@ interface DashboardSearchParamsProps {
 export default async function DashboardPage({
   searchParams,
 }: DashboardSearchParamsProps) {
-  const params = await searchParams;
+  const session = await getServerSession();
+  const user = session?.user;
 
+  if (!user) {
+    redirect("/login");
+  }
+
+  const userRole = user.role as Role;
+
+  const params = await searchParams;
   const tab = params.tab || "units";
   const page = Number(params.page) || 1;
   const search = params.search || "";
@@ -44,7 +55,7 @@ export default async function DashboardPage({
       : getRecentBookings({ page: 1 });
 
   const itemsPromise =
-    tab === "inventory"
+    tab === "inventory" && userRole !== "agent"
       ? getInventoryItems({ page, search })
       : getInventoryItems({ page: 1 });
 
@@ -143,9 +154,11 @@ export default async function DashboardPage({
           <TabsTrigger value="bookings" className="cursor-pointer" asChild>
             <Link href="/dashboard?tab=bookings&page=1">Recent Bookings</Link>
           </TabsTrigger>
-          <TabsTrigger value="inventory" className="cursor-pointer" asChild>
-            <Link href="/dashboard?tab=inventory&page=1">Inventory</Link>
-          </TabsTrigger>
+          {userRole !== "agent" && (
+            <TabsTrigger value="inventory" className="cursor-pointer" asChild>
+              <Link href="/dashboard?tab=inventory&page=1">Inventory</Link>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="units" className="space-y-4">
@@ -170,16 +183,18 @@ export default async function DashboardPage({
           />
         </TabsContent>
 
-        <TabsContent value="inventory" className="space-y-4">
-          <InventoryTable
-            items={inventoryItemsResponse.inventoryItems}
-            totalPages={inventoryItemsResponse.totalPages}
-            hasNext={inventoryItemsResponse.hasNext}
-            hasPrev={inventoryItemsResponse.hasPrev}
-            currentPage={page}
-            initialFilters={{ search }}
-          />
-        </TabsContent>
+        {userRole !== "agent" && (
+          <TabsContent value="inventory" className="space-y-4">
+            <InventoryTable
+              items={inventoryItemsResponse.inventoryItems}
+              totalPages={inventoryItemsResponse.totalPages}
+              hasNext={inventoryItemsResponse.hasNext}
+              hasPrev={inventoryItemsResponse.hasPrev}
+              currentPage={page}
+              initialFilters={{ search }}
+            />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

@@ -1,7 +1,25 @@
 import { z } from "zod";
+import { differenceInYears } from "date-fns";
 
 const nameRegex = /^[A-Za-z]+$/;
 const phoneRegex = /^\+?[0-9]\d{1,14}$/
+
+const isAtLeast18 = (dateString: string): boolean => {
+    const birthDate = new Date(dateString);
+    const today = new Date();
+    return differenceInYears(today, birthDate) >= 18;
+};
+
+const dateOfBirthSchema = z
+    .string()
+    .refine(
+        (dateString) => new Date(dateString) < new Date(),
+        "Date of birth must be in the past."
+    )
+    .refine(
+        (dateString) => isAtLeast18(dateString),
+        "Guest must be at least 18 years old."
+    );
 
 export const BookingRequestSchema = z.object({
     // Guest Details
@@ -17,7 +35,7 @@ export const BookingRequestSchema = z.object({
         .max(20, "At most 20 characters."),
     guestEmail: z.string().email("Invalid email address"),
     guestPhone: z.string().regex(phoneRegex, "Invalid phone number."),
-    guestDateOfBirth: z.string().min(1, "Date of birth is required"),
+    guestDateOfBirth: dateOfBirthSchema,
     guestNationality: z.string().min(1, "Nationality is required"),
     guestIdType: z.enum(["national_id", "passport"]),
     guestIdNumber: z
@@ -44,6 +62,8 @@ export const BookingRequestSchema = z.object({
     period: z.number().min(1),
     discountRate: z.number().nullable().optional(),
     totalAmount: z.number().min(1, "Total amount is required"),
+    paymentMethod: z.string().min(1, "Payment method is required"),
+    paymentCode: z.string().min(1, "Payment reference code is required").length(10, "Must be 10 characters").toUpperCase(),
     purpose: z.string().nullable().optional(),
     specialRequests: z.string().nullable().optional(),
 })

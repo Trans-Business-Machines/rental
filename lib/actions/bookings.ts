@@ -192,6 +192,16 @@ export async function createBooking(booking: CreateBookingData) {
 		// Confirm that the current session user has permission to create a booking
 		await requirePermission("booking", "create");
 
+		const session = await getServerSession();
+		const user = session?.user;
+
+		if (!user) {
+			throw new Error("Unauthorized: login required!")
+		}
+
+		// Determine if user is an agent or admin/superAdmin
+		const isAgent = user.role === "agent";
+
 		// Prevent double booking: check if any booking exists for this property with checkInDate on the same day
 		const startOfDay = new Date(booking.checkInDate);
 		startOfDay.setHours(0, 0, 0, 0);
@@ -241,9 +251,20 @@ export async function createBooking(booking: CreateBookingData) {
 						numberOfGuests: booking.numberOfGuests,
 						source: booking.source,
 						purpose: booking.purpose,
+						paymentCode: booking.paymentCode,
 						paymentMethod: booking.paymentMethod,
 						specialRequests: booking.specialRequests,
 						status: booking.status,
+						...(isAgent
+							? {
+								requestedById: user.id,
+							}
+							: {
+								requestedById: user.id,
+								approvedById: user.id,
+								approvedAt: new Date(),
+							}),
+
 					},
 					include: {
 						unit: true,

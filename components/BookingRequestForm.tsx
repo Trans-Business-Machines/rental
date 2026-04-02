@@ -126,6 +126,8 @@ export function BookingRequestForm() {
       idDocumentMimeType: "",
       idDocumentFileSize: 0,
       unitPrice: 0,
+      paymentMethod: "",
+      paymentCode: "",
       totalAmount: 0,
     },
   });
@@ -267,13 +269,30 @@ export function BookingRequestForm() {
     setValue("numberOfGuests", 1);
     setValue("checkInDate", new Date(today));
     setValue("checkOutDate", new Date(today));
-    setValue("priceDuration", "one_night");
-    setValue("unitPrice", 0);
     setValue("period", 1);
     setValue("discountRate", null);
     setValue("totalAmount", 0);
-    setSelectedPricing(null);
     setPeriod(1);
+
+    // Auto-select first pricing option for the selected unit
+    const unit = selectedProperty?.units.find((u) => u.id.toString() === value);
+    const firstPricing = unit?.pricingOptions?.[0];
+
+    if (firstPricing) {
+      setSelectedPricing(firstPricing);
+      setValue("priceDuration", firstPricing.duration as PriceDuration);
+
+      const discounted = calculateDiscountedPrice(
+        firstPricing.price,
+        firstPricing.discountRate,
+      );
+      setValue("unitPrice", discounted);
+      setValue("discountRate", firstPricing.discountRate || null);
+    } else {
+      setSelectedPricing(null);
+      setValue("priceDuration", "one_night");
+      setValue("unitPrice", 0);
+    }
   };
 
   // Validate current step
@@ -829,13 +848,7 @@ export function BookingRequestForm() {
                               errors.unitId && "border-destructive",
                             )}
                           >
-                            <SelectValue
-                              placeholder={
-                                isPropertySelected
-                                  ? "Select a unit"
-                                  : "Select a property first"
-                              }
-                            />
+                            <SelectValue placeholder="Select a property first" />
                           </SelectTrigger>
                           <SelectContent>
                             {selectedProperty?.units.map((unit) => {
@@ -1093,6 +1106,66 @@ export function BookingRequestForm() {
                 </div>
               )}
 
+              {isPricingSelected && (
+                <article className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="paymentMethod">Payment Method</Label>
+                    <Controller
+                      name="paymentMethod"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "w-full",
+                              errors.paymentMethod && "border-red-400",
+                            )}
+                          >
+                            <SelectValue placeholder="Select payment method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="mpesa_till">
+                              Mpesa Till No.
+                            </SelectItem>
+                            <SelectItem value="credit_card">
+                              Credit Card
+                            </SelectItem>
+                            <SelectItem value="debit_card">
+                              Debit Card
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.paymentMethod && (
+                      <p className="text-sm text-red-400">
+                        {errors.paymentMethod.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-code">Payment Reference Code</Label>
+                    <Input
+                      id="payment-code"
+                      type="text"
+                      placeholder="e.g KTUDKLM90"
+                      className={cn(
+                        errors.paymentCode && "border border-red-400",
+                      )}
+                      {...register("paymentCode")}
+                    />
+                    {errors.paymentCode && (
+                      <p className="text-sm text-red-400">
+                        {errors.paymentCode.message}
+                      </p>
+                    )}
+                  </div>
+                </article>
+              )}
+
               {/* Check-in/out Dates */}
               {isPricingSelected && (
                 <div className="grid gap-4 md:grid-cols-2">
@@ -1203,6 +1276,7 @@ export function BookingRequestForm() {
                         <SelectItem value="business">Business</SelectItem>
                         <SelectItem value="leisure">Leisure</SelectItem>
                         <SelectItem value="family">Family</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   )}

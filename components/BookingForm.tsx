@@ -87,6 +87,7 @@ export function BookingForm({
       period: 1,
       unitPrice: 0,
       discountRate: null,
+      paymentCode: "",
       paymentMethod: "",
       status: "pending",
       specialRequests: "",
@@ -187,13 +188,14 @@ export function BookingForm({
       checkOutDate: new Date(data.checkOutDate),
       numberOfGuests: data.numberOfGuests,
       priceDuration: data.priceDuration,
-      unitPrice: discountedPrice, // Store discounted price
+      unitPrice: discountedPrice,
       period: actualPeriod,
-      discountRate: selectedPricing.discountRate, // Store discount snapshot
+      discountRate: selectedPricing.discountRate,
       totalAmount,
       source: "direct" as const,
       purpose: "personal" as const,
       paymentMethod: data.paymentMethod,
+      paymentCode: data.paymentCode,
       status: data.status,
       specialRequests: data.specialRequests,
     };
@@ -491,34 +493,51 @@ export function BookingForm({
 
         {/* Payment Method - Disabled until pricing selected */}
         {isPricingSelected && (
-          <article className="space-y-2">
-            <Label htmlFor="paymentMethod">Payment Method</Label>
-            <Controller
-              name="paymentMethod"
-              control={control}
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger
-                    className={cn(
-                      "w-full",
-                      errors.paymentMethod && "border-red-400",
-                    )}
-                  >
-                    <SelectValue placeholder="Select payment method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mpesa_till">Mpesa Till No.</SelectItem>
-                    <SelectItem value="credit_card">Credit Card</SelectItem>
-                    <SelectItem value="debit_card">Debit Card</SelectItem>
-                  </SelectContent>
-                </Select>
+          <article className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="paymentMethod">Payment Method</Label>
+              <Controller
+                name="paymentMethod"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger
+                      className={cn(
+                        "w-full",
+                        errors.paymentMethod && "border-red-400",
+                      )}
+                    >
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mpesa_till">Mpesa Till No.</SelectItem>
+                      <SelectItem value="credit_card">Credit Card</SelectItem>
+                      <SelectItem value="debit_card">Debit Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.paymentMethod && (
+                <p className="text-sm text-red-400">
+                  {errors.paymentMethod.message}
+                </p>
               )}
-            />
-            {errors.paymentMethod && (
-              <p className="text-sm text-red-400">
-                {errors.paymentMethod.message}
-              </p>
-            )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payment-code">Payment Reference Code</Label>
+              <Input
+                id="payment-code"
+                type="text"
+                placeholder="e.g KTUDKLM90"
+                className={cn(errors.paymentCode && "border border-red-400")}
+                {...register("paymentCode")}
+              />
+              {errors.paymentCode && (
+                <p className="text-sm text-red-400">
+                  {errors.paymentCode.message}
+                </p>
+              )}
+            </div>
           </article>
         )}
 
