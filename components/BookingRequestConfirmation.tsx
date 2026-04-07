@@ -18,6 +18,7 @@ import {
   Target,
   CreditCard,
   FileText,
+  UserCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,9 +33,15 @@ import {
   formatFileSize,
 } from "@/lib/utils";
 import type { BookingRequestFormData } from "@/lib/schemas/booking-requests";
-import type { PriceDuration, UnitTypePricing } from "@/lib/types/types";
+import type {
+  PriceDuration,
+  UnitTypePricing,
+  GuestSearchResult,
+} from "@/lib/types/types";
 
 interface BookingRequestConfirmationProps {
+  guestType: "existing" | "new";
+  selectedGuest: GuestSearchResult | null;
   formData: BookingRequestFormData;
   idDocumentPreview: string | null;
   idDocumentFile: File | null;
@@ -46,6 +53,8 @@ interface BookingRequestConfirmationProps {
 }
 
 export function BookingRequestConfirmation({
+  guestType,
+  selectedGuest,
   formData,
   idDocumentPreview,
   idDocumentFile,
@@ -62,8 +71,24 @@ export function BookingRequestConfirmation({
     formData.priceDuration as PriceDuration,
     actualPeriod,
     selectedPricing?.fromDate,
-    selectedPricing?.toDate,
+    selectedPricing?.toDate
   );
+
+  // Get guest display info based on type
+  const guestName =
+    guestType === "existing" && selectedGuest
+      ? `${selectedGuest.firstName} ${selectedGuest.lastName}`
+      : `${formData.guestFirstName} ${formData.guestLastName}`;
+
+  const guestEmail =
+    guestType === "existing" && selectedGuest
+      ? selectedGuest.email
+      : formData.guestEmail;
+
+  const guestPhone =
+    guestType === "existing" && selectedGuest
+      ? selectedGuest.phone
+      : formData.guestPhone;
 
   return (
     <div className="space-y-6">
@@ -82,6 +107,12 @@ export function BookingRequestConfirmation({
             <CardTitle className="flex items-center gap-2 text-base">
               <User className="size-4 text-primary" />
               Guest Information
+              {guestType === "existing" && (
+                <Badge variant="secondary" className="ml-auto">
+                  <UserCheck className="size-3 mr-1" />
+                  Existing Guest
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -89,9 +120,7 @@ export function BookingRequestConfirmation({
               <User className="size-4 text-muted-foreground mt-0.5" />
               <div>
                 <p className="text-xs text-muted-foreground">Full Name</p>
-                <p className="font-medium">
-                  {formData.guestFirstName} {formData.guestLastName}
-                </p>
+                <p className="font-medium">{guestName}</p>
               </div>
             </div>
 
@@ -99,7 +128,7 @@ export function BookingRequestConfirmation({
               <Mail className="size-4 text-muted-foreground mt-0.5" />
               <div>
                 <p className="text-xs text-muted-foreground">Email</p>
-                <p className="font-medium">{formData.guestEmail}</p>
+                <p className="font-medium">{guestEmail}</p>
               </div>
             </div>
 
@@ -107,115 +136,148 @@ export function BookingRequestConfirmation({
               <Phone className="size-4 text-muted-foreground mt-0.5" />
               <div>
                 <p className="text-xs text-muted-foreground">Phone</p>
-                <p className="font-medium">{formData.guestPhone}</p>
+                <p className="font-medium">{guestPhone}</p>
               </div>
             </div>
 
-            <Separator />
-
-            <div className="flex items-start gap-3">
-              <Cake className="size-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">Date of Birth</p>
-                <p className="font-medium">
-                  {formData.guestDateOfBirth
-                    ? format(new Date(formData.guestDateOfBirth), "PPP")
-                    : "-"}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Globe className="size-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">Nationality</p>
-                <p className="font-medium">
-                  {formData.guestNationality || "-"}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <IdCard className="size-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  {formData.guestIdType === "national_id"
-                    ? "National ID Number"
-                    : "Passport Number"}
-                </p>
-                <p className="font-medium">
-                  {formData.guestIdNumber ||
-                    formData.guestPassportNumber ||
-                    "-"}
-                </p>
-              </div>
-            </div>
-
-            {formData.guestNotes && (
+            {/* Only show extended details for new guests */}
+            {guestType === "new" && (
               <>
                 <Separator />
+
                 <div className="flex items-start gap-3">
-                  <MessageSquare className="size-4 text-muted-foreground mt-0.5" />
+                  <Cake className="size-4 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Notes</p>
-                    <p className="text-sm">{formData.guestNotes}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Date of Birth
+                    </p>
+                    <p className="font-medium">
+                      {formData.guestDateOfBirth
+                        ? format(new Date(formData.guestDateOfBirth), "PPP")
+                        : "-"}
+                    </p>
                   </div>
                 </div>
+
+                <div className="flex items-start gap-3">
+                  <Globe className="size-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Nationality</p>
+                    <p className="font-medium">
+                      {formData.guestNationality || "-"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <IdCard className="size-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.guestIdType === "national_id"
+                        ? "National ID Number"
+                        : "Passport Number"}
+                    </p>
+                    <p className="font-medium">
+                      {formData.guestIdNumber ||
+                        formData.guestPassportNumber ||
+                        "-"}
+                    </p>
+                  </div>
+                </div>
+
+                {formData.guestNotes && (
+                  <>
+                    <Separator />
+                    <div className="flex items-start gap-3">
+                      <MessageSquare className="size-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Notes</p>
+                        <p className="text-sm">{formData.guestNotes}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </CardContent>
         </Card>
 
-        {/* ID Document */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <FileText className="size-4 text-primary" />
-              ID Document
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {idDocumentPreview ? (
-              <>
-                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted">
-                  <Image
-                    src={idDocumentPreview}
-                    alt="ID Document Preview"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                {idDocumentFile && (
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">File Name</span>
-                      <span className="font-medium truncate max-w-[180px]">
-                        {idDocumentFile.name}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">File Size</span>
-                      <span className="font-medium">
-                        {formatFileSize(idDocumentFile.size)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Type</span>
-                      <span className="font-medium">
-                        {idDocumentFile.type.split("/")[1].toUpperCase()}
-                      </span>
-                    </div>
+        {/* ID Document - Only show for new guests */}
+        {guestType === "new" ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileText className="size-4 text-primary" />
+                ID Document
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {idDocumentPreview ? (
+                <>
+                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted">
+                    <Image
+                      src={idDocumentPreview}
+                      alt="ID Document Preview"
+                      fill
+                      className="object-contain"
+                    />
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <FileText className="size-12 mb-2 opacity-50" />
-                <p>No document uploaded</p>
+                  {idDocumentFile && (
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">File Name</span>
+                        <span className="font-medium truncate max-w-[180px]">
+                          {idDocumentFile.name}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">File Size</span>
+                        <span className="font-medium">
+                          {formatFileSize(idDocumentFile.size)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Type</span>
+                        <span className="font-medium">
+                          {idDocumentFile.type.split("/")[1].toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                  <FileText className="size-12 mb-2 opacity-50" />
+                  <p>No document uploaded</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          // For existing guests, show a simplified card
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <UserCheck className="size-4 text-primary" />
+                Existing Guest
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <UserCheck className="size-8 text-primary" />
+                </div>
+                <p className="font-medium text-lg">{guestName}</p>
+                <p className="text-sm text-muted-foreground">{guestEmail}</p>
+                <p className="text-sm text-muted-foreground">{guestPhone}</p>
+                <p className="text-xs text-muted-foreground mt-4">
+                  This guest is already registered in the system. Their ID
+                  document is on file.
+                </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Property & Unit */}
         <Card>
@@ -250,7 +312,7 @@ export function BookingRequestConfirmation({
                 <p className="text-xs text-muted-foreground">Check-in</p>
                 <p className="font-medium">
                   {formData.checkInDate
-                    ? format(new Date(formData.checkInDate), "EEE, MMM d, yyyy")
+                    ? format(new Date(formData.checkInDate), "EEE, MMM d, yyyy 'at' h:mm a")
                     : "-"}
                 </p>
               </div>
@@ -264,7 +326,7 @@ export function BookingRequestConfirmation({
                   {formData.checkOutDate
                     ? format(
                         new Date(formData.checkOutDate),
-                        "EEE, MMM d, yyyy",
+                        "EEE, MMM d, yyyy"
                       )
                     : "-"}
                 </p>

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +20,7 @@ import {
 
 // Icons
 import {
-  User,
+  Users,
   Building,
   ChevronLeft,
   ChevronRight,
@@ -38,6 +37,8 @@ import {
   CheckCircle2,
   Info,
   ClipboardCheck,
+  UserPlus,
+  UserCheck,
 } from "lucide-react";
 
 // Utilities and Actions
@@ -54,21 +55,23 @@ import {
   calculateTotalAmount,
   calculateDiscountedPrice,
 } from "@/lib/utils";
-import {
-  BookingRequestSchema,
-  type BookingRequestFormData,
-} from "@/lib/schemas/booking-requests";
+import { type BookingRequestFormData } from "@/lib/schemas/booking-requests";
 import { uploadBookingRequestDocument } from "@/lib/services/clientMediaService";
 import { useCreateBookingRequest } from "@/hooks/useBookingRequests";
 import { getBookingRequestFormData } from "@/lib/actions/booking-requests";
 import { NationalityCombobox } from "@/components/NationalityCombobox";
+import { GuestCombobox } from "@/components/AgentGuestCombobox";
 import { BookingRequestConfirmation } from "@/components/BookingRequestConfirmation";
-import { format } from "date-fns";
+import { format, differenceInYears } from "date-fns";
 import { toast } from "sonner";
-import type { PriceDuration, UnitTypePricing } from "@/lib/types/types";
+import type {
+  PriceDuration,
+  UnitTypePricing,
+  GuestSearchResult,
+} from "@/lib/types/types";
 
 const STEPS = [
-  { id: 1, title: "Guest Details", icon: User },
+  { id: 1, title: "Select Guest", icon: Users },
   { id: 2, title: "Booking Details", icon: Building },
   { id: 3, title: "Confirm", icon: ClipboardCheck },
 ];
@@ -80,6 +83,11 @@ const durationIcons: Record<PriceDuration, React.ElementType> = {
   custom: CalendarRange,
 };
 
+// Validation helpers
+const nameRegex = /^[A-Za-z]+$/;
+const phoneRegex = /^\+?[0-9]\d{1,14}$/;
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function BookingRequestForm() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -88,6 +96,12 @@ export function BookingRequestForm() {
     null,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Guest type state
+  const [guestType, setGuestType] = useState<"existing" | "new">("existing");
+  const [selectedGuest, setSelectedGuest] = useState<GuestSearchResult | null>(
+    null,
+  );
 
   // Pricing state
   const [selectedPricing, setSelectedPricing] =
@@ -102,20 +116,21 @@ export function BookingRequestForm() {
     queryFn: () => getBookingRequestFormData(),
   });
 
-  // Get today's date
-  const today = new Date().toISOString().split("T")[0];
+  // Get current datetime for datetime-local input
+  const now = new Date().toISOString().slice(0, 16);
 
   const {
     register,
     control,
     watch,
     setValue,
-    trigger,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<BookingRequestFormData>({
     mode: "onChange",
-    resolver: zodResolver(BookingRequestSchema),
     defaultValues: {
+      guestType: "existing",
       guestIdType: "national_id",
       guestNationality: "",
       priceDuration: "one_night",
@@ -129,6 +144,10 @@ export function BookingRequestForm() {
       paymentMethod: "",
       paymentCode: "",
       totalAmount: 0,
+      propertyId: 0,
+      unitId: 0,
+      checkInDate: "",
+      checkOutDate: new Date(),
     },
   });
 
@@ -203,6 +222,43 @@ export function BookingRequestForm() {
     }
   }, [formData.checkInDate, selectedPricing, period, setValue]);
 
+  // Handle guest type change
+  const handleGuestTypeChange = (type: "existing" | "new") => {
+    setGuestType(type);
+    setValue("guestType", type);
+    clearErrors();
+
+    if (type === "existing") {
+      // Clear new guest fields
+      setValue("guestFirstName", "");
+      setValue("guestLastName", "");
+      setValue("guestEmail", "");
+      setValue("guestPhone", "");
+      setValue("guestDateOfBirth", "");
+      setValue("guestNationality", "");
+      setValue("guestIdType", "national_id");
+      setValue("guestIdNumber", "");
+      setValue("guestPassportNumber", "");
+      setValue("guestNotes", "");
+      setIdDocumentFile(null);
+      setIdDocumentPreview(null);
+    } else {
+      // Clear existing guest selection
+      setSelectedGuest(null);
+      setValue("existingGuestId", undefined);
+    }
+  };
+
+  // Handle guest selection
+  const handleGuestSelect = (guest: GuestSearchResult | null) => {
+    setSelectedGuest(guest);
+    if (guest) {
+      setValue("existingGuestId", guest.id);
+    } else {
+      setValue("existingGuestId", undefined);
+    }
+  };
+
   // Handle ID document selection
   const handleIdDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -252,8 +308,8 @@ export function BookingRequestForm() {
     setValue("propertyId", Number(value));
     setValue("unitId", 0);
     setValue("numberOfGuests", 1);
-    setValue("checkInDate", new Date(today));
-    setValue("checkOutDate", new Date(today));
+    setValue("checkInDate", "");
+    setValue("checkOutDate", new Date());
     setValue("priceDuration", "one_night");
     setValue("unitPrice", 0);
     setValue("period", 1);
@@ -267,8 +323,8 @@ export function BookingRequestForm() {
   const handleUnitChange = (value: string) => {
     setValue("unitId", Number(value));
     setValue("numberOfGuests", 1);
-    setValue("checkInDate", new Date(today));
-    setValue("checkOutDate", new Date(today));
+    setValue("checkInDate", "");
+    setValue("checkOutDate", new Date());
     setValue("period", 1);
     setValue("discountRate", null);
     setValue("totalAmount", 0);
@@ -297,41 +353,158 @@ export function BookingRequestForm() {
 
   // Validate current step
   const validateStep = async (step: number): Promise<boolean> => {
+    // Clear previous errors
+    clearErrors();
+
     if (step === 1) {
-      const guestFields: (keyof BookingRequestFormData)[] = [
-        "guestFirstName",
-        "guestLastName",
-        "guestEmail",
-        "guestPhone",
-        "guestDateOfBirth",
-        "guestNationality",
-        "guestIdType",
-      ];
-
-      if (formData.guestIdType === "national_id") {
-        guestFields.push("guestIdNumber");
+      if (guestType === "existing") {
+        if (!selectedGuest) {
+          toast.error("Please select a guest");
+          return false;
+        }
+        return true;
       } else {
-        guestFields.push("guestPassportNumber");
+        // New guest - manual validation
+        let isValid = true;
+
+        // First Name
+        if (!formData.guestFirstName || formData.guestFirstName.length < 3) {
+          setError("guestFirstName", {
+            message: "At least 3 characters are required.",
+          });
+          isValid = false;
+        } else if (formData.guestFirstName.length > 20) {
+          setError("guestFirstName", {
+            message: "At most 20 characters.",
+          });
+          isValid = false;
+        } else if (!nameRegex.test(formData.guestFirstName)) {
+          setError("guestFirstName", {
+            message: "Only letters are allowed.",
+          });
+          isValid = false;
+        }
+
+        // Last Name
+        if (!formData.guestLastName || formData.guestLastName.length < 3) {
+          setError("guestLastName", {
+            message: "At least 3 characters are required.",
+          });
+          isValid = false;
+        } else if (formData.guestLastName.length > 20) {
+          setError("guestLastName", {
+            message: "At most 20 characters.",
+          });
+          isValid = false;
+        } else if (!nameRegex.test(formData.guestLastName)) {
+          setError("guestLastName", {
+            message: "Only letters are allowed.",
+          });
+          isValid = false;
+        }
+
+        // Email
+        if (!formData.guestEmail || !emailRegex.test(formData.guestEmail)) {
+          setError("guestEmail", {
+            message: "Invalid email address.",
+          });
+          isValid = false;
+        }
+
+        // Phone
+        if (!formData.guestPhone || !phoneRegex.test(formData.guestPhone)) {
+          setError("guestPhone", {
+            message: "Invalid phone number.",
+          });
+          isValid = false;
+        }
+
+        // Date of Birth
+        if (!formData.guestDateOfBirth) {
+          setError("guestDateOfBirth", {
+            message: "Date of birth is required.",
+          });
+          isValid = false;
+        } else {
+          const birthDate = new Date(formData.guestDateOfBirth);
+          const today = new Date();
+          if (birthDate >= today) {
+            setError("guestDateOfBirth", {
+              message: "Date of birth must be in the past.",
+            });
+            isValid = false;
+          } else {
+            const age = differenceInYears(today, birthDate);
+            if (age < 18) {
+              setError("guestDateOfBirth", {
+                message: "Guest must be at least 18 years old.",
+              });
+              isValid = false;
+            }
+          }
+        }
+
+        // Nationality
+        if (!formData.guestNationality) {
+          setError("guestNationality", {
+            message: "Nationality is required.",
+          });
+          isValid = false;
+        }
+
+        // ID Number / Passport Number
+        if (formData.guestIdType === "national_id") {
+          if (!formData.guestIdNumber || formData.guestIdNumber.length < 8) {
+            setError("guestIdNumber", {
+              message: "At least 8 characters are required.",
+            });
+            isValid = false;
+          } else if (formData.guestIdNumber.length > 10) {
+            setError("guestIdNumber", {
+              message: "At most 10 characters.",
+            });
+            isValid = false;
+          }
+        } else {
+          if (
+            !formData.guestPassportNumber ||
+            formData.guestPassportNumber.length !== 9
+          ) {
+            setError("guestPassportNumber", {
+              message: "Passport should have 9 characters.",
+            });
+            isValid = false;
+          }
+        }
+
+        // ID Document
+        if (!idDocumentFile) {
+          toast.error("Please upload an ID document");
+          isValid = false;
+        }
+
+        if (!isValid) {
+          toast.error("Please fix the errors in the form");
+        }
+
+        return isValid;
       }
-
-      const isValid = await trigger(guestFields);
-
-      if (!idDocumentFile) {
-        toast.error("Please upload an ID document");
-        return false;
-      }
-
-      return isValid;
     }
 
     if (step === 2) {
+      let isValid = true;
+
       if (!formData.propertyId) {
-        toast.error("Please select a property");
+        setError("propertyId", {
+          message: "Please select a property",
+        });
         return false;
       }
 
       if (!formData.unitId) {
-        toast.error("Please select a unit");
+        setError("unitId", {
+          message: "Please select a unit",
+        });
         return false;
       }
 
@@ -341,17 +514,50 @@ export function BookingRequestForm() {
       }
 
       if (!formData.checkInDate) {
-        toast.error("Please select a check-in date");
+        setError("checkInDate", {
+          message: "Please enter a check in date time",
+        });
         return false;
       }
 
-      const bookingFields: (keyof BookingRequestFormData)[] = [
-        "propertyId",
-        "unitId",
-        "numberOfGuests",
-      ];
+      if (!formData.paymentMethod) {
+        setError("paymentMethod", {
+          message: "Payment method is required.",
+        });
+        isValid = false;
+      }
 
-      const isValid = await trigger(bookingFields);
+      if (!formData.paymentCode) {
+        setError("paymentCode", {
+          message: "Payment reference code is required.",
+        });
+        isValid = false;
+      } else if (formData.paymentCode.length !== 10) {
+        setError("paymentCode", {
+          message: "Must be 10 characters.",
+        });
+        isValid = false;
+      }
+
+      if (!formData.numberOfGuests || formData.numberOfGuests < 1) {
+        setError("numberOfGuests", {
+          message: "At least 1 guest is required.",
+        });
+        isValid = false;
+      } else if (
+        selectedUnit?.maxGuests &&
+        formData.numberOfGuests > selectedUnit.maxGuests
+      ) {
+        setError("numberOfGuests", {
+          message: `Maximum ${selectedUnit.maxGuests} guests allowed.`,
+        });
+        isValid = false;
+      }
+
+      if (!isValid) {
+        toast.error("Please fix the errors in the form");
+      }
+
       return isValid;
     }
 
@@ -378,26 +584,25 @@ export function BookingRequestForm() {
 
   // Form submission
   const onSubmit: SubmitHandler<BookingRequestFormData> = async (data) => {
-    if (!idDocumentFile) {
+    if (!selectedPricing) {
+      toast.error("Please select a pricing option");
+      return;
+    }
+
+    // Validate based on guest type
+    if (guestType === "new" && !idDocumentFile) {
       toast.error("Please upload an ID document");
       return;
     }
 
-    if (!selectedPricing) {
-      toast.error("Please select a pricing option");
+    if (guestType === "existing" && !selectedGuest) {
+      toast.error("Please select a guest");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // 1. Upload ID document
-      const uploadResult = await uploadBookingRequestDocument(idDocumentFile);
-
-      if (!uploadResult.success || !uploadResult.filename) {
-        throw new Error(uploadResult.error || "Failed to upload ID document");
-      }
-
       const discounted = calculateDiscountedPrice(
         selectedPricing.price,
         selectedPricing.discountRate,
@@ -405,23 +610,58 @@ export function BookingRequestForm() {
       const periodValue = selectedPricing.duration === "custom" ? 1 : period;
       const totalAmount = calculateTotalAmount(discounted, periodValue);
 
-      // 2. Create booking request
-      await createBookingRequest.mutateAsync({
-        ...data,
+      // Build base request data
+      const requestData: Parameters<
+        typeof createBookingRequest.mutateAsync
+      >[0] = {
+        guestType,
         propertyId: Number(data.propertyId),
         unitId: Number(data.unitId),
         checkInDate: new Date(data.checkInDate),
         checkOutDate: new Date(data.checkOutDate),
+        numberOfGuests: data.numberOfGuests,
+        priceDuration: data.priceDuration,
         unitPrice: discounted,
         period: periodValue,
         discountRate: selectedPricing.discountRate || null,
         totalAmount,
-        idDocumentFilename: uploadResult.filename,
-        idDocumentOriginalName: uploadResult.originalName!,
-        idDocumentMimeType: uploadResult.mimeType!,
-        idDocumentFileSize: uploadResult.fileSize!,
-        idDocumentUrl: uploadResult.publicUrl,
-      });
+        paymentMethod: data.paymentMethod,
+        paymentCode: data.paymentCode,
+        purpose: data.purpose || null,
+        specialRequests: data.specialRequests || null,
+      };
+
+      if (guestType === "existing") {
+        requestData.existingGuestId = selectedGuest!.id;
+      } else {
+        // Upload ID document for new guest
+        const uploadResult = await uploadBookingRequestDocument(
+          idDocumentFile!,
+        );
+
+        if (!uploadResult.success || !uploadResult.filename) {
+          throw new Error(uploadResult.error || "Failed to upload ID document");
+        }
+
+        // Add new guest fields
+        requestData.guestFirstName = data.guestFirstName;
+        requestData.guestLastName = data.guestLastName;
+        requestData.guestEmail = data.guestEmail;
+        requestData.guestPhone = data.guestPhone;
+        requestData.guestDateOfBirth = data.guestDateOfBirth;
+        requestData.guestNationality = data.guestNationality;
+        requestData.guestIdType = data.guestIdType;
+        requestData.guestIdNumber = data.guestIdNumber || null;
+        requestData.guestPassportNumber = data.guestPassportNumber || null;
+        requestData.guestNotes = data.guestNotes || null;
+        requestData.idDocumentFilename = uploadResult.filename;
+        requestData.idDocumentOriginalName = uploadResult.originalName!;
+        requestData.idDocumentMimeType = uploadResult.mimeType!;
+        requestData.idDocumentFileSize = uploadResult.fileSize!;
+        requestData.idDocumentUrl = uploadResult.publicUrl;
+      }
+
+      await createBookingRequest.mutateAsync(requestData);
 
       router.push("/booking-requests");
     } catch (error) {
@@ -440,14 +680,14 @@ export function BookingRequestForm() {
     return (
       <div className="space-y-4">
         <div className="animate-pulse space-y-4">
-          <div className="h-12 bg-gray-200 rounded"></div>
+          <div className="h-28 bg-gray-200 rounded"></div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="h-12 bg-gray-200 rounded"></div>
-            <div className="h-12 bg-gray-200 rounded"></div>
+            <div className="h-24 bg-gray-200 rounded"></div>
+            <div className="h24 bg-gray-200 rounded"></div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="h-12 bg-gray-200 rounded"></div>
-            <div className="h-12 bg-gray-200 rounded"></div>
+            <div className="h-24 bg-gray-200 rounded"></div>
+            <div className="h-24 bg-gray-200 rounded"></div>
           </div>
         </div>
       </div>
@@ -514,258 +754,387 @@ export function BookingRequestForm() {
 
       {/* Form — only allow native submission on the final step */}
       <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
-        {/* Step 1: Guest Details */}
+        {/* Step 1: Select Guest */}
         {currentStep === 1 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User className="size-5 text-primary" />
-                Guest Details
+                <Users className="size-5 text-primary" />
+                Select Guest
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Name Row */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="guestFirstName">First Name *</Label>
-                  <Input
-                    id="guestFirstName"
-                    placeholder="Enter first name"
-                    {...register("guestFirstName")}
-                    className={cn(
-                      errors.guestFirstName && "border-destructive",
-                    )}
-                  />
-                  {errors.guestFirstName && (
-                    <p className="text-sm text-destructive">
-                      {errors.guestFirstName.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="guestLastName">Last Name *</Label>
-                  <Input
-                    id="guestLastName"
-                    placeholder="Enter last name"
-                    {...register("guestLastName")}
-                    className={cn(errors.guestLastName && "border-destructive")}
-                  />
-                  {errors.guestLastName && (
-                    <p className="text-sm text-destructive">
-                      {errors.guestLastName.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Contact Row */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="guestEmail">Email *</Label>
-                  <Input
-                    id="guestEmail"
-                    type="email"
-                    placeholder="email@example.com"
-                    {...register("guestEmail")}
-                    className={cn(errors.guestEmail && "border-destructive")}
-                  />
-                  {errors.guestEmail && (
-                    <p className="text-sm text-destructive">
-                      {errors.guestEmail.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="guestPhone">Phone Number *</Label>
-                  <Input
-                    id="guestPhone"
-                    placeholder="+254 700 000 000"
-                    {...register("guestPhone")}
-                    className={cn(errors.guestPhone && "border-destructive")}
-                  />
-                  {errors.guestPhone && (
-                    <p className="text-sm text-destructive">
-                      {errors.guestPhone.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* DOB and Nationality */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="guestDateOfBirth">Date of Birth *</Label>
-                  <Input
-                    id="guestDateOfBirth"
-                    type="date"
-                    {...register("guestDateOfBirth")}
-                    className={cn(
-                      errors.guestDateOfBirth && "border-destructive",
-                    )}
-                  />
-                  {errors.guestDateOfBirth && (
-                    <p className="text-sm text-destructive">
-                      {errors.guestDateOfBirth.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="nationality">Nationality</Label>
-                  <Controller
-                    name="guestNationality"
-                    control={control}
-                    render={({ field }) => (
-                      <NationalityCombobox
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        error={errors.guestNationality?.message}
-                      />
-                    )}
-                  />
-                </div>
-              </div>
-
-              {/* ID Type Selection */}
+              {/* Guest Type Selection */}
               <div className="space-y-3">
-                <Label>ID Type *</Label>
-                <Controller
-                  name="guestIdType"
-                  control={control}
-                  render={({ field }) => (
-                    <RadioGroup
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      className="flex gap-4"
+                <Label>Guest Type</Label>
+                <RadioGroup
+                  value={guestType}
+                  onValueChange={(value) =>
+                    handleGuestTypeChange(value as "existing" | "new")
+                  }
+                  className="grid gap-3 md:grid-cols-2 pb-6"
+                >
+                  <Label htmlFor="guest-existing" className="cursor-pointer">
+                    <Card
+                      className={cn(
+                        "transition-all py-2 w-full",
+                        guestType === "existing"
+                          ? "border-primary ring-2 ring-primary/20"
+                          : "hover:border-primary/50",
+                      )}
                     >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="national_id" id="national_id" />
-                        <Label htmlFor="national_id" className="cursor-pointer">
-                          National ID
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="passport" id="passport" />
-                        <Label htmlFor="passport" className="cursor-pointer">
-                          Passport
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  )}
-                />
+                      <CardContent className="flex items-center gap-4 p-4">
+                        <RadioGroupItem
+                          value="existing"
+                          id="guest-existing"
+                          hidden
+                        />
+                        <div
+                          className={cn(
+                            "size-10 rounded-lg flex items-center justify-center",
+                            guestType === "existing"
+                              ? "bg-primary/10"
+                              : "bg-muted",
+                          )}
+                        >
+                          <UserCheck
+                            className={cn(
+                              "size-5",
+                              guestType === "existing"
+                                ? "text-primary"
+                                : "text-muted-foreground",
+                            )}
+                          />
+                        </div>
+                        <div>
+                          <p className="font-medium">Existing Guest</p>
+                          <p className="text-sm text-muted-foreground">
+                            Select from registered guests
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Label>
+
+                  <Label htmlFor="guest-new" className="cursor-pointer">
+                    <Card
+                      className={cn(
+                        "transition-all py-2 w-full",
+                        guestType === "new"
+                          ? "border-primary ring-2 ring-primary/20"
+                          : "hover:border-primary/50",
+                      )}
+                    >
+                      <CardContent className="flex items-center gap-4 p-4">
+                        <RadioGroupItem value="new" id="guest-new" hidden />
+                        <div
+                          className={cn(
+                            "size-10 rounded-lg flex items-center justify-center",
+                            guestType === "new" ? "bg-primary/10" : "bg-muted",
+                          )}
+                        >
+                          <UserPlus
+                            className={cn(
+                              "size-5",
+                              guestType === "new"
+                                ? "text-primary"
+                                : "text-muted-foreground",
+                            )}
+                          />
+                        </div>
+                        <div>
+                          <p className="font-medium">New Guest</p>
+                          <p className="text-sm text-muted-foreground">
+                            Enter guest details manually
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Label>
+                </RadioGroup>
               </div>
 
-              {/* ID Number */}
-              {formData.guestIdType === "national_id" ? (
+              {/* Existing Guest Selection */}
+              {guestType === "existing" && (
                 <div className="space-y-2">
-                  <Label htmlFor="guestIdNumber">National ID Number *</Label>
-                  <Input
-                    id="guestIdNumber"
-                    placeholder="Enter ID number"
-                    {...register("guestIdNumber")}
-                    className={cn(errors.guestIdNumber && "border-destructive")}
+                  <Label>Select Guest *</Label>
+                  <GuestCombobox
+                    value={selectedGuest}
+                    onSelect={handleGuestSelect}
+                    onAddNew={() => handleGuestTypeChange("new")}
+                    error={!selectedGuest ? "Please select a guest" : undefined}
                   />
-                  {errors.guestIdNumber && (
-                    <p className="text-sm text-destructive">
-                      {errors.guestIdNumber.message}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="guestPassportNumber">Passport Number *</Label>
-                  <Input
-                    id="guestPassportNumber"
-                    placeholder="Enter passport number"
-                    {...register("guestPassportNumber")}
-                    className={cn(
-                      errors.guestPassportNumber && "border-destructive",
-                    )}
-                  />
-                  {errors.guestPassportNumber && (
-                    <p className="text-sm text-destructive">
-                      {errors.guestPassportNumber.message}
-                    </p>
-                  )}
                 </div>
               )}
 
-              {/* ID Document Upload */}
-              <div className="space-y-3">
-                <Label>ID Document *</Label>
-                {!idDocumentPreview ? (
-                  <div
-                    className={cn(
-                      "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-primary/50",
-                      !idDocumentFile && "border-muted-foreground/25",
-                    )}
-                    onClick={() =>
-                      document.getElementById("idDocument")?.click()
-                    }
-                  >
-                    <Upload className="size-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm font-medium">
-                      Click to upload ID document
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      JPEG, PNG, WebP, or AVIF (max 5MB)
-                    </p>
-                    <input
-                      id="idDocument"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/avif"
-                      className="hidden"
-                      onChange={handleIdDocumentChange}
-                    />
-                  </div>
-                ) : (
-                  <div className="relative border rounded-lg p-4">
-                    <div className="flex items-start gap-4">
-                      <img
-                        src={idDocumentPreview}
-                        alt="ID Document Preview"
-                        className="w-32 h-20 object-cover rounded"
+              {/* New Guest Form */}
+              {guestType === "new" && (
+                <>
+                  {/* Name Row */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="guestFirstName">First Name *</Label>
+                      <Input
+                        id="guestFirstName"
+                        placeholder="Enter first name"
+                        {...register("guestFirstName")}
+                        className={cn(
+                          errors.guestFirstName && "border-destructive",
+                        )}
                       />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium truncate">
-                          {idDocumentFile?.name}
+                      {errors.guestFirstName && (
+                        <p className="text-sm text-destructive">
+                          {errors.guestFirstName.message}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {idDocumentFile &&
-                            `${(idDocumentFile.size / 1024 / 1024).toFixed(2)} MB`}
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="guestLastName">Last Name *</Label>
+                      <Input
+                        id="guestLastName"
+                        placeholder="Enter last name"
+                        {...register("guestLastName")}
+                        className={cn(
+                          errors.guestLastName && "border-destructive",
+                        )}
+                      />
+                      {errors.guestLastName && (
+                        <p className="text-sm text-destructive">
+                          {errors.guestLastName.message}
                         </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive"
-                        onClick={removeIdDocument}
-                      >
-                        <X className="size-4" />
-                      </Button>
+                      )}
                     </div>
                   </div>
-                )}
-                {!idDocumentFile && (
-                  <p className="text-sm text-destructive">
-                    ID document is required
-                  </p>
-                )}
-              </div>
 
-              {/* Guest Notes */}
-              <div className="space-y-2">
-                <Label htmlFor="guestNotes">Notes (optional)</Label>
-                <Textarea
-                  id="guestNotes"
-                  placeholder="Any additional notes about the guest..."
-                  {...register("guestNotes")}
-                  rows={3}
-                />
-              </div>
+                  {/* Contact Row */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="guestEmail">Email *</Label>
+                      <Input
+                        id="guestEmail"
+                        type="email"
+                        placeholder="email@example.com"
+                        {...register("guestEmail")}
+                        className={cn(
+                          errors.guestEmail && "border-destructive",
+                        )}
+                      />
+                      {errors.guestEmail && (
+                        <p className="text-sm text-destructive">
+                          {errors.guestEmail.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="guestPhone">Phone Number *</Label>
+                      <Input
+                        id="guestPhone"
+                        placeholder="+254 700 000 000"
+                        {...register("guestPhone")}
+                        className={cn(
+                          errors.guestPhone && "border-destructive",
+                        )}
+                      />
+                      {errors.guestPhone && (
+                        <p className="text-sm text-destructive">
+                          {errors.guestPhone.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* DOB and Nationality */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="guestDateOfBirth">Date of Birth *</Label>
+                      <Input
+                        id="guestDateOfBirth"
+                        type="date"
+                        {...register("guestDateOfBirth")}
+                        className={cn(
+                          errors.guestDateOfBirth && "border-destructive",
+                        )}
+                      />
+                      {errors.guestDateOfBirth && (
+                        <p className="text-sm text-destructive">
+                          {errors.guestDateOfBirth.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="nationality">Nationality *</Label>
+                      <Controller
+                        name="guestNationality"
+                        control={control}
+                        render={({ field }) => (
+                          <NationalityCombobox
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
+                            error={errors.guestNationality?.message}
+                          />
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* ID Type Selection */}
+                  <div className="space-y-3">
+                    <Label>ID Type *</Label>
+                    <Controller
+                      name="guestIdType"
+                      control={control}
+                      render={({ field }) => (
+                        <RadioGroup
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          className="flex gap-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem
+                              value="national_id"
+                              id="national_id"
+                            />
+                            <Label
+                              htmlFor="national_id"
+                              className="cursor-pointer"
+                            >
+                              National ID
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="passport" id="passport" />
+                            <Label
+                              htmlFor="passport"
+                              className="cursor-pointer"
+                            >
+                              Passport
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      )}
+                    />
+                  </div>
+
+                  {/* ID Number */}
+                  {formData.guestIdType === "national_id" ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="guestIdNumber">
+                        National ID Number *
+                      </Label>
+                      <Input
+                        id="guestIdNumber"
+                        placeholder="Enter ID number"
+                        {...register("guestIdNumber")}
+                        className={cn(
+                          errors.guestIdNumber && "border-destructive",
+                        )}
+                      />
+                      {errors.guestIdNumber && (
+                        <p className="text-sm text-destructive">
+                          {errors.guestIdNumber.message}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label htmlFor="guestPassportNumber">
+                        Passport Number *
+                      </Label>
+                      <Input
+                        id="guestPassportNumber"
+                        placeholder="Enter passport number"
+                        {...register("guestPassportNumber")}
+                        className={cn(
+                          errors.guestPassportNumber && "border-destructive",
+                        )}
+                      />
+                      {errors.guestPassportNumber && (
+                        <p className="text-sm text-destructive">
+                          {errors.guestPassportNumber.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ID Document Upload */}
+                  <div className="space-y-3">
+                    <Label>ID Document *</Label>
+                    {!idDocumentPreview ? (
+                      <div
+                        className={cn(
+                          "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-primary/50",
+                          !idDocumentFile && "border-muted-foreground/25",
+                        )}
+                        onClick={() =>
+                          document.getElementById("idDocument")?.click()
+                        }
+                      >
+                        <Upload className="size-8 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm font-medium">
+                          Click to upload ID document
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          JPEG, PNG, WebP, or AVIF (max 5MB)
+                        </p>
+                        <input
+                          id="idDocument"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/avif"
+                          className="hidden"
+                          onChange={handleIdDocumentChange}
+                        />
+                      </div>
+                    ) : (
+                      <div className="relative border rounded-lg p-4">
+                        <div className="flex items-start gap-4">
+                          <img
+                            src={idDocumentPreview}
+                            alt="ID Document Preview"
+                            className="w-32 h-20 object-cover rounded"
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium truncate">
+                              {idDocumentFile?.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {idDocumentFile &&
+                                `${(idDocumentFile.size / 1024 / 1024).toFixed(2)} MB`}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={removeIdDocument}
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {!idDocumentFile && (
+                      <p className="text-sm text-destructive">
+                        ID document is required
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Guest Notes */}
+                  <div className="space-y-2">
+                    <Label htmlFor="guestNotes">Notes (optional)</Label>
+                    <Textarea
+                      id="guestNotes"
+                      placeholder="Any additional notes about the guest..."
+                      {...register("guestNotes")}
+                      rows={3}
+                    />
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         )}
@@ -780,9 +1149,37 @@ export function BookingRequestForm() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Property Selection */}
+              {/* Guest Summary */}
+              <div className="p-4 rounded-lg bg-muted">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                  Guest
+                </Label>
+                {guestType === "existing" && selectedGuest ? (
+                  <div className="mt-1">
+                    <p className="font-medium">
+                      {selectedGuest.firstName} {selectedGuest.lastName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedGuest.email} • {selectedGuest.phone}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-1">
+                    <p className="font-medium">
+                      {formData.guestFirstName} {formData.guestLastName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {formData.guestEmail} • {formData.guestPhone}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Property section */}
               <div className="space-y-2">
-                <Label>Property *</Label>
+                <Label>
+                  Property <span className="text-lipstick-red">*</span>
+                </Label>
                 <Controller
                   name="propertyId"
                   control={control}
@@ -796,11 +1193,11 @@ export function BookingRequestForm() {
                     >
                       <SelectTrigger
                         className={cn(
-                          "w-full",
+                          "w-full text-night",
                           errors.propertyId && "border-destructive",
                         )}
                       >
-                        <SelectValue placeholder="Select a property" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {formDataCache?.properties.map((property) => (
@@ -825,7 +1222,9 @@ export function BookingRequestForm() {
               {/* Unit Selection */}
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Unit *</Label>
+                  <Label>
+                    Unit <span className="text-lipstick-red">*</span>
+                  </Label>
                   <Controller
                     name="unitId"
                     control={control}
@@ -848,7 +1247,7 @@ export function BookingRequestForm() {
                               errors.unitId && "border-destructive",
                             )}
                           >
-                            <SelectValue placeholder="Select a property first" />
+                            <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {selectedProperty?.units.map((unit) => {
@@ -918,13 +1317,6 @@ export function BookingRequestForm() {
                     )}
                     {...register("numberOfGuests", {
                       valueAsNumber: true,
-                      validate: (value: number) => {
-                        if (!selectedUnit?.maxGuests) return true;
-                        if (value > selectedUnit.maxGuests) {
-                          return `Maximum ${selectedUnit.maxGuests} guests allowed.`;
-                        }
-                        return true;
-                      },
                     })}
                   />
                   {errors.numberOfGuests && (
@@ -935,12 +1327,68 @@ export function BookingRequestForm() {
                 </div>
               </div>
 
+              {/* Check-in & check-out Dates */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="checkInDate">
+                    Check-in Date & Time{" "}
+                    <span className="text-lipstick-red">*</span>
+                  </Label>
+                  <Input
+                    id="checkInDate"
+                    type="datetime-local"
+                    min={now}
+                    disabled={isCustomDuration}
+                    className={cn(
+                      errors.checkInDate && "border-destructive",
+                      isCustomDuration && "bg-muted",
+                    )}
+                    onChange={(e) => {
+                      setValue("checkInDate", e.target.value);
+                      clearErrors("checkInDate");
+                    }}
+                    value={formData.checkInDate || ""}
+                  />
+                  {isCustomDuration && (
+                    <p className="text-xs text-muted-foreground">
+                      Fixed dates for custom pricing period
+                    </p>
+                  )}
+                  {errors.checkInDate && (
+                    <p className="text-sm text-destructive">
+                      {errors.checkInDate.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="checkOutDate">Check-out Date</Label>
+                  <Input
+                    id="checkOutDate"
+                    type="date"
+                    disabled
+                    className="bg-muted"
+                    value={
+                      formData.checkOutDate
+                        ? format(new Date(formData.checkOutDate), "yyyy-MM-dd")
+                        : ""
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Auto-calculated based on duration and period
+                  </p>
+                </div>
+              </div>
+
               {/* Pricing Selection */}
               {isUnitSelected &&
                 isMaxGuestsValid &&
                 pricingOptions.length > 0 && (
                   <div className="space-y-4">
-                    <Label>Stay Duration & Pricing *</Label>
+                    <Label>
+                      Stay Duration & Pricing{" "}
+                      <span className="text-lipstick-red">*</span>
+                    </Label>
                     <RadioGroup
                       value={formData.priceDuration}
                       onValueChange={(value) => {
@@ -1109,7 +1557,10 @@ export function BookingRequestForm() {
               {isPricingSelected && (
                 <article className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="paymentMethod">Payment Method</Label>
+                    <Label htmlFor="paymentMethod">
+                      Payment Method{" "}
+                      <span className="text-lipstick-red">*</span>
+                    </Label>
                     <Controller
                       name="paymentMethod"
                       control={control}
@@ -1121,7 +1572,7 @@ export function BookingRequestForm() {
                           <SelectTrigger
                             className={cn(
                               "w-full",
-                              errors.paymentMethod && "border-red-400",
+                              errors.paymentMethod && "border-destructive",
                             )}
                           >
                             <SelectValue placeholder="Select payment method" />
@@ -1141,87 +1592,30 @@ export function BookingRequestForm() {
                       )}
                     />
                     {errors.paymentMethod && (
-                      <p className="text-sm text-red-400">
+                      <p className="text-sm text-destructive">
                         {errors.paymentMethod.message}
                       </p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="payment-code">Payment Reference Code</Label>
+                    <Label htmlFor="payment-code">
+                      Payment Reference Code{" "}
+                      <span className="text-lipstick-red">*</span>
+                    </Label>
                     <Input
                       id="payment-code"
                       type="text"
-                      placeholder="e.g KTUDKLM90"
-                      className={cn(
-                        errors.paymentCode && "border border-red-400",
-                      )}
+                      placeholder="e.g KTUDKLM901"
+                      className={cn(errors.paymentCode && "border-destructive")}
                       {...register("paymentCode")}
                     />
                     {errors.paymentCode && (
-                      <p className="text-sm text-red-400">
+                      <p className="text-sm text-destructive">
                         {errors.paymentCode.message}
                       </p>
                     )}
                   </div>
                 </article>
-              )}
-
-              {/* Check-in/out Dates */}
-              {isPricingSelected && (
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="checkInDate">Check-in Date *</Label>
-                    <Input
-                      id="checkInDate"
-                      type="date"
-                      min={today}
-                      disabled={isCustomDuration}
-                      className={cn(
-                        errors.checkInDate && "border-destructive",
-                        isCustomDuration && "bg-muted",
-                      )}
-                      onChange={(e) => {
-                        setValue("checkInDate", new Date(e.target.value));
-                      }}
-                      value={
-                        formData.checkInDate
-                          ? format(new Date(formData.checkInDate), "yyyy-MM-dd")
-                          : ""
-                      }
-                    />
-                    {isCustomDuration && (
-                      <p className="text-xs text-muted-foreground">
-                        Fixed dates for custom pricing period
-                      </p>
-                    )}
-                    {errors.checkInDate && (
-                      <p className="text-sm text-destructive">
-                        {errors.checkInDate.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="checkOutDate">Check-out Date</Label>
-                    <Input
-                      id="checkOutDate"
-                      type="date"
-                      disabled
-                      className="bg-muted"
-                      value={
-                        formData.checkOutDate
-                          ? format(
-                              new Date(formData.checkOutDate),
-                              "yyyy-MM-dd",
-                            )
-                          : ""
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Auto-calculated based on duration and period
-                    </p>
-                  </div>
-                </div>
               )}
 
               {/* Total Calculation */}
@@ -1259,7 +1653,9 @@ export function BookingRequestForm() {
 
               {/* Purpose */}
               <div className="space-y-2">
-                <Label>Purpose</Label>
+                <Label>
+                  Purpose <span className="text-lipstick-red">*</span>
+                </Label>
                 <Controller
                   name="purpose"
                   control={control}
@@ -1302,6 +1698,8 @@ export function BookingRequestForm() {
         {/* Step 3: Confirmation */}
         {currentStep === 3 && (
           <BookingRequestConfirmation
+            guestType={guestType}
+            selectedGuest={selectedGuest}
             formData={formData}
             idDocumentPreview={idDocumentPreview}
             idDocumentFile={idDocumentFile}

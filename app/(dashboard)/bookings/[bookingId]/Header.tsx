@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft,  SquarePen } from "lucide-react";
+import { ArrowLeft, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { BookingEditDialog } from "@/components/booking-edit-dialog";
 import type { Booking } from "@/lib/types/types";
@@ -27,15 +27,13 @@ function Header({ booking }: { booking: Booking }) {
       </div>
 
       <div className="space-x-2">
-        {/* <Button variant="outline" className="cursor-pointer">
-          <Download className="size-4" />
-          <span>Export</span>
-        </Button> */}
         <BookingEditDialog booking={booking}>
           <Button
             className="cursor-pointer"
             disabled={
-              booking.status === "checked_out" || booking.status === "cancelled"
+              booking.status === "checked_out" ||
+              booking.status === "cancelled" ||
+              booking.status === "checked_in"
             }
           >
             <SquarePen className="size-4" />

@@ -23,13 +23,14 @@ import {
   XCircle,
   Percent,
 } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { differenceInDays } from "date-fns";
 import Header from "./Header";
 import type { BookingStatus } from "@/lib/types/types";
 import {
   cn,
   getPeriodLabelSingular,
   formatPrice,
+  formatDateInTimezone,
   hasDiscount,
   getDurationLabel,
 } from "@/lib/utils";
@@ -375,7 +376,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                       Check in date
                     </p>
                     <p className="text-sm font-normal text-foreground">
-                      {format(checkInDate, "EEEE, MMM d, yyyy")}
+                      {formatDateInTimezone(checkInDate)}
                     </p>
                   </div>
                 </div>
@@ -391,7 +392,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                       Check out date
                     </p>
                     <p className="text-sm font-normal text-foreground">
-                      {format(checkOutDate, "EEEE, MMM d, yyyy")}
+                      {formatDateInTimezone(checkOutDate)}
                     </p>
                   </div>
                 </div>
@@ -521,7 +522,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                 </div>
                 <div className="flex justify-between pt-2">
                   <span className="font-semibold text-foreground">
-                   Payment code
+                    Payment code
                   </span>
                   <span className="text-sm font-semibold">
                     {booking.paymentCode}
@@ -547,10 +548,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                     Booking Created
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {format(
-                      new Date(booking.createdAt),
-                      "MMM dd, yyyy, hh:mm a",
-                    )}
+                    {formatDateInTimezone(new Date(booking.createdAt))}
                   </p>
                 </div>
               </div>
@@ -561,10 +559,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                     Last Updated
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {format(
-                      new Date(booking.updatedAt),
-                      "MMM dd, yyyy, hh:mm a",
-                    )}
+                    {formatDateInTimezone(new Date(booking.updatedAt))}
                   </p>
                 </div>
               </div>

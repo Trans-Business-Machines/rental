@@ -18,7 +18,7 @@ import type { UseMutationResult } from "@tanstack/react-query";
 
 interface RejectRequestDialogProps {
   requestId: number;
-  idDocumentFilename: string;
+  idDocumentFilename?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mutation: UseMutationResult<any, Error, any, unknown>;

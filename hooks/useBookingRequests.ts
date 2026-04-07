@@ -91,6 +91,7 @@ export function useApproveBookingRequest() {
     return useMutation({
         mutationFn: async ({
             id,
+            isExistingGuest,
             guestId,
             idDocumentFilename,
             idDocumentOriginalName,
@@ -98,12 +99,30 @@ export function useApproveBookingRequest() {
             idDocumentFileSize,
         }: {
             id: number;
-            guestId: number;
-            idDocumentFilename: string;
-            idDocumentOriginalName: string;
-            idDocumentMimeType: string;
-            idDocumentFileSize: number;
+            isExistingGuest: boolean;
+            guestId?: number;
+            idDocumentFilename?: string;
+            idDocumentOriginalName?: string;
+            idDocumentMimeType?: string;
+            idDocumentFileSize?: number;
         }) => {
+            // For existing guests, no file move needed
+            if (isExistingGuest) {
+                const result = await approveBookingRequest(id);
+                return result;
+            }
+
+            // For new guests, move the ID document first
+            if (
+                !guestId ||
+                !idDocumentFilename ||
+                !idDocumentOriginalName ||
+                !idDocumentMimeType ||
+                !idDocumentFileSize
+            ) {
+                throw new Error("Missing required document data for new guest");
+            }
+
             // 1. Move the ID document FIRST
             const moveResult = await moveBookingRequestDocument(
                 idDocumentFilename,
@@ -125,18 +144,22 @@ export function useApproveBookingRequest() {
 
             return result;
         },
-        onSuccess: () => {
+        onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: bookingRequestKeys.lists() });
             queryClient.invalidateQueries({ queryKey: ["bookings"] });
             queryClient.invalidateQueries({ queryKey: ["guests"] });
-            toast.success("Booking request approved. Guest and booking created.");
+
+            if (data.isExistingGuest) {
+                toast.success("Booking request approved. Booking created for existing guest.");
+            } else {
+                toast.success("Booking request approved. Guest and booking created.");
+            }
         },
         onError: (error: Error) => {
             toast.error(error.message || "Failed to approve booking request");
         },
     });
 }
-
 
 // Reject booking request
 export function useRejectBookingRequest() {
@@ -150,14 +173,16 @@ export function useRejectBookingRequest() {
         }: {
             id: number;
             rejectionReason: string;
-            idDocumentFilename: string;
+            idDocumentFilename?: string;
         }) => {
-            // 1. Delete the ID document file
-            const deleteResult = await deleteBookingRequestDocument(idDocumentFilename);
+            // 1. Delete the ID document file (only if it exists - new guests only)
+            if (idDocumentFilename) {
+                const deleteResult = await deleteBookingRequestDocument(idDocumentFilename);
 
-            if (!deleteResult.success) {
-                console.error("Failed to delete document:", deleteResult.error);
-                // Continue anyway - rejection is more important
+                if (!deleteResult.success) {
+                    console.error("Failed to delete document:", deleteResult.error);
+                    // Continue anyway - rejection is more important
+                }
             }
 
             // 2. Reject the request
@@ -185,14 +210,16 @@ export function useCancelBookingRequest() {
             idDocumentFilename,
         }: {
             id: number;
-            idDocumentFilename: string;
+            idDocumentFilename?: string;
         }) => {
-            // 1. Delete the ID document file
-            const deleteResult = await deleteBookingRequestDocument(idDocumentFilename);
+            // 1. Delete the ID document file (only if it exists - new guests only)
+            if (idDocumentFilename) {
+                const deleteResult = await deleteBookingRequestDocument(idDocumentFilename);
 
-            if (!deleteResult.success) {
-                console.error("Failed to delete document:", deleteResult.error);
-                // Continue anyway - cancellation is more important
+                if (!deleteResult.success) {
+                    console.error("Failed to delete document:", deleteResult.error);
+                    // Continue anyway - cancellation is more important
+                }
             }
 
             // 2. Cancel the request

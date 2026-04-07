@@ -243,14 +243,15 @@ model Guest {
   totalSpent               Int?      @default(0)
   rating                   Float?
   blacklisted              Boolean?  @default(false)
-  verificationStatus       String?   @default("pending") // pending, verified, rejected
+  verificationStatus       String?   @default("pending")
   createdAt                DateTime? @default(now())
   updatedAt                DateTime? @updatedAt
   deletedAt                DateTime?
 
+  media           Media?
   bookings        Booking[]
   checkoutReports CheckoutReport[]
-  media           Media?
+  bookingRequests BookingRequest[]
 
   @@map("guests")
 }
@@ -471,24 +472,29 @@ model BookingRequest {
   status          BookingRequestStatus @default(pending)
   rejectionReason String?
 
-  // ============ Guest Details (embedded) ============
-  guestFirstName      String
-  guestLastName       String
-  guestEmail          String
-  guestPhone          String
-  guestDateOfBirth    String
-  guestNationality    String
-  guestIdType         IdType  @default(national_id)
+  // ============ Guest Selection ============
+  // For existing guests - link directly
+  existingGuestId Int?
+  existingGuest   Guest? @relation(fields: [existingGuestId], references: [id])
+
+  // ============ Guest Details (embedded - only for NEW guests) ============
+  guestFirstName      String?
+  guestLastName       String?
+  guestEmail          String?
+  guestPhone          String?
+  guestDateOfBirth    String?
+  guestNationality    String?
+  guestIdType         IdType?
   guestIdNumber       String?
   guestPassportNumber String?
   guestNotes          String?
 
-  // ID Document (required, stored temporarily until approval)
-  idDocumentFilename     String
-  idDocumentOriginalName String
-  idDocumentMimeType     String
-  idDocumentFileSize     Int
-  idDocumentUrl          String
+  // ID Document (only for NEW guests)
+  idDocumentFilename     String?
+  idDocumentOriginalName String?
+  idDocumentMimeType     String?
+  idDocumentFileSize     Int?
+  idDocumentUrl          String?
 
   // ============ Booking Details ============
   propertyId Int
@@ -516,5 +522,6 @@ model BookingRequest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([existingGuestId])
   @@map("booking_requests")
 }
