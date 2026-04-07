@@ -26,6 +26,7 @@ import {
   Users,
   MessageSquare,
   Target,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +109,22 @@ export function BookingRequestDetails({
 
   const bookingRequest = data;
 
+  // Determine if this is an existing guest request
+  const isExistingGuest = !!bookingRequest.existingGuestId;
+
+  // Get guest display info based on type
+  const guestName = isExistingGuest
+    ? `${bookingRequest.existingGuest?.firstName} ${bookingRequest.existingGuest?.lastName}`
+    : `${bookingRequest.guestFirstName} ${bookingRequest.guestLastName}`;
+
+  const guestEmail = isExistingGuest
+    ? bookingRequest.existingGuest?.email
+    : bookingRequest.guestEmail;
+
+  const guestPhone = isExistingGuest
+    ? bookingRequest.existingGuest?.phone
+    : bookingRequest.guestPhone;
+
   const isPending = bookingRequest.status === "pending";
   const isAgent = userRole === "agent";
   const canApproveReject =
@@ -119,7 +136,7 @@ export function BookingRequestDetails({
   // Calculate pricing details using utils
   const totalNights = calculateTotalNights(
     bookingRequest.priceDuration as PriceDuration,
-    bookingRequest.period,
+    bookingRequest.period
   );
 
   // unitPrice is already the discounted price
@@ -164,7 +181,7 @@ export function BookingRequestDetails({
             status === "rejected" &&
               "border-red-500 bg-red-500/10 text-red-500",
             status === "approved" &&
-              "border-medium-jungle bg-medium-jungle/10 text-medium-jungle",
+              "border-medium-jungle bg-medium-jungle/10 text-medium-jungle"
           )}
         >
           {status}
@@ -194,9 +211,17 @@ export function BookingRequestDetails({
             <CardTitle className="flex items-center gap-2">
               <User className="size-5" />
               Guest Information
+              {isExistingGuest && (
+                <Badge variant="secondary" className="ml-auto">
+                  <UserCheck className="size-3 mr-1" />
+                  Existing Guest
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription>
-              Details of the guest for this booking
+              {isExistingGuest
+                ? "Existing guest selected for this booking"
+                : "Details of the guest for this booking"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -205,10 +230,7 @@ export function BookingRequestDetails({
                 <User className="size-4 text-muted-foreground mt-0.5" />
                 <div>
                   <p className="text-sm text-muted-foreground">Full Name</p>
-                  <p className="font-medium">
-                    {bookingRequest.guestFirstName}{" "}
-                    {bookingRequest.guestLastName}
-                  </p>
+                  <p className="font-medium">{guestName}</p>
                 </div>
               </div>
 
@@ -216,7 +238,7 @@ export function BookingRequestDetails({
                 <Mail className="size-4 text-muted-foreground mt-0.5" />
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{bookingRequest.guestEmail}</p>
+                  <p className="font-medium">{guestEmail}</p>
                 </div>
               </div>
 
@@ -224,116 +246,190 @@ export function BookingRequestDetails({
                 <Phone className="size-4 text-muted-foreground mt-0.5" />
                 <div>
                   <p className="text-sm text-muted-foreground">Phone</p>
-                  <p className="font-medium">{bookingRequest.guestPhone}</p>
+                  <p className="font-medium">{guestPhone}</p>
                 </div>
               </div>
 
-              <Separator />
-
-              <div className="flex items-start gap-3">
-                <Cake className="size-4 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Date of Birth</p>
-                  <p className="font-medium">
-                    {format(new Date(bookingRequest.guestDateOfBirth), "PPP")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Globe className="size-4 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Nationality</p>
-                  <p className="font-medium">
-                    {bookingRequest.guestNationality}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <IdCard className="size-4 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    {bookingRequest.guestIdType === "national_id"
-                      ? "National ID Number"
-                      : "Passport Number"}
-                  </p>
-                  <p className="font-medium">
-                    {bookingRequest.guestIdNumber ||
-                      bookingRequest.guestPassportNumber}
-                  </p>
-                </div>
-              </div>
-
-              {bookingRequest.guestNotes && (
+              {/* Only show extended details for new guests */}
+              {!isExistingGuest && (
                 <>
                   <Separator />
+
                   <div className="flex items-start gap-3">
-                    <MessageSquare className="size-4 text-muted-foreground mt-0.5" />
+                    <Cake className="size-4 text-muted-foreground mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Notes</p>
-                      <p className="text-sm">{bookingRequest.guestNotes}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Date of Birth
+                      </p>
+                      <p className="font-medium">
+                        {bookingRequest.guestDateOfBirth
+                          ? format(
+                              new Date(bookingRequest.guestDateOfBirth),
+                              "PPP"
+                            )
+                          : "-"}
+                      </p>
                     </div>
                   </div>
+
+                  <div className="flex items-start gap-3">
+                    <Globe className="size-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Nationality
+                      </p>
+                      <p className="font-medium">
+                        {bookingRequest.guestNationality || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <IdCard className="size-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        {bookingRequest.guestIdType === "national_id"
+                          ? "National ID Number"
+                          : "Passport Number"}
+                      </p>
+                      <p className="font-medium">
+                        {bookingRequest.guestIdNumber ||
+                          bookingRequest.guestPassportNumber ||
+                          "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {bookingRequest.guestNotes && (
+                    <>
+                      <Separator />
+                      <div className="flex items-start gap-3">
+                        <MessageSquare className="size-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Notes</p>
+                          <p className="text-sm">{bookingRequest.guestNotes}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* Link to existing guest profile */}
+              {isExistingGuest && bookingRequest.existingGuestId && (
+                <>
+                  <Separator />
+                  <Link
+                    href={`/guests/${bookingRequest.existingGuestId}`}
+                    className="text-sm text-primary hover:underline flex items-center gap-2"
+                  >
+                    <UserCheck className="size-4" />
+                    View Full Guest Profile
+                  </Link>
                 </>
               )}
             </div>
           </CardContent>
         </Card>
 
-        {/* ID Document */}
-        {(bookingRequest.status === "pending" ||
-          bookingRequest.status === "approved") && (
+        {/* ID Document - Only show for new guests */}
+        {!isExistingGuest &&
+          (bookingRequest.status === "pending" ||
+            bookingRequest.status === "approved") && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="size-5" />
+                  ID Document
+                </CardTitle>
+                <CardDescription>
+                  Uploaded identification document
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {bookingRequest.idDocumentUrl ? (
+                  <>
+                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted">
+                      <Image
+                        src={bookingRequest.idDocumentUrl}
+                        alt="ID Document"
+                        fill
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">File Name</span>
+                        <span className="font-medium truncate max-w-[200px]">
+                          {bookingRequest.idDocumentOriginalName}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">File Size</span>
+                        <span className="font-medium">
+                          {bookingRequest.idDocumentFileSize
+                            ? formatFileSize(bookingRequest.idDocumentFileSize)
+                            : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Type</span>
+                        <span className="font-medium">
+                          {bookingRequest.idDocumentMimeType
+                            ? bookingRequest.idDocumentMimeType
+                                .split("/")[1]
+                                .toUpperCase()
+                            : "-"}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <FileText className="size-12 mb-2 opacity-50" />
+                    <p>Document not available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+        {/* Existing Guest Card */}
+        {isExistingGuest && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="size-5" />
-                ID Document
+                <UserCheck className="size-5" />
+                Existing Guest
               </CardTitle>
               <CardDescription>
-                Uploaded identification document
+                This booking is for a registered guest
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {bookingRequest.idDocumentUrl ? (
-                <>
-                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted">
-                    <Image
-                      src={bookingRequest.idDocumentUrl}
-                      alt="ID Document"
-                      fill
-                      className="object-contain"
-                    />
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">File Name</span>
-                      <span className="font-medium truncate max-w-[200px]">
-                        {bookingRequest.idDocumentOriginalName}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">File Size</span>
-                      <span className="font-medium">
-                        {formatFileSize(bookingRequest.idDocumentFileSize)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Type</span>
-                      <span className="font-medium">
-                        {bookingRequest.idDocumentMimeType
-                          .split("/")[1]
-                          .toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                  <FileText className="size-12 mb-2 opacity-50" />
-                  <p>Document not available</p>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <UserCheck className="size-8 text-primary" />
                 </div>
-              )}
+                <p className="font-medium text-lg">{guestName}</p>
+                <p className="text-sm text-muted-foreground">{guestEmail}</p>
+                <p className="text-sm text-muted-foreground">{guestPhone}</p>
+                <p className="text-xs text-muted-foreground mt-4">
+                  This guest is already registered in the system. Their ID
+                  document is on file.
+                </p>
+                {bookingRequest.existingGuestId && (
+                  <Link
+                    href={`/guests/${bookingRequest.existingGuestId}`}
+                    className="mt-4"
+                  >
+                    <Button variant="outline" size="sm">
+                      <UserCheck className="size-4 mr-2" />
+                      View Guest Profile
+                    </Button>
+                  </Link>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -383,7 +479,7 @@ export function BookingRequestDetails({
                 <p className="font-medium">
                   {format(
                     new Date(bookingRequest.checkInDate),
-                    "EEE, MMM d, yyyy",
+                    "EEE, MMM d, yyyy 'at' h:mm a"
                   )}
                 </p>
               </div>
@@ -396,7 +492,7 @@ export function BookingRequestDetails({
                 <p className="font-medium">
                   {format(
                     new Date(bookingRequest.checkOutDate),
-                    "EEE, MMM d, yyyy",
+                    "EEE, MMM d, yyyy"
                   )}
                 </p>
               </div>
@@ -707,11 +803,14 @@ export function BookingRequestDetails({
         <>
           <ApproveRequestDialog
             requestId={bookingRequest.id}
+            isExistingGuest={isExistingGuest}
             guestId={bookingRequest.id}
-            idDocumentFilename={bookingRequest.idDocumentFilename}
-            idDocumentOriginalName={bookingRequest.idDocumentOriginalName}
-            idDocumentMimeType={bookingRequest.idDocumentMimeType}
-            idDocumentFileSize={bookingRequest.idDocumentFileSize}
+            idDocumentFilename={bookingRequest.idDocumentFilename ?? undefined}
+            idDocumentOriginalName={
+              bookingRequest.idDocumentOriginalName ?? undefined
+            }
+            idDocumentMimeType={bookingRequest.idDocumentMimeType ?? undefined}
+            idDocumentFileSize={bookingRequest.idDocumentFileSize ?? undefined}
             open={approveDialogOpen}
             onOpenChange={(open) => {
               if (!approveMutation.isPending) {
@@ -722,7 +821,7 @@ export function BookingRequestDetails({
           />
           <RejectRequestDialog
             requestId={bookingRequest.id}
-            idDocumentFilename={bookingRequest.idDocumentFilename}
+            idDocumentFilename={bookingRequest.idDocumentFilename ?? undefined}
             open={rejectDialogOpen}
             onOpenChange={(open) => {
               if (!rejectMutation.isPending) {
@@ -733,7 +832,7 @@ export function BookingRequestDetails({
           />
           <CancelRequestDialog
             requestId={bookingRequest.id}
-            idDocumentFilename={bookingRequest.idDocumentFilename}
+            idDocumentFilename={bookingRequest.idDocumentFilename ?? undefined}
             open={cancelDialogOpen}
             onOpenChange={(open) => {
               if (!cancelMutation.isPending) {

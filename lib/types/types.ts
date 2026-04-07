@@ -387,35 +387,45 @@ export interface UpdateBookingRequestParams {
 
 export type BookingRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
 
-
 export interface BookingRequestListItem {
+  id: number;
+  // For existing guests
+  existingGuestId: number | null;
+  existingGuest: {
     id: number;
-    guestFirstName: string;
-    guestLastName: string;
-    guestEmail: string;
-    guestPhone: string;
-    status: BookingRequestStatus;
-    checkInDate: Date;
-    checkOutDate: Date;
-    totalAmount: number;
-    createdAt: Date;
-    idDocumentFilename: string;
-    idDocumentOriginalName: string;
-    idDocumentMimeType: string;
-    idDocumentFileSize: number;
-    idDocumentUrl: string;
-    property: {
-        id: number;
-        name: string;
-    };
-    unit: {
-        id: number;
-        name: string;
-    };
-    requestedBy: {
-        id: string;
-        name: string;
-    };
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+  } | null;
+  // For new guests (optional when existingGuestId is set)
+  guestFirstName: string | null;
+  guestLastName: string | null;
+  guestEmail: string | null;
+  guestPhone: string | null;
+  status: BookingRequestStatus;
+  checkInDate: Date;
+  checkOutDate: Date;
+  totalAmount: number;
+  createdAt: Date;
+  // ID document fields (optional - only for new guests)
+  idDocumentFilename: string | null;
+  idDocumentOriginalName: string | null;
+  idDocumentMimeType: string | null;
+  idDocumentFileSize: number | null;
+  idDocumentUrl: string | null;
+  property: {
+    id: number;
+    name: string;
+  };
+  unit: {
+    id: number;
+    name: string;
+  };
+  requestedBy: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface ApproveMediaData {
@@ -440,4 +450,14 @@ export interface NotifyAdminsOfBookingRequestParams {
     period: number;
     totalAmount: number;
     requestedByName: string;
+}
+
+export interface GuestSearchResult {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    activeBookingStatus: "pending" | "reserved" | "checked_in" | null;
+    activeBookingUnit: string | null;
 }

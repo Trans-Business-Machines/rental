@@ -15,7 +15,7 @@ import type { UseMutationResult } from "@tanstack/react-query";
 
 interface CancelRequestDialogProps {
   requestId: number;
-  idDocumentFilename: string;
+  idDocumentFilename?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mutation: UseMutationResult<any, Error, any, unknown>;
@@ -37,6 +37,9 @@ export function CancelRequestDialog({
     onOpenChange(false);
   };
 
+  // Determine if there's a document to delete
+  const hasDocument = !!idDocumentFilename;
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -48,8 +51,18 @@ export function CancelRequestDialog({
             <AlertDialogTitle>Cancel Booking Request</AlertDialogTitle>
           </div>
           <AlertDialogDescription className="p-4 border border-destructive bg-destructive/10 text-destructive rounded-lg">
-            Are you sure you want to cancel this booking request? This action
-            cannot be undone and the uploaded ID document will be deleted.
+            {hasDocument ? (
+              <>
+                Are you sure you want to cancel this booking request? This
+                action cannot be undone and the uploaded ID document will be
+                deleted.
+              </>
+            ) : (
+              <>
+                Are you sure you want to cancel this booking request? This
+                action cannot be undone.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
 

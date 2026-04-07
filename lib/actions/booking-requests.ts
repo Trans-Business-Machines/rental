@@ -8,15 +8,12 @@ import { NewBookingRequestEmail } from "@/lib/emails/NewBookingRequestEmail";
 import { formatPrice, formatDate, calculateTotalNights } from "@/lib/utils";
 import resend from "@/lib/emailClient"
 import type {
-    CreateBookingRequestParams,
     GetBookingRequestsParams,
     UpdateBookingRequestParams,
     Role,
     PriceDuration,
-    ApproveMediaData,
     NotifyAdminsOfBookingRequestParams
 } from "@/lib/types/types";
-
 
 export async function notifyAdminsOfNewBookingRequest({
     requestId,
@@ -119,6 +116,48 @@ export async function notifyAdminsOfNewBookingRequest({
     }
 }
 
+// Update the type - guestDateOfBirth should be string
+interface CreateBookingRequestParams {
+    // Guest type
+    guestType: "existing" | "new";
+
+    // For existing guest
+    existingGuestId?: number;
+
+    // For new guest (optional when guestType is "existing")
+    guestFirstName?: string;
+    guestLastName?: string;
+    guestEmail?: string;
+    guestPhone?: string;
+    guestDateOfBirth?: string; // Changed from Date to string
+    guestNationality?: string;
+    guestIdType?: "national_id" | "passport";
+    guestIdNumber?: string | null;
+    guestPassportNumber?: string | null;
+    guestNotes?: string | null;
+    idDocumentFilename?: string;
+    idDocumentOriginalName?: string;
+    idDocumentMimeType?: string;
+    idDocumentFileSize?: number;
+    idDocumentUrl?: string;
+
+    // Booking details (always required)
+    propertyId: number;
+    unitId: number;
+    checkInDate: Date;
+    checkOutDate: Date;
+    numberOfGuests: number;
+    priceDuration: string;
+    unitPrice: number;
+    period: number;
+    discountRate?: number | null;
+    totalAmount: number;
+    paymentMethod: string;
+    paymentCode: string;
+    purpose?: string | null;
+    specialRequests?: string | null;
+}
+
 export async function createBookingRequest(data: CreateBookingRequestParams) {
     try {
         const session = await getServerSession();
@@ -129,7 +168,59 @@ export async function createBookingRequest(data: CreateBookingRequestParams) {
 
         // Only agents can create booking requests
         if (session.user.role !== "agent") {
-            throw new Error("Unauthorized, Only agents can create booking requests!");
+            throw new Error(
+                "Unauthorized, Only agents can create booking requests!"
+            );
+        }
+
+        // Validate based on guest type
+        if (data.guestType === "existing") {
+            if (!data.existingGuestId) {
+                throw new Error("Please select a guest");
+            }
+
+            // Verify guest exists and has no active booking
+            const guest = await prisma.guest.findUnique({
+                where: { id: data.existingGuestId, deletedAt: null },
+                include: {
+                    bookings: {
+                        where: {
+                            status: { in: ["pending", "reserved", "checked_in"] },
+                        },
+                        take: 1,
+                    },
+                },
+            });
+
+            if (!guest) {
+                throw new Error("Guest not found");
+            }
+
+            if (guest.bookings.length > 0) {
+                throw new Error("This guest already has an active booking");
+            }
+        } else {
+            // New guest - validate required fields
+            if (
+                !data.guestFirstName ||
+                !data.guestLastName ||
+                !data.guestEmail ||
+                !data.guestPhone ||
+                !data.guestDateOfBirth ||
+                !data.guestNationality ||
+                !data.guestIdType ||
+                !data.idDocumentUrl
+            ) {
+                throw new Error("All guest details are required for new guests");
+            }
+
+            if (data.guestIdType === "national_id" && !data.guestIdNumber) {
+                throw new Error("National ID number is required");
+            }
+
+            if (data.guestIdType === "passport" && !data.guestPassportNumber) {
+                throw new Error("Passport number is required");
+            }
         }
 
         // Verify property exists
@@ -154,47 +245,58 @@ export async function createBookingRequest(data: CreateBookingRequestParams) {
             throw new Error("Unit does not belong to the selected property!");
         }
 
-        // Create the booking requests
+        // Build the create data object
+        const createData: Parameters<typeof prisma.bookingRequest.create>[0]["data"] = {
+            requestedById: session.user.id,
+
+            // Guest - existing guest ID (null for new guests)
+            existingGuestId:
+                data.guestType === "existing" ? data.existingGuestId : null,
+
+            // Booking details (always required)
+            propertyId: data.propertyId,
+            unitId: data.unitId,
+            checkInDate: data.checkInDate,
+            checkOutDate: data.checkOutDate,
+            numberOfGuests: data.numberOfGuests,
+            priceDuration: data.priceDuration as PriceDuration,
+            unitPrice: data.unitPrice,
+            period: data.period,
+            discountRate: data.discountRate || null,
+            totalAmount: data.totalAmount,
+            paymentCode: data.paymentCode,
+            paymentMethod: data.paymentMethod,
+            purpose: data.purpose || null,
+            specialRequests: data.specialRequests || null,
+            status: "pending",
+        };
+
+        // Add guest details only for new guests
+        if (data.guestType === "new") {
+            createData.guestFirstName = data.guestFirstName;
+            createData.guestLastName = data.guestLastName;
+            createData.guestEmail = data.guestEmail;
+            createData.guestPhone = data.guestPhone;
+            createData.guestDateOfBirth = data.guestDateOfBirth;
+            createData.guestNationality = data.guestNationality;
+            createData.guestIdType = data.guestIdType;
+            createData.guestIdNumber = data.guestIdNumber || null;
+            createData.guestPassportNumber = data.guestPassportNumber || null;
+            createData.guestNotes = data.guestNotes || null;
+            createData.idDocumentFilename = data.idDocumentFilename;
+            createData.idDocumentOriginalName = data.idDocumentOriginalName;
+            createData.idDocumentMimeType = data.idDocumentMimeType;
+            createData.idDocumentFileSize = data.idDocumentFileSize;
+            createData.idDocumentUrl = data.idDocumentUrl;
+        }
+
+        // Create the booking request
         const bookingRequest = await prisma.bookingRequest.create({
-            data: {
-                requestedById: session.user.id,
-
-                guestFirstName: data.guestFirstName,
-                guestLastName: data.guestLastName,
-                guestEmail: data.guestEmail,
-                guestPhone: data.guestPhone,
-                guestDateOfBirth: data.guestDateOfBirth,
-                guestNationality: data.guestNationality,
-                guestIdType: data.guestIdType,
-                guestIdNumber: data.guestIdNumber || null,
-                guestPassportNumber: data.guestPassportNumber || null,
-                guestNotes: data.guestNotes || null,
-
-                idDocumentFilename: data.idDocumentFilename,
-                idDocumentOriginalName: data.idDocumentOriginalName,
-                idDocumentMimeType: data.idDocumentMimeType,
-                idDocumentFileSize: data.idDocumentFileSize,
-                idDocumentUrl: data.idDocumentUrl,
-
-                propertyId: data.propertyId,
-                unitId: data.unitId,
-                checkInDate: data.checkInDate,
-                checkOutDate: data.checkOutDate,
-                numberOfGuests: data.numberOfGuests,
-                priceDuration: data.priceDuration,
-                unitPrice: data.unitPrice,
-                period: data.period,
-                discountRate: data.discountRate || null,
-                totalAmount: data.totalAmount,
-                paymentCode: data.paymentCode,
-                paymentMethod: data.paymentMethod,
-                purpose: data.purpose || null,
-                specialRequests: data.specialRequests || null,
-                status: "pending"
-            },
+            data: createData,
             include: {
                 property: true,
                 unit: true,
+                existingGuest: true,
                 requestedBy: {
                     select: {
                         id: true,
@@ -203,17 +305,35 @@ export async function createBookingRequest(data: CreateBookingRequestParams) {
                     },
                 },
             },
-        })
+        });
 
         revalidatePath("/booking-requests");
 
-        // Notify admin of the request
+        // Get guest info for email notification
+        const guestFirstName =
+            data.guestType === "existing"
+                ? bookingRequest.existingGuest!.firstName
+                : data.guestFirstName!;
+        const guestLastName =
+            data.guestType === "existing"
+                ? bookingRequest.existingGuest!.lastName
+                : data.guestLastName!;
+        const guestEmail =
+            data.guestType === "existing"
+                ? bookingRequest.existingGuest!.email
+                : data.guestEmail!;
+        const guestPhone =
+            data.guestType === "existing"
+                ? bookingRequest.existingGuest!.phone
+                : data.guestPhone!;
+
+        // Notify admin of the request (fire and forget)
         notifyAdminsOfNewBookingRequest({
             requestId: bookingRequest.id,
-            guestFirstName: data.guestFirstName,
-            guestLastName: data.guestLastName,
-            guestEmail: data.guestEmail,
-            guestPhone: data.guestPhone,
+            guestFirstName,
+            guestLastName,
+            guestEmail,
+            guestPhone,
             propertyName: bookingRequest.property.name,
             unitName: unit.name,
             checkInDate: new Date(data.checkInDate),
@@ -222,15 +342,180 @@ export async function createBookingRequest(data: CreateBookingRequestParams) {
             period: data.period,
             totalAmount: data.totalAmount,
             requestedByName: session.user.name,
-        })
+        }).catch((error) => {
+            console.error("Failed to send booking request notifications:", error);
+        });
 
         return { success: true, bookingRequest };
-
     } catch (error) {
         console.error("Error creating booking request:", error);
         throw error;
     }
+}
 
+interface ApproveMediaData {
+    mediaUrl: string;
+    mediaFilename: string;
+    mediaOriginalName: string;
+    mediaMimeType: string;
+    mediaSize: number;
+}
+
+export async function approveBookingRequest(
+    id: number,
+    mediaData?: ApproveMediaData
+) {
+    try {
+        const session = await getServerSession();
+
+        if (!session?.user?.id) {
+            throw new Error("Unauthorized");
+        }
+
+        const userRole = session.user.role as Role;
+
+        if (!["user", "admin", "superAdmin"].includes(userRole)) {
+            throw new Error("Unauthorized: Insufficient permissions");
+        }
+
+        const bookingRequest = await prisma.bookingRequest.findUnique({
+            where: { id },
+            include: {
+                property: true,
+                unit: true,
+                existingGuest: true,
+            },
+        });
+
+        if (!bookingRequest) {
+            throw new Error("Booking request not found");
+        }
+
+        if (bookingRequest.status !== "pending") {
+            throw new Error("Only pending requests can be approved");
+        }
+
+        // Determine if this is an existing guest or new guest
+        const isExistingGuest = !!bookingRequest.existingGuestId;
+
+        // Create everything in a transaction
+        const result = await prisma.$transaction(async (tx) => {
+            let guestId: number;
+
+            if (isExistingGuest) {
+                // Use existing guest - no need to create guest or media
+                guestId = bookingRequest.existingGuestId!;
+            } else {
+                // Validate required fields for new guest
+                if (
+                    !bookingRequest.guestFirstName ||
+                    !bookingRequest.guestLastName ||
+                    !bookingRequest.guestEmail ||
+                    !bookingRequest.guestPhone ||
+                    !bookingRequest.guestDateOfBirth ||
+                    !bookingRequest.guestNationality
+                ) {
+                    throw new Error("Missing guest details for new guest request");
+                }
+
+                // Create new guest
+                const guest = await tx.guest.create({
+                    data: {
+                        firstName: bookingRequest.guestFirstName,
+                        lastName: bookingRequest.guestLastName,
+                        email: bookingRequest.guestEmail,
+                        phone: bookingRequest.guestPhone,
+                        dateOfBirth: bookingRequest.guestDateOfBirth,
+                        nationality: bookingRequest.guestNationality,
+                        idType: bookingRequest.guestIdType || "national_id",
+                        idNumber: bookingRequest.guestIdNumber,
+                        passportNumber: bookingRequest.guestPassportNumber,
+                        notes: bookingRequest.guestNotes,
+                        verificationStatus: "verified",
+                    },
+                });
+
+                guestId = guest.id;
+
+                // Create media record with moved file data (only for new guests)
+                if (mediaData) {
+                    await tx.media.create({
+                        data: {
+                            guestId: guest.id,
+                            filePath: mediaData.mediaUrl,
+                            filename: mediaData.mediaFilename,
+                            originalName: mediaData.mediaOriginalName,
+                            mimeType: mediaData.mediaMimeType,
+                            fileSize: mediaData.mediaSize,
+                        },
+                    });
+                }
+            }
+
+            // Create booking
+            const booking = await tx.booking.create({
+                data: {
+                    guestId,
+                    propertyId: bookingRequest.propertyId,
+                    unitId: bookingRequest.unitId,
+                    checkInDate: bookingRequest.checkInDate,
+                    checkOutDate: bookingRequest.checkOutDate,
+                    numberOfGuests: bookingRequest.numberOfGuests,
+                    priceDuration: bookingRequest.priceDuration,
+                    unitPrice: bookingRequest.unitPrice,
+                    period: bookingRequest.period,
+                    discountRate: bookingRequest.discountRate,
+                    totalAmount: bookingRequest.totalAmount,
+                    paymentCode: bookingRequest.paymentCode,
+                    paymentMethod: bookingRequest.paymentMethod,
+                    purpose: bookingRequest.purpose || "personal",
+                    specialRequests: bookingRequest.specialRequests,
+                    source: "agent_request",
+                    status: "reserved",
+                    requestedById: bookingRequest.requestedById,
+                    approvedById: session.user.id,
+                    approvedAt: new Date(),
+                },
+            });
+
+            // Update unit status
+            await tx.unit.update({
+                where: { id: bookingRequest.unitId },
+                data: { status: "reserved" },
+            });
+
+            // Update booking request status
+            await tx.bookingRequest.update({
+                where: { id },
+                data: {
+                    status: "approved",
+                    reviewedById: session.user.id,
+                    reviewedAt: new Date(),
+                },
+            });
+
+            // Increment property occupied count
+            await tx.property.update({
+                where: { id: bookingRequest.propertyId },
+                data: { occupied: { increment: 1 } },
+            });
+
+            return { guestId, booking };
+        });
+
+        revalidatePath("/booking-requests");
+        revalidatePath(`/booking-requests/${bookingRequest.id}`);
+
+        return {
+            success: true,
+            guestId: result.guestId,
+            bookingId: result.booking.id,
+            isExistingGuest,
+        };
+    } catch (error) {
+        console.error("Error approving booking request:", error);
+        throw error;
+    }
 }
 
 export async function getBookingRequests(params: GetBookingRequestsParams = {}) {
@@ -248,12 +533,7 @@ export async function getBookingRequests(params: GetBookingRequestsParams = {}) 
         const whereClause: {
             requestedById?: string;
             status?: "pending" | "approved" | "rejected" | "cancelled";
-            OR?: Array<{
-                guestFirstName?: { contains: string; mode: "insensitive" };
-                guestLastName?: { contains: string; mode: "insensitive" };
-                guestEmail?: { contains: string; mode: "insensitive" };
-                guestPhone?: { contains: string; mode: "insensitive" };
-            }>;
+            OR?: Array<Record<string, unknown>>;
         } = {};
 
         // Agents can only see their own requests
@@ -266,13 +546,35 @@ export async function getBookingRequests(params: GetBookingRequestsParams = {}) 
             whereClause.status = status;
         }
 
-        // Search filter
+        // Search filter - search both new guest fields and existing guest relation
         if (search) {
             whereClause.OR = [
+                // Search new guest fields
                 { guestFirstName: { contains: search, mode: "insensitive" } },
                 { guestLastName: { contains: search, mode: "insensitive" } },
                 { guestEmail: { contains: search, mode: "insensitive" } },
                 { guestPhone: { contains: search, mode: "insensitive" } },
+                // Search existing guest relation
+                {
+                    existingGuest: {
+                        firstName: { contains: search, mode: "insensitive" },
+                    },
+                },
+                {
+                    existingGuest: {
+                        lastName: { contains: search, mode: "insensitive" },
+                    },
+                },
+                {
+                    existingGuest: {
+                        email: { contains: search, mode: "insensitive" },
+                    },
+                },
+                {
+                    existingGuest: {
+                        phone: { contains: search, mode: "insensitive" },
+                    },
+                },
             ];
         }
 
@@ -311,6 +613,15 @@ export async function getBookingRequests(params: GetBookingRequestsParams = {}) 
                         id: true,
                         name: true,
                         email: true,
+                    },
+                },
+                existingGuest: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        phone: true,
                     },
                 },
             },
@@ -379,6 +690,20 @@ export async function getBookingRequestById(id: number) {
                         id: true,
                         name: true,
                         email: true,
+                    },
+                },
+                existingGuest: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        phone: true,
+                        dateOfBirth: true,
+                        nationality: true,
+                        idType: true,
+                        idNumber: true,
+                        passportNumber: true,
                     },
                 },
             },
@@ -621,139 +946,6 @@ export async function updateBookingRequest(data: UpdateBookingRequestParams) {
         return { success: true, bookingRequest: updatedRequest };
     } catch (error) {
         console.error("Error updating booking request:", error);
-        throw error;
-    }
-}
-
-export async function approveBookingRequest(id: number, mediaData: ApproveMediaData) {
-    try {
-        const session = await getServerSession();
-
-        if (!session?.user?.id) {
-            throw new Error("Unauthorized");
-        }
-
-        const userRole = session.user.role as Role
-
-        if (!["user", "admin", "superAdmin"].includes(userRole)) {
-            throw new Error("Unauthorized: Insufficient permissions");
-        }
-
-        const bookingRequest = await prisma.bookingRequest.findUnique({
-            where: { id },
-            include: {
-                property: true,
-                unit: true,
-            },
-        });
-
-        if (!bookingRequest) {
-            throw new Error("Booking request not found");
-        }
-
-        if (bookingRequest.status !== "pending") {
-            throw new Error("Only pending requests can be approved");
-        }
-
-        // Create everything in a transaction
-        const result = await prisma.$transaction(async (tx) => {
-            // 1. Create guest
-            const guest = await tx.guest.create({
-                data: {
-                    firstName: bookingRequest.guestFirstName,
-                    lastName: bookingRequest.guestLastName,
-                    email: bookingRequest.guestEmail,
-                    phone: bookingRequest.guestPhone,
-                    dateOfBirth: bookingRequest.guestDateOfBirth,
-                    nationality: bookingRequest.guestNationality,
-                    idType: bookingRequest.guestIdType,
-                    idNumber: bookingRequest.guestIdNumber,
-                    passportNumber: bookingRequest.guestPassportNumber,
-                    notes: bookingRequest.guestNotes,
-                    verificationStatus: "verified",
-                },
-            });
-
-            // 2. Create media record with moved file data
-            await tx.media.create({
-                data: {
-                    guestId: guest.id,
-                    filePath: mediaData.mediaUrl,
-                    filename: mediaData.mediaFilename,
-                    originalName: mediaData.mediaOriginalName,
-                    mimeType: mediaData.mediaMimeType,
-                    fileSize: mediaData.mediaSize,
-                },
-            });
-
-            // 3. Create booking
-            const booking = await tx.booking.create({
-                data: {
-                    guestId: guest.id,
-                    propertyId: bookingRequest.propertyId,
-                    unitId: bookingRequest.unitId,
-                    checkInDate: bookingRequest.checkInDate,
-                    checkOutDate: bookingRequest.checkOutDate,
-                    numberOfGuests: bookingRequest.numberOfGuests,
-                    priceDuration: bookingRequest.priceDuration,
-                    unitPrice: bookingRequest.unitPrice,
-                    period: bookingRequest.period,
-                    discountRate: bookingRequest.discountRate,
-                    totalAmount: bookingRequest.totalAmount,
-                    paymentCode: bookingRequest.paymentCode,
-                    paymentMethod: bookingRequest.paymentMethod,
-                    purpose: bookingRequest.purpose || "personal",
-                    specialRequests: bookingRequest.specialRequests,
-                    source: "agent_request",
-                    status: "reserved",
-                    requestedById: bookingRequest.requestedById,
-                    approvedById: session.user.id,
-                    approvedAt: new Date(),
-                },
-            });
-
-            // 4. Update unit status
-            await tx.unit.update({
-                where: { id: bookingRequest.unitId },
-                data: { status: "reserved" },
-            });
-
-            // 5. Update booking request status
-            await tx.bookingRequest.update({
-                where: { id },
-                data: {
-                    status: "approved",
-                    reviewedById: session.user.id,
-                    reviewedAt: new Date(),
-                },
-            });
-
-            // 6. Increment property occupied count
-            await tx.property.update({
-                where: {
-                    id: booking.propertyId,
-                },
-                data: {
-                    occupied: {
-                        increment: 1,
-                    },
-                },
-            });
-
-
-            return { guest, booking };
-        });
-
-        revalidatePath("/booking-requests");
-        revalidatePath(`/booking-requests/${bookingRequest.id}`)
-
-        return {
-            success: true,
-            guestId: result.guest.id,
-            bookingId: result.booking.id,
-        };
-    } catch (error) {
-        console.error("Error approving booking request:", error);
         throw error;
     }
 }

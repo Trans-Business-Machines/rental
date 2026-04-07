@@ -11,6 +11,7 @@ import {
   CalendarClock,
   CircleDashed,
   ClipboardPaste,
+  Plus,
 } from "lucide-react";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { Bookings } from "@/components/Bookings";
@@ -115,7 +116,19 @@ export default async function BookingsPage({
           </div>
 
           <div className="flex gap-3">
-            <BookingDialog />
+            {isAgent ? (
+              <Button asChild>
+                <Link
+                  href="/booking-requests/new"
+                  className="flex items-center gap-3"
+                >
+                  <Plus className="size-4 text-white" />
+                  <span className="text-white">New Booking Request</span>
+                </Link>
+              </Button>
+            ) : (
+              <BookingDialog />
+            )}
             <Button asChild className={cn(isAgent && "hidden")}>
               <Link href="/checkout" className="flex items-center gap-3">
                 <ClipboardPaste className="size-4 text-white" />

@@ -14,11 +14,12 @@ import type { UseMutationResult } from "@tanstack/react-query";
 
 interface ApproveRequestDialogProps {
   requestId: number;
-  guestId: number;
-  idDocumentFilename: string;
-  idDocumentOriginalName: string;
-  idDocumentMimeType: string;
-  idDocumentFileSize: number;
+  isExistingGuest: boolean;
+  guestId?: number;
+  idDocumentFilename?: string;
+  idDocumentOriginalName?: string;
+  idDocumentMimeType?: string;
+  idDocumentFileSize?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mutation: UseMutationResult<any, Error, any, unknown>;
@@ -26,6 +27,7 @@ interface ApproveRequestDialogProps {
 
 export function ApproveRequestDialog({
   requestId,
+  isExistingGuest,
   guestId,
   idDocumentFilename,
   idDocumentOriginalName,
@@ -38,6 +40,7 @@ export function ApproveRequestDialog({
   const handleApprove = async () => {
     await mutation.mutateAsync({
       id: requestId,
+      isExistingGuest,
       guestId,
       idDocumentFilename,
       idDocumentOriginalName,
@@ -59,9 +62,18 @@ export function ApproveRequestDialog({
             <AlertDialogTitle>Approve Booking Request</AlertDialogTitle>
           </div>
           <AlertDialogDescription className="p-4 border border-green-600 bg-green-600/10 text-green-600 rounded-lg">
-            This will create a new guest and booking from this request. The
-            guest&apos;s ID document will be moved to their profile and the
-            booking will be set to &quot;reserved&quot; status.
+            {isExistingGuest ? (
+              <>
+                This will create a booking for the existing guest. The booking
+                will be set to &quot;reserved&quot; status.
+              </>
+            ) : (
+              <>
+                This will create a new guest and booking from this request. The
+                guest&apos;s ID document will be moved to their profile and the
+                booking will be set to &quot;reserved&quot; status.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
 

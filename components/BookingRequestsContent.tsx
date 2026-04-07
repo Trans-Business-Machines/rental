@@ -229,10 +229,14 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
                         <div className="flex items-center gap-2">
                           <div>
                             <p className="font-medium">
-                              {request.guestFirstName} {request.guestLastName}
+                              {request.existingGuest
+                                ? `${request.existingGuest.firstName} ${request.existingGuest.lastName}`
+                                : `${request.guestFirstName} ${request.guestLastName}`}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {request.guestEmail}
+                              {request.existingGuest
+                                ? request.existingGuest.email
+                                : request.guestEmail}
                             </p>
                           </div>
                         </div>
@@ -254,7 +258,9 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
 
                       {/* Phone */}
                       <TableCell className="text-night">
-                        {request.guestPhone}
+                        {request.existingGuest
+                          ? request.existingGuest.phone
+                          : request.guestPhone}
                       </TableCell>
 
                       {/* Check-in */}
@@ -373,20 +379,18 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
 
       {/* Dialogs - Only render when selectedRequest exists */}
       {selectedRequest && (
-        <>
-          <CancelRequestDialog
-            requestId={selectedRequest.id}
-            idDocumentFilename={selectedRequest.idDocumentFilename}
-            open={cancelDialogOpen}
-            onOpenChange={(open) => {
-              if (!cancelMutation.isPending) {
-                setCancelDialogOpen(open);
-                if (!open) setSelectedRequest(null);
-              }
-            }}
-            mutation={cancelMutation}
-          />
-        </>
+        <CancelRequestDialog
+          requestId={selectedRequest.id}
+          idDocumentFilename={selectedRequest.idDocumentFilename ?? undefined}
+          open={cancelDialogOpen}
+          onOpenChange={(open) => {
+            if (!cancelMutation.isPending) {
+              setCancelDialogOpen(open);
+              if (!open) setSelectedRequest(null);
+            }
+          }}
+          mutation={cancelMutation}
+        />
       )}
     </section>
   );

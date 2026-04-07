@@ -2,9 +2,9 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { requirePermission } from "@/lib/check-permissions"
+import { requirePermission, getServerSession } from "@/lib/check-permissions"
 import { LIMIT } from "@/lib/utils"
-import type { GuestUpdateFormData, CreateNewGuest } from "@/lib/types/types"
+import type { GuestUpdateFormData, CreateNewGuest, GuestSearchResult, Role } from "@/lib/types/types"
 
 interface GetGuestsParams {
 	page?: number;
@@ -75,9 +75,9 @@ export async function getGuests({
 
 export async function getGuestById(id: number) {
 	return prisma.guest.findUnique({
-		where: { id, deletedAt: null }, 
+		where: { id, deletedAt: null },
 		include: {
-			media:true,
+			media: true,
 			bookings: {
 				select: {
 					id: true,
@@ -264,4 +264,69 @@ export async function getGuestStats() {
 			blacklisted: 0,
 		};
 	}
+}
+
+
+export async function searchGuestsForBooking(
+	query: string
+): Promise<GuestSearchResult[]> {
+	const session = await getServerSession();
+
+	if (!session?.user?.id) {
+		throw new Error("Unauthorized");
+	}
+
+	const userRole = session.user.role as Role
+	// Agents, admins, and superAdmins can search guests
+	if (!["agent", "admin", "superAdmin"].includes(userRole)) {
+		throw new Error("Unauthorized");
+	}
+
+	const guests = await prisma.guest.findMany({
+		where: {
+			deletedAt: null,
+			...(query.trim() && {
+				OR: [
+					{ firstName: { contains: query, mode: "insensitive" } },
+					{ lastName: { contains: query, mode: "insensitive" } },
+					{ email: { contains: query, mode: "insensitive" } },
+					{ phone: { contains: query } },
+				],
+			}),
+		},
+		select: {
+			id: true,
+			firstName: true,
+			lastName: true,
+			email: true,
+			phone: true,
+			bookings: {
+				where: {
+					status: { in: ["pending", "reserved", "checked_in"] },
+				},
+				select: {
+					status: true,
+					unit: {
+						select: { name: true },
+					},
+				},
+				take: 1,
+				orderBy: { createdAt: "desc" },
+			},
+		},
+		take: 20,
+		orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+	});
+
+	return guests.map((guest) => ({
+		id: guest.id,
+		firstName: guest.firstName,
+		lastName: guest.lastName,
+		email: guest.email,
+		phone: guest.phone,
+		activeBookingStatus:
+			(guest.bookings[0]?.status as "pending" | "reserved" | "checked_in") ||
+			null,
+		activeBookingUnit: guest.bookings[0]?.unit.name || null,
+	}));
 }
