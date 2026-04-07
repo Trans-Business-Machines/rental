@@ -2,17 +2,29 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { evaluateUnitStatus } from "@/lib/utils"
+import { evaluateUnitStatus, normalizeCheckOutTo10amEAT } from "@/lib/utils"
 import { requirePermission, getServerSession } from "@/lib/check-permissions"
 import { LIMIT } from "@/lib/utils"
-import type { BookingStatus, CreateBookingData, Role } from "@/lib/types/types"
 import { redirect } from "next/navigation";
+import type { BookingStatus, CreateBookingData, Role } from "@/lib/types/types"
 
 interface GetBookingsParams {
 	page?: number;
 	search?: string;
 	status?: string;
 	propertyId?: string;
+}
+
+interface UpdatedBookingData {
+	checkInDate?: Date;
+	checkOutDate?: Date;
+	numberOfGuests?: number;
+	totalAmount?: number;
+	paymentMethod?: string;
+	source?: string;
+	purpose?: string;
+	specialRequests?: string;
+	status: BookingStatus;
 }
 
 export async function getBookings({
@@ -203,11 +215,11 @@ export async function createBooking(booking: CreateBookingData) {
 		const isAgent = user.role === "agent";
 
 		// Prevent double booking: check if any booking exists for this property with checkInDate on the same day
-		const startOfDay = new Date(booking.checkInDate);
-		startOfDay.setHours(0, 0, 0, 0);
-
-		const endOfDay = new Date(booking.checkInDate);
-		endOfDay.setHours(23, 59, 59, 999);
+		const checkInUTC = new Date(booking.checkInDate);
+		const startOfDay = new Date(checkInUTC);
+		startOfDay.setUTCHours(-3, 0, 0, 0); // 00:00 EAT === 21:00 UTC previous day
+		const endOfDay = new Date(checkInUTC);
+		endOfDay.setUTCHours(20, 59, 59, 999); // 23:59 EAT
 
 		const existingBooking = await prisma.booking.findFirst({
 			where: {
@@ -232,6 +244,9 @@ export async function createBooking(booking: CreateBookingData) {
 		// Get the corresponding unit status based on booking status
 		const unitStatus = evaluateUnitStatus(booking.status);
 
+		// Se the checkout time to 10am
+		const checkOutAt10amEAT = normalizeCheckOutTo10amEAT(booking.checkOutDate);
+
 		// use a prisma transaction to create booking and then update unit status
 		const result = await prisma.$transaction(
 			async (tx) => {
@@ -247,7 +262,7 @@ export async function createBooking(booking: CreateBookingData) {
 						discountRate: booking.discountRate || null,
 						totalAmount: booking.totalAmount,
 						checkInDate: booking.checkInDate,
-						checkOutDate: booking.checkOutDate,
+						checkOutDate: checkOutAt10amEAT,
 						numberOfGuests: booking.numberOfGuests,
 						source: booking.source,
 						purpose: booking.purpose,
@@ -315,33 +330,45 @@ export async function createBooking(booking: CreateBookingData) {
 
 export async function updateBooking(
 	id: number,
-	data: {
-		checkInDate?: Date;
-		checkOutDate?: Date;
-		numberOfGuests?: number;
-		totalAmount?: number;
-		paymentMethod?: string;
-		source?: string;
-		purpose?: string;
-		specialRequests?: string;
-		status: BookingStatus;
-	}
+	data: UpdatedBookingData
 ) {
 	try {
+		// Confirm that the current session user has permission to update a booking
+		await requirePermission("booking", "update");
 
-		// Confirm that the current session user has permission to create a booking
-		await requirePermission("booking", "update")
+		// Fetch existing booking so we can detect real status transitions
+		const existing = await prisma.booking.findUnique({
+			where: { id },
+			select: { status: true, propertyId: true },
+		});
 
-		//  Get the corresponding unit status based on booking status
-		const unitStatus = evaluateUnitStatus(data.status)
+		if (!existing) {
+			throw new Error("Booking not found");
+		}
 
-		// we use a prisma transaction to ensure atomicity and data consistency
+		// Get the corresponding unit status based on the new booking status
+		const unitStatus = evaluateUnitStatus(data.status);
+
+		// Build the update payload
+		const updatedBookingData = {
+			...data,
+			...(data.checkOutDate && {
+				checkOutDate: normalizeCheckOutTo10amEAT(data.checkOutDate),
+			}),
+			...(data.status === "checked_in" && { checkInDate: new Date() }),
+		};
+
+		// Only increment occupied on an actual transition into checked_in
+		const isCheckingInNow =
+			data.status === "checked_in" && existing.status !== "checked_in";
+
+		// Use a prisma transaction to ensure atomicity and data consistency
 		const result = await prisma.$transaction(
 			async (tx) => {
 				// update booking
 				const booking = await tx.booking.update({
 					where: { id },
-					data,
+					data: updatedBookingData,
 					include: {
 						guest: true,
 						property: true,
@@ -353,36 +380,31 @@ export async function updateBooking(
 				const unit = await tx.unit.update({
 					where: {
 						id: booking.unit.id,
-						propertyId: booking.property.id
+						propertyId: booking.property.id,
 					},
 					data: {
-						status: unitStatus
-					}
-				})
+						status: unitStatus,
+					},
+				});
 
-				// increment property occupied count
-				if (booking.status === "checked_in") {
+				// increment property occupied count only on real transition
+				if (isCheckingInNow) {
 					await tx.property.update({
-						where: {
-							id: booking.propertyId
-						},
+						where: { id: booking.propertyId },
 						data: {
 							occupied: {
-								increment: 1
-							}
-						}
-
-					})
+								increment: 1,
+							},
+						},
+					});
 				}
 
-				return {
-					booking,
-					unit
-				}
+				return { booking, unit };
+			},
+			{ timeout: 6000, maxWait: 3000, isolationLevel: "ReadCommitted" }
+		);
 
-			}, { timeout: 10000, maxWait: 3000, isolationLevel: "ReadCommitted" })
-
-		revalidateTag("unit")
+		revalidateTag("unit");
 		revalidatePath("/bookings");
 		revalidatePath("/dashboard");
 		return result;

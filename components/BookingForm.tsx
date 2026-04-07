@@ -50,8 +50,8 @@ export function BookingForm({
     queryFn: () => getBookingFormData(),
   });
 
-  // Get today's date
-  const today = new Date().toISOString().split("T")[0];
+  // Get current date time
+  const now = format(new Date(), "yyyy-MM-dd'T'HH:mm");
 
   // Get user role
   const { isAgent } = usePermissions();
@@ -80,7 +80,7 @@ export function BookingForm({
       guestId: "",
       propertyId: preselectedPropertyId?.toString() || "",
       unitId: preselectedUnitId?.toString() || "",
-      checkInDate: today,
+      checkInDate: now,
       checkOutDate: "",
       numberOfGuests: 1,
       priceDuration: "one_night",
@@ -214,8 +214,8 @@ export function BookingForm({
   const handlePropertyChange = (value: string) => {
     setValue("propertyId", value);
     setValue("unitId", "");
-    setValue("numberOfGuests", 0);
-    setValue("checkInDate", today);
+    setValue("numberOfGuests", 1);
+    setValue("checkInDate", now);
     setValue("checkOutDate", "");
     setValue("paymentMethod", "");
     setValue("priceDuration", undefined as unknown as PriceDuration);
@@ -229,8 +229,8 @@ export function BookingForm({
   // Update unit on change and reset dependent fields
   const handleUnitChange = (value: string) => {
     setValue("unitId", value);
-    setValue("numberOfGuests", 0);
-    setValue("checkInDate", today);
+    setValue("numberOfGuests", 1);
+    setValue("checkInDate", now);
     setValue("checkOutDate", "");
     setValue("paymentMethod", "");
     setValue("priceDuration", undefined as unknown as PriceDuration);
@@ -451,11 +451,11 @@ export function BookingForm({
         {isPricingSelected && (
           <article className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="checkInDate">Check-in Date</Label>
+              <Label htmlFor="checkInDate">Check-in Date & Time</Label>
               <Input
                 id="checkInDate"
-                type="date"
-                min={today}
+                type="datetime-local"
+                min={now}
                 disabled={selectedPricing?.duration === "custom"}
                 className={cn(
                   errors.checkInDate && "border border-red-400",

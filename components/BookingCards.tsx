@@ -88,7 +88,8 @@ function BookingCards({
                       <DropdownMenuItem
                         disabled={
                           booking.status === "cancelled" ||
-                          booking.status === "checked_out"
+                          booking.status === "checked_out" ||
+                          booking.status === "checked_in"
                         }
                         onClick={() => {
                           setEditBooking(booking);

@@ -189,7 +189,6 @@ export function hasDiscount(discountRate: number | null | undefined): boolean {
 }
 
 // ================= FORMAT UTILITIES =================
-
 export function formatPrice(price: number): string {
   return new Intl.NumberFormat("en-KE", {
     style: "currency",
@@ -215,14 +214,20 @@ export const formatDateInTimezone = (
     timeZone: TIMEZONE,
     year: "numeric",
     month: "long",
-    day: "numeric",
-    hour: "numeric",
+    day: "2-digit",
+    hour: "2-digit",
     minute: "2-digit",
     hour12: true,
   }
 
   return new Intl.DateTimeFormat("en-KE", options || defaultOptions).format(new Date(date))
 
+}
+
+export function normalizeCheckOutTo10amEAT(date: Date | string): Date {
+  const d = new Date(date);
+  d.setUTCHours(7, 0, 0, 0); 
+  return d;
 }
 
 export const formatFileSize = (bytes: number) => {

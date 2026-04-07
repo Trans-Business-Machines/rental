@@ -4,7 +4,13 @@ export const BookingFormSchema = z.object({
     guestId: z.string().min(1, "Guest is required"),
     propertyId: z.string().min(1, "Property is required"),
     unitId: z.string().min(1, "Unit is required"),
-    checkInDate: z.string().min(1, "Check-in date is required"),
+    checkInDate: z
+        .string()
+        .min(1, "Check-in date is required")
+        .regex(
+            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
+            "Invalid check-in date format",
+        ),
     checkOutDate: z.string().min(1, "Check-out date is required"),
     numberOfGuests: z
         .number()
