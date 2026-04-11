@@ -50,7 +50,6 @@ export function GuestEditDialog({
     dateOfBirth: guest.dateOfBirth || "",
     address: guest.address || "",
     city: guest.city || "",
-    country: guest.country || "",
     occupation: guest.occupation || "",
     employer: guest.employer || "",
     emergencyContactName: guest.emergencyContactName || "",
@@ -242,23 +241,13 @@ export function GuestEditDialog({
                   onChange={handleChange}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="city">City</Label>
                 <Input
                   id="city"
                   name="city"
                   value={formData.city}
                   placeholder="e.g Nairobi"
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  name="country"
-                  placeholder="e.g Kenya"
-                  value={formData.country}
                   onChange={handleChange}
                 />
               </div>

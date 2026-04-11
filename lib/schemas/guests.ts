@@ -2,7 +2,7 @@ import z from "zod";
 import { differenceInYears } from "date-fns";
 
 const nameRegex = /^[A-Za-z]+$/;
-const phoneRegex = /^\+?[0-9]\d{1,14}$/;
+const phoneRegex = /^\+?(?=(?:\D*\d){7,15}\D*$)[\d\s\-]+$/;
 
 // Helper function to validate age
 const isAtLeast18 = (dateString: string): boolean => {
@@ -33,17 +33,22 @@ export const GuestSchema = z.discriminatedUnion("idType", [
         lastName: z
             .string()
             .min(3, "At least 3 characters are required.")
-            .regex(nameRegex, "Only letters are allowed")
+            .regex(nameRegex, "Only letters are allowed.")
             .max(20, "At most 20 characters."),
         email: z.string().email("Please enter a valid email address."),
-        phone: z.string().regex(phoneRegex, "Invalid phone number."),
+        phone: z
+            .string()
+            .regex(
+                phoneRegex,
+                "Enter a valid phone number (7–15 digits). Only digits, spaces, hyphens, and a leading + are allowed."
+            ),
         nationality: z.string().min(1, "Nationality is required."),
         idType: z.literal("national_id"),
         dateOfBirth: dateOfBirthSchema,
         idNumber: z
             .string()
             .min(8, "At least 8 characters are required.")
-            .max(10, "At most 10 characters"),
+            .max(10, "At most 10 characters."),
         passportNumber: z.string().optional(),
         idDocument: z
             .object({
@@ -72,15 +77,16 @@ export const GuestSchema = z.discriminatedUnion("idType", [
             .string()
             .regex(
                 phoneRegex,
-                "Only digits, plus (+), dash (-), and spaces are allowed."
-            )
-            .min(10, "At least 10 digits.")
-            .max(15, "At most 15 digits"),
+                "Enter a valid phone number (7–15 digits). Only digits, spaces, hyphens, and a leading + are allowed."
+            ),
         dateOfBirth: dateOfBirthSchema,
         nationality: z.string().min(1, "Nationality is required."),
         idType: z.literal("passport"),
         idNumber: z.string().optional(),
-        passportNumber: z.string().length(9, "Passport should have 9 characters."),
+        passportNumber: z
+            .string()
+            .min(8, "Passport number must be at least 8 characters.")
+            .max(12, "Passport number must be at most 12 characters."),
         idDocument: z
             .object({
                 filename: z.string(),

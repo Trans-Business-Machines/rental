@@ -38,6 +38,7 @@ export type PriceDuration = "one_night" | "weekly" | "monthly" | "custom"
 export type BadgeVariant = "dashboard" | "listing" | "details";
 
 export type Role = "user" | "admin" | "superAdmin" | "agent"
+export type VerificationStatus = "pending" | "verified" | "rejected"
 
 
 interface IdDocumentData {
@@ -60,6 +61,7 @@ export type CreateNewGuest = {
     passportNumber?: string | undefined;
     notes?: string | undefined;
     idDocument?: IdDocumentData;
+    registeredBy?: string;
 } | {
     idType: "passport";
     firstName: string;
@@ -72,6 +74,7 @@ export type CreateNewGuest = {
     idNumber?: string | undefined;
     notes?: string | undefined;
     idDocument?: IdDocumentData;
+    registeredBy?: string;
 }
 
 export type GroupedAssigments = {
@@ -193,7 +196,7 @@ export interface GuestUpdateFormData {
     emergencyContactName?: string;
     emergencyContactPhone?: string;
     emergencyContactRelation?: string;
-    verificationStatus: string;
+    verificationStatus: VerificationStatus;
 }
 
 export interface Invitation {
@@ -388,44 +391,44 @@ export interface UpdateBookingRequestParams {
 export type BookingRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
 
 export interface BookingRequestListItem {
-  id: number;
-  // For existing guests
-  existingGuestId: number | null;
-  existingGuest: {
     id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-  } | null;
-  // For new guests (optional when existingGuestId is set)
-  guestFirstName: string | null;
-  guestLastName: string | null;
-  guestEmail: string | null;
-  guestPhone: string | null;
-  status: BookingRequestStatus;
-  checkInDate: Date;
-  checkOutDate: Date;
-  totalAmount: number;
-  createdAt: Date;
-  // ID document fields (optional - only for new guests)
-  idDocumentFilename: string | null;
-  idDocumentOriginalName: string | null;
-  idDocumentMimeType: string | null;
-  idDocumentFileSize: number | null;
-  idDocumentUrl: string | null;
-  property: {
-    id: number;
-    name: string;
-  };
-  unit: {
-    id: number;
-    name: string;
-  };
-  requestedBy: {
-    id: string;
-    name: string;
-  };
+    // For existing guests
+    existingGuestId: number | null;
+    existingGuest: {
+        id: number;
+        firstName: string;
+        lastName: string;
+        email: string;
+        phone: string;
+    } | null;
+    // For new guests (optional when existingGuestId is set)
+    guestFirstName: string | null;
+    guestLastName: string | null;
+    guestEmail: string | null;
+    guestPhone: string | null;
+    status: BookingRequestStatus;
+    checkInDate: Date;
+    checkOutDate: Date;
+    totalAmount: number;
+    createdAt: Date;
+    // ID document fields (optional - only for new guests)
+    idDocumentFilename: string | null;
+    idDocumentOriginalName: string | null;
+    idDocumentMimeType: string | null;
+    idDocumentFileSize: number | null;
+    idDocumentUrl: string | null;
+    property: {
+        id: number;
+        name: string;
+    };
+    unit: {
+        id: number;
+        name: string;
+    };
+    requestedBy: {
+        id: string;
+        name: string;
+    };
 }
 
 export interface ApproveMediaData {

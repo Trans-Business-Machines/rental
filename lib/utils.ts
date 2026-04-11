@@ -6,6 +6,7 @@ import type { BookingStatus, UnitStatus, Guest, InventoryItem, PriceDuration } f
 
 export const LIMIT = 9;
 const TIMEZONE = "Africa/Nairobi";
+export const BUCKET = "media_dev"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -226,7 +227,7 @@ export const formatDateInTimezone = (
 
 export function normalizeCheckOutTo10amEAT(date: Date | string): Date {
   const d = new Date(date);
-  d.setUTCHours(7, 0, 0, 0); 
+  d.setUTCHours(7, 0, 0, 0);
   return d;
 }
 

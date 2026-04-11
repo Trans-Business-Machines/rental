@@ -129,18 +129,21 @@ export default function GuestsPage() {
       value: guestStats?.total || 0,
       icon: Users,
       color: "blue",
-    },
-    {
-      title: "Verified Guests",
-      value: guestStats?.verified || 0,
-      icon: UserCheck,
-      color: "green",
+      subtitle: " ",
     },
     {
       title: "Pending",
       value: guestStats?.pending || 0,
       icon: Clock,
       color: "orange",
+      subtitle: " ",
+    },
+    {
+      title: "Verified Guests",
+      value: guestStats?.verified || 0,
+      icon: UserCheck,
+      color: "green",
+      subtitle: " ",
     },
   ];
 
@@ -249,7 +252,7 @@ export default function GuestsPage() {
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="verified">Verified</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
-              {/*  <SelectItem value="blacklisted">Blacklisted</SelectItem> */}
+              <SelectItem value="rejected">Rejected</SelectItem>
             </SelectContent>
           </Select>
         </div>

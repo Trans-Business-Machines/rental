@@ -1,10 +1,12 @@
 import imageCompression from "browser-image-compression";
 import { createClient } from "@supabase/supabase-js";
+import { BUCKET } from "@/lib/utils"
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
 
 export interface UploadResult {
     url: string;
@@ -128,7 +130,7 @@ export class ClientMediaService {
     ): Promise<string> {
         const filePath = folder ? `${folder}/${filename}` : filename;
 
-        const { error } = await supabase.storage.from("media").upload(filePath, file, {
+        const { error } = await supabase.storage.from(BUCKET).upload(filePath, file, {
             contentType: file.type,
             cacheControl: "3600",
             upsert: false,
@@ -139,7 +141,7 @@ export class ClientMediaService {
         }
 
         const { data: urlData } = supabase.storage
-            .from("media")
+            .from(BUCKET)
             .getPublicUrl(filePath);
 
         return urlData.publicUrl;
@@ -216,7 +218,7 @@ export class ClientMediaService {
     static async deleteFromSupabase(filenames: string[]): Promise<void> {
         if (filenames.length === 0) return;
 
-        const { error } = await supabase.storage.from("media").remove(filenames);
+        const { error } = await supabase.storage.from(BUCKET).remove(filenames);
 
         if (error) {
             console.error("Failed to delete files from Supabase:", error);
@@ -227,7 +229,7 @@ export class ClientMediaService {
     static async deleteGuestDocument(filename: string): Promise<void> {
         const filePath = `guest-documents/${filename}`;
 
-        const { error } = await supabase.storage.from("media").remove([filePath]);
+        const { error } = await supabase.storage.from(BUCKET).remove([filePath]);
 
         if (error) {
             console.error("Failed to delete guest document:", error);
@@ -235,7 +237,7 @@ export class ClientMediaService {
     }
 }
 
-/* Upload booking request ID document (single file) */
+
 export async function uploadBookingRequestDocument(file: File) {
     try {
         // Step 1: Validate the document
@@ -254,7 +256,7 @@ export async function uploadBookingRequestDocument(file: File) {
 
         // Step 4: Upload to Supabase in booking-requests folder 
         const { error: uploadError, } = await supabase.storage
-            .from("media")
+            .from(BUCKET)
             .upload(filePath, processedFile, {
                 contentType: processedFile.type,
                 cacheControl: "3600",
@@ -268,7 +270,7 @@ export async function uploadBookingRequestDocument(file: File) {
 
         // Step 5. Get the public URL
         const { data: urlData } = supabase.storage
-            .from("media")
+            .from(BUCKET)
             .getPublicUrl(filePath);
 
         return {
@@ -305,7 +307,7 @@ export async function moveBookingRequestDocument(
 
         // Download the file
         const { data: fileData, error: downloadError } = await supabase.storage
-            .from("media")
+            .from(BUCKET)
             .download(oldPath);
 
         if (downloadError || !fileData) {
@@ -318,7 +320,7 @@ export async function moveBookingRequestDocument(
 
         // Upload to new location
         const { error: uploadError } = await supabase.storage
-            .from("media")
+            .from(BUCKET)
             .upload(newPath, fileData, {
                 cacheControl: "3600",
                 upsert: false,
@@ -334,7 +336,7 @@ export async function moveBookingRequestDocument(
 
         // Delete old file
         const { error: deleteError } = await supabase.storage
-            .from("media")
+            .from(BUCKET)
             .remove([oldPath]);
 
         if (deleteError) {
@@ -343,7 +345,7 @@ export async function moveBookingRequestDocument(
 
         // Get new public URL
         const { data: urlData } = supabase.storage
-            .from("media")
+            .from(BUCKET)
             .getPublicUrl(newPath);
 
         return {
@@ -366,7 +368,7 @@ export async function deleteBookingRequestDocument(filename: string) {
         const filePath = `booking-requests/${filename}`;
 
         const { error } = await supabase.storage
-            .from("media")
+            .from(BUCKET)
             .remove([filePath]);
 
         if (error) {

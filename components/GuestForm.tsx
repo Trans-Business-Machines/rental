@@ -15,7 +15,7 @@ import {
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
-import { Loader, Upload, X, FileText, Image as ImageIcon } from "lucide-react";
+import { Loader, Upload, X } from "lucide-react";
 import {
   GuestSchema,
   type NewGuest,
@@ -25,14 +25,20 @@ import {
 interface GuestFormProps {
   onSuccess: () => void;
   onCancel: () => void;
+  userId: string;
 }
 
-export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
+export function GuestForm({
+  onCancel,
+  onSuccess: closeModal,
+  userId,
+}: GuestFormProps) {
   const createGuestMutation = useCreateGuest();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State for file upload
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -69,11 +75,19 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
     }
 
     setSelectedFile(file);
+
+    // Generate image preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFilePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   // Remove selected file
   const removeFile = () => {
     setSelectedFile(null);
+    setFilePreview(null);
     setUploadError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -82,20 +96,17 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
 
   // Submit handler
   const onSubmit: SubmitHandler<NewGuest> = async (values) => {
-    // Explicitly type as UploadResult | null
     let uploadedDocument: UploadResult | null = null;
-    // Store filename separately for cleanup
     let uploadedFilename: string | null = null;
 
     try {
-      // Upload file if selected
       if (selectedFile) {
         setIsUploading(true);
         try {
           const result =
             await ClientMediaService.uploadGuestDocument(selectedFile);
           uploadedDocument = result;
-          uploadedFilename = result.filename; // Store filename for cleanup
+          uploadedFilename = result.filename;
         } catch (error) {
           setUploadError(
             error instanceof Error ? error.message : "Upload failed",
@@ -106,9 +117,13 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
         setIsUploading(false);
       }
 
-      // Create guest with ID document
-      await createGuestMutation.mutateAsync({
+      const guestData = {
         ...values,
+        registeredById: userId,
+      };
+
+      await createGuestMutation.mutateAsync({
+        ...guestData,
         idDocument: uploadedDocument
           ? {
               filename: uploadedDocument.filename,
@@ -124,7 +139,6 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
       removeFile();
       closeModal();
     } catch (error) {
-      // Cleanup uploaded file if guest creation fails
       if (uploadedFilename) {
         try {
           await ClientMediaService.deleteGuestDocument(uploadedFilename);
@@ -135,6 +149,7 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
       console.error("Error creating guest:", error);
     }
   };
+
   const isSubmitting = createGuestMutation.isPending || isUploading;
 
   return (
@@ -264,56 +279,57 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
           {idType === "national_id" ? "National ID" : "Passport"} Image
         </Label>
 
-        {!selectedFile ? (
+        {!filePreview ? (
           <div
             onClick={() => fileInputRef.current?.click()}
             className={cn(
-              "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors",
-              "hover:border-primary hover:bg-muted/50",
+              "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
+              "hover:border-primary/50",
+              !selectedFile && "border-muted-foreground/25",
               uploadError && "border-red-400",
             )}
           >
-            <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">
-              Click to upload ID document
-            </p>
+            <Upload className="mx-auto size-8 text-muted-foreground mb-2" />
+            <p className="text-sm font-medium">Click to upload ID document</p>
             <p className="text-xs text-muted-foreground mt-1">
-              JPG, PNG, WebP (max 5MB)
+              JPEG, PNG, WebP, or AVIF (max 5MB)
             </p>
           </div>
         ) : (
-          <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
-            <div className="flex items-center gap-3">
-              {selectedFile.type.startsWith("image/") ? (
-                <ImageIcon className="h-8 w-8 text-blue-500" />
-              ) : (
-                <FileText className="h-8 w-8 text-red-500" />
-              )}
-              <div>
+          <div className="relative border rounded-lg p-4">
+            <div className="flex items-start gap-4">
+              <img
+                src={filePreview}
+                alt="ID Document Preview"
+                className="w-32 h-20 object-cover rounded"
+              />
+              <div className="flex-1">
                 <p className="text-sm font-medium truncate max-w-[200px]">
-                  {selectedFile.name}
+                  {selectedFile?.name}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {(selectedFile.size / 1024).toFixed(1)} KB
+                  {selectedFile &&
+                    `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`}
                 </p>
               </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:text-destructive"
+                onClick={removeFile}
+                disabled={isSubmitting}
+              >
+                <X className="size-4" />
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={removeFile}
-              disabled={isSubmitting}
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
         )}
 
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp, image/avif, image/jpg"
+          accept="image/jpeg,image/png,image/webp,image/avif"
           onChange={handleFileSelect}
           className="hidden"
         />
@@ -379,7 +395,9 @@ export function GuestForm({ onCancel, onSuccess: closeModal }: GuestFormProps) {
           {isSubmitting ? (
             <span className="flex items-center gap-2">
               <Loader className="animate-spin h-4 w-4" />
-              <span>{isUploading ? "Uploading image..." : "Creating guest..."}</span>
+              <span>
+                {isUploading ? "Uploading image..." : "Creating guest..."}
+              </span>
             </span>
           ) : (
             "Create Guest"

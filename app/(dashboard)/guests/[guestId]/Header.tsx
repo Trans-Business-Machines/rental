@@ -63,7 +63,7 @@ function Header({ guest }: { guest: Guest }) {
           variant="destructive"
           disabled={shouldDisableDelete(guest) || isArchivePending}
           onClick={() => handleClick(guest.id)}
-          className="bg-orange-500 hover:bg-orange-600 flex items-center gap-2 cursor-pointer"
+          className="bg-lipstick-red hover:bg-crimson-red flex items-center gap-2 cursor-pointer"
         >
           <Archive className="size-4" />
           <span> Archive Guest</span>

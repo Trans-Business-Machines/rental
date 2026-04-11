@@ -4,7 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { requirePermission, getServerSession } from "@/lib/check-permissions"
 import { LIMIT } from "@/lib/utils"
-import type { GuestUpdateFormData, CreateNewGuest, GuestSearchResult, Role } from "@/lib/types/types"
+import type {
+	GuestUpdateFormData,
+	CreateNewGuest,
+	GuestSearchResult,
+	Role,
+	VerificationStatus
+} from "@/lib/types/types"
 
 interface GetGuestsParams {
 	page?: number;
@@ -17,6 +23,7 @@ export async function getGuests({
 	search = "",
 	status = "all",
 }: GetGuestsParams = {}) {
+
 	const where = {
 		// Exclude soft-deleted guests
 		deletedAt: null,
@@ -33,7 +40,7 @@ export async function getGuests({
 
 		// Status filter (verified, pending, blacklisted)
 		...(status !== "all" && {
-			verificationStatus: status,
+			verificationStatus: status as VerificationStatus,
 		}),
 	};
 
@@ -52,7 +59,10 @@ export async function getGuests({
 					take: 1,
 				},
 			},
-			orderBy: { createdAt: "desc" },
+			orderBy: [
+				{ verificationStatus: "asc" },
+				{ createdAt: "desc" },
+			],
 			take: LIMIT,
 			skip: (page - 1) * LIMIT,
 		}),
@@ -87,6 +97,11 @@ export async function getGuestById(id: number) {
 					createdAt: "desc"
 				},
 				take: 1
+			},
+			registeredBy: {
+				select: {
+					name: true
+				}
 			}
 		},
 	});
@@ -113,12 +128,18 @@ export async function createGuest(data: CreateNewGuest) {
 	// Confirm that the current session user has permission to create a guest
 	await requirePermission("guest", "create");
 
-	const { idDocument, ...guestData } = data;
+	const { idDocument, registeredBy, ...guestData } = data;
 
 	// Create guest with optional ID document in a transaction
 	const guest = await prisma.guest.create({
 		data: {
 			...guestData,
+			// Connect registeredBy to existing User if provided
+			...(registeredBy && {
+				registeredBy: {
+					connect: { id: registeredBy },
+				},
+			}),
 			// Create media record if ID document was uploaded
 			...(idDocument && {
 				media: {
@@ -265,7 +286,6 @@ export async function getGuestStats() {
 		};
 	}
 }
-
 
 export async function searchGuestsForBooking(
 	query: string
