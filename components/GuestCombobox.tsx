@@ -13,19 +13,23 @@ import {
   CommandList,
 } from "./ui/command";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
-import type { BookingStatus } from "@/lib/types/types";
+import type { BookingStatus, BookingRequestStatus } from "@/lib/types/types";
 
 interface Guest {
   isCheckedIn: boolean;
   id: number;
   email: string;
+  firstName: string;
+  lastName: string;
   bookings: {
     id: number;
     status: BookingStatus;
-    unitPrice: number
+    unitPrice: number;
   }[];
-  firstName: string;
-  lastName: string;
+  bookingRequests: {
+    id: number;
+    status: BookingRequestStatus;
+  }[];
 }
 
 interface GuestComboboxProps {
@@ -36,6 +40,25 @@ interface GuestComboboxProps {
   disabled?: boolean;
 }
 
+// Get display status for occupied guest
+const getGuestStatus = (guest: Guest): string => {
+  // Check active bookings first (takes priority)
+  if (guest.bookings.length > 0) {
+    const bookingStatus = guest.bookings[0].status;
+    return bookingStatus === "pending"
+      ? "booked"
+      : bookingStatus.replace("_", " ");
+  }
+
+  // Check booking requests
+  if (guest.bookingRequests.length > 0) {
+    const requestStatus = guest.bookingRequests[0].status;
+    return requestStatus === "approved" ? "reserved" : "pending request";
+  }
+
+  return "";
+};
+
 function GuestCombobox({
   guests,
   value,
@@ -43,10 +66,8 @@ function GuestCombobox({
   disabled,
   error,
 }: GuestComboboxProps) {
-  // Define state to track popover open state
   const [open, setOpen] = useState(false);
 
-  // Find the selected guestu
   const selectedGuest = guests.find((guest) => guest.id.toString() === value);
 
   return (
@@ -61,7 +82,7 @@ function GuestCombobox({
             className={cn(
               "w-full justify-between cursor-pointer",
               !value && "text-muted-foreground",
-              error && "border-red-400"
+              error && "border-red-400",
             )}
           >
             {selectedGuest ? (
@@ -71,7 +92,7 @@ function GuestCombobox({
             ) : (
               "Select guest..."
             )}
-            <ChevronsUpDown className="ml-2 size-4  shrink-0 opacity-50" />
+            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent
@@ -89,15 +110,9 @@ function GuestCombobox({
                 {guests.map((guest) => {
                   const guestId = guest.id.toString();
                   const fullName = `${guest.firstName} ${guest.lastName}`;
-                  let guestStatus = "";
-
-                  if (guest.isCheckedIn) {
-                    const bookingStatus = guest.bookings[0].status;
-                    guestStatus =
-                      bookingStatus === "pending"
-                        ? "booked"
-                        : bookingStatus.replace("_", " ");
-                  }
+                  const guestStatus = guest.isCheckedIn
+                    ? getGuestStatus(guest)
+                    : "";
 
                   return (
                     <CommandItem
@@ -120,7 +135,7 @@ function GuestCombobox({
                         <div className="flex-1">
                           <p className="font-medium flex gap-4 items-center">
                             <span>{fullName}</span>
-                            {guest.isCheckedIn && (
+                            {guest.isCheckedIn && guestStatus && (
                               <span className="text-sm text-muted-foreground capitalize">
                                 ({guestStatus})
                               </span>
@@ -133,7 +148,7 @@ function GuestCombobox({
                         <Check
                           className={cn(
                             "ml-2 size-4",
-                            value === guestId ? "opacity-100" : "opacity-0"
+                            value === guestId ? "opacity-100" : "opacity-0",
                           )}
                         />
                       </div>

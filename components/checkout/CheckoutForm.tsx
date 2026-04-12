@@ -18,6 +18,7 @@ import type {
   BookingsForCheckout,
   InventoryAssignmentForUnit,
 } from "@/lib/types/types";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CheckoutFormProps {
   bookings: BookingsForCheckout;
@@ -31,6 +32,7 @@ export function CheckoutForm({
   bookingId,
 }: CheckoutFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { currentUser } = usePermissions();
@@ -159,6 +161,17 @@ export function CheckoutForm({
       await createCheckoutReport(checkoutData);
 
       toast.success("Checkout completed successfully!");
+
+      // Invalidate the necessary Queries
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["booking-request-form-data"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["guests", "search"],
+        }),
+      ]);
+
       router.push("/bookings");
     } catch (error) {
       let errMsg = "Failed to complete checkout. Please try again.";

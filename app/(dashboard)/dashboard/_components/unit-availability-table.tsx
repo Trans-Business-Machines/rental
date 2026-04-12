@@ -200,12 +200,6 @@ export function UnitAvailabilityTable({
                     Status
                   </TableHead>
                   <TableHead className="font-semibold text-foreground">
-                    Current Guest
-                  </TableHead>
-                  <TableHead className="font-semibold text-foreground">
-                    Checkout Date
-                  </TableHead>
-                  <TableHead className="font-semibold text-foreground">
                     Actions
                   </TableHead>
                 </TableRow>
@@ -217,23 +211,6 @@ export function UnitAvailabilityTable({
                     <TableCell>{unit.property}</TableCell>
                     <TableCell className="capitalize">{unit.type}</TableCell>
                     <TableCell>{getStatusBadge(unit.status)}</TableCell>
-                    <TableCell>{unit.guest || "-"}</TableCell>
-                    <TableCell>
-                      {unit.checkOut ? (
-                        <span
-                          className={
-                            unit.isOverstayed
-                              ? "text-red-600 font-medium"
-                              : "text-sm"
-                          }
-                        >
-                          {unit.checkOut}
-                          {unit.isOverstayed && " (Overstayed)"}
-                        </span>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <UnitViewDialog unit={unit}>

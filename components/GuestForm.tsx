@@ -138,7 +138,7 @@ export function GuestForm({
       reset();
       removeFile();
       closeModal();
-    } catch (error) {
+    } catch {
       if (uploadedFilename) {
         try {
           await ClientMediaService.deleteGuestDocument(uploadedFilename);
@@ -146,7 +146,6 @@ export function GuestForm({
           console.error("Failed to cleanup uploaded document:", cleanupError);
         }
       }
-      console.error("Error creating guest:", error);
     }
   };
 

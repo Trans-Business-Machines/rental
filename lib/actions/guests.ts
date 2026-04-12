@@ -7,7 +7,6 @@ import { LIMIT } from "@/lib/utils"
 import type {
 	GuestUpdateFormData,
 	CreateNewGuest,
-	GuestSearchResult,
 	Role,
 	VerificationStatus
 } from "@/lib/types/types"
@@ -125,42 +124,74 @@ export async function getSoftDeletedGuests() {
 }
 
 export async function createGuest(data: CreateNewGuest) {
-	// Confirm that the current session user has permission to create a guest
-	await requirePermission("guest", "create");
+	try {
+		// Confirm that the current session user has permission to create a guest
+		await requirePermission("guest", "create");
 
-	const { idDocument, registeredBy, ...guestData } = data;
+		const { idDocument, registeredBy, ...guestData } = data;
 
-	// Create guest with optional ID document in a transaction
-	const guest = await prisma.guest.create({
-		data: {
-			...guestData,
-			// Connect registeredBy to existing User if provided
-			...(registeredBy && {
-				registeredBy: {
-					connect: { id: registeredBy },
-				},
-			}),
-			// Create media record if ID document was uploaded
-			...(idDocument && {
-				media: {
-					create: {
-						filename: idDocument.filename,
-						originalName: idDocument.originalName,
-						fileSize: idDocument.fileSize,
-						mimeType: idDocument.mimeType,
-						filePath: idDocument.filePath,
+
+		// Check that the guest does not exist
+		const existingGuest = await prisma.guest.findUnique({
+			where: {
+				email: guestData.email
+			}
+		})
+
+		if (existingGuest) {
+			throw new Error("A guest with this email already exists.")
+		}
+
+		// Check that the provided email is not already on booking requests
+		const pendingGuest = await prisma.bookingRequest.findUnique({
+			where: {
+				guestEmail: guestData.email
+			}
+		});
+
+		if (pendingGuest) {
+			throw new Error("An agent has already requested a guest with this email.")
+		}
+
+
+		const guest = await prisma.guest.create({
+			data: {
+				...guestData,
+				...(registeredBy && {
+					registeredBy: {
+						connect: { id: registeredBy },
 					},
-				},
-			}),
-		},
-		include: {
-			media: true,
-		},
-	});
+				}),
+				...(idDocument && {
+					media: {
+						create: {
+							filename: idDocument.filename,
+							originalName: idDocument.originalName,
+							fileSize: idDocument.fileSize,
+							mimeType: idDocument.mimeType,
+							filePath: idDocument.filePath,
+						},
+					},
+				}),
+			},
+			include: {
+				media: true,
+			},
+		});
 
-	revalidatePath("/guests");
+		revalidatePath("/guests");
 
-	return guest;
+		return guest;
+
+	} catch (error) {
+		console.error("Error creating guest: ", error)
+
+		if (error instanceof Error) {
+			throw error
+		} else {
+			throw new Error("Failed to create guest.")
+		}
+	}
 }
 
 export async function updateGuest(id: number, data: GuestUpdateFormData) {
@@ -289,22 +320,26 @@ export async function getGuestStats() {
 
 export async function searchGuestsForBooking(
 	query: string
-): Promise<GuestSearchResult[]> {
+) {
 	const session = await getServerSession();
 
 	if (!session?.user?.id) {
 		throw new Error("Unauthorized");
 	}
 
-	const userRole = session.user.role as Role
-	// Agents, admins, and superAdmins can search guests
-	if (!["agent", "admin", "superAdmin"].includes(userRole)) {
+	const userRole = session.user.role as Role;
+
+	// Agents only can search guests
+	if (!["agent"].includes(userRole)) {
 		throw new Error("Unauthorized");
 	}
 
 	const guests = await prisma.guest.findMany({
 		where: {
 			deletedAt: null,
+			verificationStatus: {
+				in: ["verified"],
+			},
 			...(query.trim() && {
 				OR: [
 					{ firstName: { contains: query, mode: "insensitive" } },
@@ -333,20 +368,66 @@ export async function searchGuestsForBooking(
 				take: 1,
 				orderBy: { createdAt: "desc" },
 			},
+			bookingRequests: {
+				where: {
+					status: { in: ["pending", "approved"] },
+				},
+				select: {
+					status: true,
+					unit: {
+						select: { name: true },
+					},
+				},
+				take: 1,
+				orderBy: { createdAt: "desc" },
+			},
 		},
 		take: 20,
 		orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
 	});
 
-	return guests.map((guest) => ({
-		id: guest.id,
-		firstName: guest.firstName,
-		lastName: guest.lastName,
-		email: guest.email,
-		phone: guest.phone,
-		activeBookingStatus:
-			(guest.bookings[0]?.status as "pending" | "reserved" | "checked_in") ||
-			null,
-		activeBookingUnit: guest.bookings[0]?.unit.name || null,
-	}));
+	return guests.map((guest) => {
+		// Bookings take precedence since they're confirmed stays
+		if (guest.bookings[0]) {
+			return {
+				id: guest.id,
+				firstName: guest.firstName,
+				lastName: guest.lastName,
+				email: guest.email,
+				phone: guest.phone,
+				activeBookingStatus: guest.bookings[0].status as
+					| "pending"
+					| "reserved"
+					| "checked_in",
+				activeBookingUnit: guest.bookings[0].unit.name,
+			};
+		}
+
+		// Check for pending/approved booking requests
+		if (guest.bookingRequests[0]) {
+			const requestStatus =
+				guest.bookingRequests[0].status === "approved" ? "reserved" : "pending";
+
+			return {
+				id: guest.id,
+				firstName: guest.firstName,
+				lastName: guest.lastName,
+				email: guest.email,
+				phone: guest.phone,
+				activeBookingStatus: requestStatus as "pending" | "reserved",
+				activeBookingUnit: guest.bookingRequests[0].unit.name,
+			};
+		}
+
+		// No active booking or request
+		return {
+			id: guest.id,
+			firstName: guest.firstName,
+			lastName: guest.lastName,
+			email: guest.email,
+			phone: guest.phone,
+			activeBookingStatus: null,
+			activeBookingUnit: null,
+		};
+	});
 }

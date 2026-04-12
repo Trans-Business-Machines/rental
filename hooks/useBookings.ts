@@ -114,12 +114,21 @@ export const useCreateBooking = () => {
 		onSuccess: async (newBooking) => {
 			toast.success("Booking created successfully");
 
-			// Invalidate and refetch bookings list and unit details
+			// Invalidate queries
 			await Promise.all([
 				queryClient.invalidateQueries({ queryKey: bookingKeys.lists() }),
 				queryClient.invalidateQueries({
 					queryKey: unitKeys.details(newBooking.unitId.toString(), newBooking.propertyId.toString())
-				})
+				}),
+				queryClient.invalidateQueries({
+					queryKey: ["booking-form-data"]
+				}),
+				queryClient.invalidateQueries({
+					queryKey: ["booking-request-form-data"]
+				}),
+				queryClient.invalidateQueries({
+					queryKey: ["guests", "search"]
+				}),
 			])
 
 			// Optionally update the cache with the new booking

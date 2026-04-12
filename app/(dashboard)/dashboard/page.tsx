@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Wrench } from "lucide-react";
+import { Home, UserCheck, CalendarClock } from "lucide-react";
 import { InventoryTable } from "./_components/inventory-table";
 import { RecentBookingsTable } from "./_components/recent-bookings-table";
 import { UnitAvailabilityTable } from "./_components/unit-availability-table";
@@ -118,14 +118,21 @@ export default async function DashboardPage({
       value: unitsStatsResponse.available,
       subtitle: "Ready for booking",
       icon: Home,
-      color: "orange",
+      color: "green",
     },
     {
-      title: "Maintenance",
-      value: unitsStatsResponse.maintenance,
-      subtitle: "Units under maintenance",
-      icon: Wrench,
+      title: "Occupied",
+      value: unitsStatsResponse.occupied,
+      subtitle: "Units that are currently occupied",
+      icon: UserCheck,
       color: "red",
+    },
+    {
+      title: "Reserved",
+      value: unitsStatsResponse.reserved,
+      subtitle: "Units that have a reservation",
+      icon: CalendarClock,
+      color: "",
     },
   ];
 

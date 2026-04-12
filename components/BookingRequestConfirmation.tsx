@@ -50,6 +50,7 @@ interface BookingRequestConfirmationProps {
   propertyName: string;
   unitName: string;
   savings: number;
+  paymentCode: string;
 }
 
 export function BookingRequestConfirmation({
@@ -63,6 +64,7 @@ export function BookingRequestConfirmation({
   propertyName,
   unitName,
   savings,
+  paymentCode,
 }: BookingRequestConfirmationProps) {
   const isCustomDuration = selectedPricing?.duration === "custom";
   const actualPeriod = isCustomDuration ? 1 : period;
@@ -71,7 +73,7 @@ export function BookingRequestConfirmation({
     formData.priceDuration as PriceDuration,
     actualPeriod,
     selectedPricing?.fromDate,
-    selectedPricing?.toDate
+    selectedPricing?.toDate,
   );
 
   // Get guest display info based on type
@@ -312,7 +314,10 @@ export function BookingRequestConfirmation({
                 <p className="text-xs text-muted-foreground">Check-in</p>
                 <p className="font-medium">
                   {formData.checkInDate
-                    ? format(new Date(formData.checkInDate), "EEE, MMM d, yyyy 'at' h:mm a")
+                    ? format(
+                        new Date(formData.checkInDate),
+                        "EEE, MMM d, yyyy 'at' h:mm a",
+                      )
                     : "-"}
                 </p>
               </div>
@@ -326,7 +331,7 @@ export function BookingRequestConfirmation({
                   {formData.checkOutDate
                     ? format(
                         new Date(formData.checkOutDate),
-                        "EEE, MMM d, yyyy"
+                        "EEE, MMM d, yyyy",
                       )
                     : "-"}
                 </p>
@@ -445,6 +450,10 @@ export function BookingRequestConfirmation({
                 <span className="text-2xl font-bold text-primary">
                   {formatPrice(formData.totalAmount || 0)}
                 </span>
+              </div>
+              <div className="flex justify-between items-center pt-2 text-base font-medium">
+                <span>Payment code</span>
+                <span className="text-primary">{paymentCode}</span>
               </div>
             </div>
 

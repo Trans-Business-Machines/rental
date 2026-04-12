@@ -1,9 +1,8 @@
-// lib/schemas/booking-requests.ts
 import { z } from "zod";
 import { differenceInYears } from "date-fns";
 
 const nameRegex = /^[A-Za-z]+$/;
-const phoneRegex = /^\+?[0-9]\d{1,14}$/;
+const phoneRegex = /^\+?(?=(?:\D*\d){7,15}\D*$)[\d\s\-]+$/;
 
 const isAtLeast18 = (dateString: string): boolean => {
   const birthDate = new Date(dateString);
@@ -21,6 +20,81 @@ const dateOfBirthSchema = z
     (dateString) => isAtLeast18(dateString),
     "Guest must be at least 18 years old."
   );
+
+
+// Form-level schema (used by zodResolver + trigger)
+// Every field has real validation rules, but only
+// the relevant fields are triggered per step.
+export const BookingRequestFormSchema = z.object({
+  // Step 1: Guest
+  guestType: z.enum(["existing", "new"]),
+  existingGuestId: z.number().min(1, "Please select a guest."),
+
+  guestFirstName: z
+    .string()
+    .min(3, "At least 3 characters are required.")
+    .regex(nameRegex, "Only letters are allowed.")
+    .max(20, "At most 20 characters."),
+  guestLastName: z
+    .string()
+    .min(3, "At least 3 characters are required.")
+    .regex(nameRegex, "Only letters are allowed.")
+    .max(20, "At most 20 characters."),
+  guestEmail: z.string().email("Invalid email address."),
+  guestPhone: z
+    .string()
+    .regex(
+      phoneRegex,
+      "Enter a valid phone number (7–15 digits). Only digits, spaces, hyphens, and a leading + are allowed."
+    ),
+  guestDateOfBirth: dateOfBirthSchema,
+  guestNationality: z.string().min(1, "Nationality is required."),
+  guestIdType: z.enum(["national_id", "passport"]),
+  guestIdNumber: z
+    .string()
+    .min(8, "At least 8 characters are required.")
+    .max(10, "At most 10 characters."),
+  guestPassportNumber: z
+    .string()
+    .min(8, "Passport number must be at least 8 characters.")
+    .max(12, "Passport number must be at most 12 characters."),
+  guestNotes: z.string().nullable().optional(),
+
+  // ID Document metadata (handled manually, not validated by Zod)
+  idDocumentFilename: z.string().optional(),
+  idDocumentOriginalName: z.string().optional(),
+  idDocumentMimeType: z.string().optional(),
+  idDocumentFileSize: z.number().optional(),
+
+  // Step 2: Booking Details
+  propertyId: z.number().min(1, "Property is required."),
+  unitId: z.number().min(1, "Unit is required."),
+  checkInDate: z
+    .string()
+    .min(1, "Check-in date is required.")
+    .regex(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
+      "Invalid check-in date format."
+    ),
+  checkOutDate: z.date(),
+  numberOfGuests: z.number().min(1, "At least 1 guest is required."),
+  priceDuration: z.enum(["one_night", "weekly", "monthly", "custom"]),
+  unitPrice: z.number().min(1, "Price is required."),
+  period: z.number().min(1),
+  discountRate: z.number().nullable().optional(),
+  totalAmount: z.number().min(1, "Total amount is required."),
+  paymentMethod: z.string().min(1, "Payment method is required."),
+  paymentCode: z
+    .string()
+    .min(8, "Payment code must be atleast 8 characters")
+    .max(12, "Payment code must be atleast 10 characters")
+    .toUpperCase(),
+  purpose: z.string().nullable().optional(),
+  specialRequests: z.string().nullable().optional(),
+});
+
+export type BookingRequestFormData = z.infer<typeof BookingRequestFormSchema>;
+
 
 // Base booking details schema (always required)
 const bookingDetailsSchema = {
@@ -43,8 +117,8 @@ const bookingDetailsSchema = {
   paymentMethod: z.string().min(1, "Payment method is required"),
   paymentCode: z
     .string()
-    .min(1, "Payment reference code is required")
-    .length(10, "Must be 10 characters")
+    .min(8, "Payment code must be atleast 8 characters")
+    .max(12, "Payment code must be atleast 10 characters")
     .toUpperCase(),
   purpose: z.string().nullable().optional(),
   specialRequests: z.string().nullable().optional(),
@@ -60,7 +134,6 @@ export const ExistingGuestBookingRequestSchema = z.object({
 // Base schema for new guest (without refinements)
 const NewGuestBookingRequestBaseSchema = z.object({
   guestType: z.literal("new"),
-  // Guest Details
   guestFirstName: z
     .string()
     .min(3, "At least 3 characters are required.")
@@ -72,7 +145,12 @@ const NewGuestBookingRequestBaseSchema = z.object({
     .regex(nameRegex, "Only letters are allowed")
     .max(20, "At most 20 characters."),
   guestEmail: z.string().email("Invalid email address"),
-  guestPhone: z.string().regex(phoneRegex, "Invalid phone number."),
+  guestPhone: z
+    .string()
+    .regex(
+      phoneRegex,
+      "Enter a valid phone number (7–15 digits). Only digits, spaces, hyphens, and a leading + are allowed."
+    ),
   guestDateOfBirth: dateOfBirthSchema,
   guestNationality: z.string().min(1, "Nationality is required"),
   guestIdType: z.enum(["national_id", "passport"]),
@@ -84,7 +162,8 @@ const NewGuestBookingRequestBaseSchema = z.object({
     .optional(),
   guestPassportNumber: z
     .string()
-    .length(9, "Passport should have 9 characters.")
+    .min(8, "Passport number must be at least 8 characters.")
+    .max(12, "Passport number must be at most 12 characters.")
     .nullable()
     .optional(),
   guestNotes: z.string().nullable().optional(),
@@ -131,39 +210,9 @@ export const NewGuestBookingRequestSchema = NewGuestBookingRequestBaseSchema
     }
   );
 
-// Combined form data type that allows all fields (for useForm)
-export type BookingRequestFormData = {
-  guestType: "existing" | "new";
-  existingGuestId?: number;
-  guestFirstName?: string;
-  guestLastName?: string;
-  guestEmail?: string;
-  guestPhone?: string;
-  guestDateOfBirth?: string;
-  guestNationality?: string;
-  guestIdType?: "national_id" | "passport";
-  guestIdNumber?: string | null;
-  guestPassportNumber?: string | null;
-  guestNotes?: string | null;
-  idDocumentFilename?: string;
-  idDocumentOriginalName?: string;
-  idDocumentMimeType?: string;
-  idDocumentFileSize?: number;
-  propertyId: number;
-  unitId: number;
-  checkInDate: string;
-  checkOutDate: Date;
-  numberOfGuests: number;
-  priceDuration: "one_night" | "weekly" | "monthly" | "custom";
-  unitPrice: number;
-  period: number;
-  discountRate?: number | null;
-  totalAmount: number;
-  paymentMethod: string;
-  paymentCode: string;
-  purpose?: string | null;
-  specialRequests?: string | null;
-};
-
-export type ExistingGuestBookingRequestData = z.infer<typeof ExistingGuestBookingRequestSchema>;
-export type NewGuestBookingRequestData = z.infer<typeof NewGuestBookingRequestSchema>;
+export type ExistingGuestBookingRequestData = z.infer<
+  typeof ExistingGuestBookingRequestSchema
+>;
+export type NewGuestBookingRequestData = z.infer<
+  typeof NewGuestBookingRequestSchema
+>;

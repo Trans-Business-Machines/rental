@@ -8,7 +8,8 @@ import {
 	restoreGuest
 } from "@/lib/actions/guests";
 import { toast } from "sonner";
-import type { Guest, CreateNewGuest, GuestUpdateFormData } from "@/lib/types/types"
+import type { Guest, CreateNewGuest, GuestUpdateFormData } from "@/lib/types/types";
+import { searchGuestsForBooking } from "@/lib/actions/guests";
 
 interface UseGuestsParams {
 	page?: number;
@@ -24,7 +25,11 @@ export const guestKeys = {
 	details: () => [...guestKeys.all, "detail"] as const,
 	detail: (id: number) => [...guestKeys.details(), id] as const,
 	stats: () => [...guestKeys.all, "stats"] as const,
+	search: () => [...guestKeys.all, "search"] as const,
+	searchForBooking: (query: string) =>
+		[...guestKeys.search(), "forBooking", query] as const,
 };
+
 
 // GET guests from the datababse
 export const useGuests = ({ page = 1, search = "", status = "all" }: UseGuestsParams) => {
@@ -89,14 +94,11 @@ export const useCreateGuest = () => {
 				}
 			);
 		},
-		onError: (error: any) => {
-			let errMsg = "Failed to create guest!"
-
-			if (error instanceof Error && error.message.includes("Unauthorized: Insufficent permissions."))
-				errMsg = "Unauthorized, Insufficent permissions."
-
-			toast.error(errMsg, {
-				duration: 5000
+		onError: (error) => {
+			const errorMessage = error.message
+			console.error("Hook error:",errorMessage)
+			toast.error(errorMessage, {
+				duration: 6000
 			})
 		}
 	});
@@ -281,4 +283,12 @@ export const useRestoreGuest = () => {
 			})
 		}
 	})
+}
+
+export function useSearchGuestsForBooking(query: string, enabled = true) {
+	return useQuery({
+		queryKey: guestKeys.searchForBooking(query),
+		queryFn: () => searchGuestsForBooking(query),
+		enabled,
+	});
 }

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller, SubmitHandler } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Icons
 import {
   Users,
   Building,
@@ -41,7 +41,6 @@ import {
   UserCheck,
 } from "lucide-react";
 
-// Utilities and Actions
 import {
   cn,
   formatPrice,
@@ -55,14 +54,17 @@ import {
   calculateTotalAmount,
   calculateDiscountedPrice,
 } from "@/lib/utils";
-import { type BookingRequestFormData } from "@/lib/schemas/booking-requests";
+import {
+  BookingRequestFormSchema,
+  type BookingRequestFormData,
+} from "@/lib/schemas/booking-requests";
 import { uploadBookingRequestDocument } from "@/lib/services/clientMediaService";
 import { useCreateBookingRequest } from "@/hooks/useBookingRequests";
 import { getBookingRequestFormData } from "@/lib/actions/booking-requests";
 import { NationalityCombobox } from "@/components/NationalityCombobox";
 import { GuestCombobox } from "@/components/AgentGuestCombobox";
 import { BookingRequestConfirmation } from "@/components/BookingRequestConfirmation";
-import { format, differenceInYears } from "date-fns";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import type {
   PriceDuration,
@@ -82,11 +84,6 @@ const durationIcons: Record<PriceDuration, React.ElementType> = {
   monthly: CalendarDays,
   custom: CalendarRange,
 };
-
-// Validation helpers
-const nameRegex = /^[A-Za-z]+$/;
-const phoneRegex = /^\+?[0-9]\d{1,14}$/;
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function BookingRequestForm() {
   const router = useRouter();
@@ -124,22 +121,32 @@ export function BookingRequestForm() {
     control,
     watch,
     setValue,
-    setError,
+    trigger,
     clearErrors,
     formState: { errors },
   } = useForm<BookingRequestFormData>({
     mode: "onChange",
+    resolver: zodResolver(BookingRequestFormSchema),
     defaultValues: {
       guestType: "existing",
-      guestIdType: "national_id",
+      existingGuestId: 0,
+      guestFirstName: "",
+      guestLastName: "",
+      guestEmail: "",
+      guestPhone: "",
+      guestDateOfBirth: "",
       guestNationality: "",
-      priceDuration: "one_night",
-      period: 1,
-      numberOfGuests: 1,
+      guestIdType: "national_id",
+      guestIdNumber: "",
+      guestPassportNumber: "",
+      guestNotes: "",
       idDocumentFilename: "",
       idDocumentOriginalName: "",
       idDocumentMimeType: "",
       idDocumentFileSize: 0,
+      priceDuration: "one_night",
+      period: 1,
+      numberOfGuests: 1,
       unitPrice: 0,
       paymentMethod: "",
       paymentCode: "",
@@ -222,6 +229,80 @@ export function BookingRequestForm() {
     }
   }, [formData.checkInDate, selectedPricing, period, setValue]);
 
+  // Step field mapping — only trigger relevant fields
+  const getStepFields = (step: number): (keyof BookingRequestFormData)[] => {
+    if (step === 1) {
+      if (guestType === "existing") {
+        return ["existingGuestId"];
+      }
+
+      const fields: (keyof BookingRequestFormData)[] = [
+        "guestFirstName",
+        "guestLastName",
+        "guestEmail",
+        "guestPhone",
+        "guestDateOfBirth",
+        "guestNationality",
+      ];
+
+      if (formData.guestIdType === "national_id") {
+        fields.push("guestIdNumber");
+      } else {
+        fields.push("guestPassportNumber");
+      }
+
+      return fields;
+    }
+
+    if (step === 2) {
+      return [
+        "propertyId",
+        "unitId",
+        "checkInDate",
+        "numberOfGuests",
+        "paymentMethod",
+        "paymentCode",
+      ];
+    }
+
+    return [];
+  };
+
+  // Validate current step (Zod + manual for external state)
+  const validateStep = async (step: number): Promise<boolean> => {
+    clearErrors();
+
+    const fields = getStepFields(step);
+    const isValid = await trigger(fields);
+
+    if (!isValid) {
+      toast.error("Please fix the errors in the form.");
+      return false;
+    }
+
+    // Manual checks for state that lives outside React Hook Form
+    if (step === 1) {
+      if (guestType === "existing" && !selectedGuest) {
+        toast.error("Please select a guest.");
+        return false;
+      }
+
+      if (guestType === "new" && !idDocumentFile) {
+        toast.error("Please upload an ID document.");
+        return false;
+      }
+    }
+
+    if (step === 2) {
+      if (!selectedPricing) {
+        toast.error("Please select a pricing option.");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   // Handle guest type change
   const handleGuestTypeChange = (type: "existing" | "new") => {
     setGuestType(type);
@@ -229,7 +310,6 @@ export function BookingRequestForm() {
     clearErrors();
 
     if (type === "existing") {
-      // Clear new guest fields
       setValue("guestFirstName", "");
       setValue("guestLastName", "");
       setValue("guestEmail", "");
@@ -243,9 +323,8 @@ export function BookingRequestForm() {
       setIdDocumentFile(null);
       setIdDocumentPreview(null);
     } else {
-      // Clear existing guest selection
       setSelectedGuest(null);
-      setValue("existingGuestId", undefined);
+      setValue("existingGuestId", 0);
     }
   };
 
@@ -255,7 +334,7 @@ export function BookingRequestForm() {
     if (guest) {
       setValue("existingGuestId", guest.id);
     } else {
-      setValue("existingGuestId", undefined);
+      setValue("existingGuestId", 0);
     }
   };
 
@@ -330,7 +409,6 @@ export function BookingRequestForm() {
     setValue("totalAmount", 0);
     setPeriod(1);
 
-    // Auto-select first pricing option for the selected unit
     const unit = selectedProperty?.units.find((u) => u.id.toString() === value);
     const firstPricing = unit?.pricingOptions?.[0];
 
@@ -351,226 +429,10 @@ export function BookingRequestForm() {
     }
   };
 
-  // Validate current step
-  const validateStep = async (step: number): Promise<boolean> => {
-    // Clear previous errors
-    clearErrors();
-
-    if (step === 1) {
-      if (guestType === "existing") {
-        if (!selectedGuest) {
-          toast.error("Please select a guest");
-          return false;
-        }
-        return true;
-      } else {
-        // New guest - manual validation
-        let isValid = true;
-
-        // First Name
-        if (!formData.guestFirstName || formData.guestFirstName.length < 3) {
-          setError("guestFirstName", {
-            message: "At least 3 characters are required.",
-          });
-          isValid = false;
-        } else if (formData.guestFirstName.length > 20) {
-          setError("guestFirstName", {
-            message: "At most 20 characters.",
-          });
-          isValid = false;
-        } else if (!nameRegex.test(formData.guestFirstName)) {
-          setError("guestFirstName", {
-            message: "Only letters are allowed.",
-          });
-          isValid = false;
-        }
-
-        // Last Name
-        if (!formData.guestLastName || formData.guestLastName.length < 3) {
-          setError("guestLastName", {
-            message: "At least 3 characters are required.",
-          });
-          isValid = false;
-        } else if (formData.guestLastName.length > 20) {
-          setError("guestLastName", {
-            message: "At most 20 characters.",
-          });
-          isValid = false;
-        } else if (!nameRegex.test(formData.guestLastName)) {
-          setError("guestLastName", {
-            message: "Only letters are allowed.",
-          });
-          isValid = false;
-        }
-
-        // Email
-        if (!formData.guestEmail || !emailRegex.test(formData.guestEmail)) {
-          setError("guestEmail", {
-            message: "Invalid email address.",
-          });
-          isValid = false;
-        }
-
-        // Phone
-        if (!formData.guestPhone || !phoneRegex.test(formData.guestPhone)) {
-          setError("guestPhone", {
-            message: "Invalid phone number.",
-          });
-          isValid = false;
-        }
-
-        // Date of Birth
-        if (!formData.guestDateOfBirth) {
-          setError("guestDateOfBirth", {
-            message: "Date of birth is required.",
-          });
-          isValid = false;
-        } else {
-          const birthDate = new Date(formData.guestDateOfBirth);
-          const today = new Date();
-          if (birthDate >= today) {
-            setError("guestDateOfBirth", {
-              message: "Date of birth must be in the past.",
-            });
-            isValid = false;
-          } else {
-            const age = differenceInYears(today, birthDate);
-            if (age < 18) {
-              setError("guestDateOfBirth", {
-                message: "Guest must be at least 18 years old.",
-              });
-              isValid = false;
-            }
-          }
-        }
-
-        // Nationality
-        if (!formData.guestNationality) {
-          setError("guestNationality", {
-            message: "Nationality is required.",
-          });
-          isValid = false;
-        }
-
-        // ID Number / Passport Number
-        if (formData.guestIdType === "national_id") {
-          if (!formData.guestIdNumber || formData.guestIdNumber.length < 8) {
-            setError("guestIdNumber", {
-              message: "At least 8 characters are required.",
-            });
-            isValid = false;
-          } else if (formData.guestIdNumber.length > 10) {
-            setError("guestIdNumber", {
-              message: "At most 10 characters.",
-            });
-            isValid = false;
-          }
-        } else {
-          if (
-            !formData.guestPassportNumber ||
-            formData.guestPassportNumber.length !== 9
-          ) {
-            setError("guestPassportNumber", {
-              message: "Passport should have 9 characters.",
-            });
-            isValid = false;
-          }
-        }
-
-        // ID Document
-        if (!idDocumentFile) {
-          toast.error("Please upload an ID document");
-          isValid = false;
-        }
-
-        if (!isValid) {
-          toast.error("Please fix the errors in the form");
-        }
-
-        return isValid;
-      }
-    }
-
-    if (step === 2) {
-      let isValid = true;
-
-      if (!formData.propertyId) {
-        setError("propertyId", {
-          message: "Please select a property",
-        });
-        return false;
-      }
-
-      if (!formData.unitId) {
-        setError("unitId", {
-          message: "Please select a unit",
-        });
-        return false;
-      }
-
-      if (!selectedPricing) {
-        toast.error("Please select a pricing option");
-        return false;
-      }
-
-      if (!formData.checkInDate) {
-        setError("checkInDate", {
-          message: "Please enter a check in date time",
-        });
-        return false;
-      }
-
-      if (!formData.paymentMethod) {
-        setError("paymentMethod", {
-          message: "Payment method is required.",
-        });
-        isValid = false;
-      }
-
-      if (!formData.paymentCode) {
-        setError("paymentCode", {
-          message: "Payment reference code is required.",
-        });
-        isValid = false;
-      } else if (formData.paymentCode.length !== 10) {
-        setError("paymentCode", {
-          message: "Must be 10 characters.",
-        });
-        isValid = false;
-      }
-
-      if (!formData.numberOfGuests || formData.numberOfGuests < 1) {
-        setError("numberOfGuests", {
-          message: "At least 1 guest is required.",
-        });
-        isValid = false;
-      } else if (
-        selectedUnit?.maxGuests &&
-        formData.numberOfGuests > selectedUnit.maxGuests
-      ) {
-        setError("numberOfGuests", {
-          message: `Maximum ${selectedUnit.maxGuests} guests allowed.`,
-        });
-        isValid = false;
-      }
-
-      if (!isValid) {
-        toast.error("Please fix the errors in the form");
-      }
-
-      return isValid;
-    }
-
-    return true;
-  };
-
   // Handle next button
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
-
-    if (!isValid) {
-      return;
-    }
+    if (!isValid) return;
 
     setCurrentStep((prev) => prev + 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -583,20 +445,19 @@ export function BookingRequestForm() {
   };
 
   // Form submission
-  const onSubmit: SubmitHandler<BookingRequestFormData> = async (data) => {
+  const onSubmit = async () => {
     if (!selectedPricing) {
-      toast.error("Please select a pricing option");
+      toast.error("Please select a pricing option.");
       return;
     }
 
-    // Validate based on guest type
     if (guestType === "new" && !idDocumentFile) {
-      toast.error("Please upload an ID document");
+      toast.error("Please upload an ID document.");
       return;
     }
 
     if (guestType === "existing" && !selectedGuest) {
-      toast.error("Please select a guest");
+      toast.error("Please select a guest.");
       return;
     }
 
@@ -610,31 +471,29 @@ export function BookingRequestForm() {
       const periodValue = selectedPricing.duration === "custom" ? 1 : period;
       const totalAmount = calculateTotalAmount(discounted, periodValue);
 
-      // Build base request data
       const requestData: Parameters<
         typeof createBookingRequest.mutateAsync
       >[0] = {
         guestType,
-        propertyId: Number(data.propertyId),
-        unitId: Number(data.unitId),
-        checkInDate: new Date(data.checkInDate),
-        checkOutDate: new Date(data.checkOutDate),
-        numberOfGuests: data.numberOfGuests,
-        priceDuration: data.priceDuration,
+        propertyId: Number(formData.propertyId),
+        unitId: Number(formData.unitId),
+        checkInDate: new Date(formData.checkInDate),
+        checkOutDate: new Date(formData.checkOutDate),
+        numberOfGuests: formData.numberOfGuests,
+        priceDuration: formData.priceDuration,
         unitPrice: discounted,
         period: periodValue,
         discountRate: selectedPricing.discountRate || null,
         totalAmount,
-        paymentMethod: data.paymentMethod,
-        paymentCode: data.paymentCode,
-        purpose: data.purpose || null,
-        specialRequests: data.specialRequests || null,
+        paymentMethod: formData.paymentMethod,
+        paymentCode: formData.paymentCode,
+        purpose: formData.purpose || null,
+        specialRequests: formData.specialRequests || null,
       };
 
       if (guestType === "existing") {
         requestData.existingGuestId = selectedGuest!.id;
       } else {
-        // Upload ID document for new guest
         const uploadResult = await uploadBookingRequestDocument(
           idDocumentFile!,
         );
@@ -643,17 +502,16 @@ export function BookingRequestForm() {
           throw new Error(uploadResult.error || "Failed to upload ID document");
         }
 
-        // Add new guest fields
-        requestData.guestFirstName = data.guestFirstName;
-        requestData.guestLastName = data.guestLastName;
-        requestData.guestEmail = data.guestEmail;
-        requestData.guestPhone = data.guestPhone;
-        requestData.guestDateOfBirth = data.guestDateOfBirth;
-        requestData.guestNationality = data.guestNationality;
-        requestData.guestIdType = data.guestIdType;
-        requestData.guestIdNumber = data.guestIdNumber || null;
-        requestData.guestPassportNumber = data.guestPassportNumber || null;
-        requestData.guestNotes = data.guestNotes || null;
+        requestData.guestFirstName = formData.guestFirstName;
+        requestData.guestLastName = formData.guestLastName;
+        requestData.guestEmail = formData.guestEmail;
+        requestData.guestPhone = formData.guestPhone;
+        requestData.guestDateOfBirth = formData.guestDateOfBirth;
+        requestData.guestNationality = formData.guestNationality;
+        requestData.guestIdType = formData.guestIdType;
+        requestData.guestIdNumber = formData.guestIdNumber || null;
+        requestData.guestPassportNumber = formData.guestPassportNumber || null;
+        requestData.guestNotes = formData.guestNotes || null;
         requestData.idDocumentFilename = uploadResult.filename;
         requestData.idDocumentOriginalName = uploadResult.originalName!;
         requestData.idDocumentMimeType = uploadResult.mimeType!;
@@ -662,20 +520,15 @@ export function BookingRequestForm() {
       }
 
       await createBookingRequest.mutateAsync(requestData);
-
       router.push("/booking-requests");
     } catch (error) {
       console.error("Error submitting booking request:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to submit booking request",
-      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Loading state
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -683,7 +536,7 @@ export function BookingRequestForm() {
           <div className="h-28 bg-gray-200 rounded"></div>
           <div className="grid grid-cols-2 gap-4">
             <div className="h-24 bg-gray-200 rounded"></div>
-            <div className="h24 bg-gray-200 rounded"></div>
+            <div className="h-24 bg-gray-200 rounded"></div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="h-24 bg-gray-200 rounded"></div>
@@ -694,6 +547,7 @@ export function BookingRequestForm() {
     );
   }
 
+  // Render
   return (
     <div className="space-y-6 md:py-5">
       {/* Header */}
@@ -752,9 +606,9 @@ export function BookingRequestForm() {
         })}
       </div>
 
-      {/* Form — only allow native submission on the final step */}
+      {/* Form */}
       <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
-        {/* Step 1: Select Guest */}
+        {/* Step 1: Select Guest                   */}
         {currentStep === 1 && (
           <Card>
             <CardHeader>
@@ -1061,7 +915,12 @@ export function BookingRequestForm() {
 
                   {/* ID Document Upload */}
                   <div className="space-y-3">
-                    <Label>ID Document *</Label>
+                    <Label>
+                      {formData.guestIdType === "national_id"
+                        ? "National ID  image"
+                        : "Passport image"}{" "}
+                      *
+                    </Label>
                     {!idDocumentPreview ? (
                       <div
                         className={cn(
@@ -1139,7 +998,7 @@ export function BookingRequestForm() {
           </Card>
         )}
 
-        {/* Step 2: Booking Details */}
+        {/* Step 2: Booking Details                */}
         {currentStep === 2 && (
           <Card>
             <CardHeader>
@@ -1695,7 +1554,7 @@ export function BookingRequestForm() {
           </Card>
         )}
 
-        {/* Step 3: Confirmation */}
+        {/* Step 3: Confirmation                   */}
         {currentStep === 3 && (
           <BookingRequestConfirmation
             guestType={guestType}
@@ -1708,6 +1567,7 @@ export function BookingRequestForm() {
             propertyName={selectedProperty?.name || ""}
             unitName={selectedUnit?.name || ""}
             savings={savings}
+            paymentCode={formData.paymentCode}
           />
         )}
 
@@ -1743,7 +1603,7 @@ export function BookingRequestForm() {
           ) : (
             <Button
               type="button"
-              onClick={() => onSubmit(formData)}
+              onClick={() => onSubmit()}
               disabled={isSubmitting}
               className="min-w-[140px] cursor-pointer"
             >
