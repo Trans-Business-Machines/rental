@@ -536,3 +536,17 @@ model BookingRequest {
   @@index([existingGuestId])
   @@map("booking_requests")
 }
+
+model AppSettings {
+  id           String   @id @default(cuid())
+  imageType    String   @unique
+  imageName    String   @unique
+  originalName String
+  imageUrl     String
+  imageSize    Int
+  mimeType     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("app_settings")
+}
