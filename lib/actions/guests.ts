@@ -298,15 +298,15 @@ export async function getGuestStats() {
 		const pendingGuests = await prisma.guest.count({
 			where: { verificationStatus: "pending", deletedAt: null },
 		});
-		const blacklistedGuests = await prisma.guest.count({
-			where: { blacklisted: true, deletedAt: null },
+		const rejectedGuests = await prisma.guest.count({
+			where: { verificationStatus: "rejected", deletedAt: null },
 		});
 
 		return {
 			total: totalGuests,
 			verified: verifiedGuests,
 			pending: pendingGuests,
-			blacklisted: blacklistedGuests,
+			rejected: rejectedGuests,
 		};
 	} catch {
 		return {

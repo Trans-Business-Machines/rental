@@ -389,7 +389,7 @@ export function GuestForm({
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="bg-chart-1 w-1/3 hover:bg-chart-1/90 cursor-pointer"
+          className="bg-chart-1 w-2/3 hover:bg-chart-1/90 cursor-pointer"
         >
           {isSubmitting ? (
             <span className="flex items-center gap-2">

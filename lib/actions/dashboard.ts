@@ -49,11 +49,19 @@ export async function getDashboardStats() {
         }
     })
 
+    // Get all booked units  from DB
+    const bookedUnits = await prisma.unit.count({
+        where: {
+            status: "booked"
+        }
+    })
+
     return {
         total: totalUnits,
         occupied: occupiedUnits,
         available: availableUnits,
-        reserved: reservedUnits
+        reserved: reservedUnits,
+        booked: bookedUnits
     };
 }
 

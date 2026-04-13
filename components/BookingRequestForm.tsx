@@ -53,6 +53,10 @@ import {
   calculateTotalNights,
   calculateTotalAmount,
   calculateDiscountedPrice,
+  getStartOfDay,
+  getEndOfDay,
+  formatDateKE,
+  formatDateTimeLocal,
 } from "@/lib/utils";
 import {
   BookingRequestFormSchema,
@@ -85,6 +89,16 @@ const durationIcons: Record<PriceDuration, React.ElementType> = {
   custom: CalendarRange,
 };
 
+// Get unit type label
+const getUnitTypeLabel = (type: string) => {
+  const typeLabels: Record<string, string> = {
+    one_bedroom: "1 Bedroom",
+    two_bedroom: "2 Bedroom",
+    three_bedroom: "3 Bedroom",
+  };
+  return typeLabels[type] || type.replace("_", " ");
+};
+
 export function BookingRequestForm() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -104,6 +118,7 @@ export function BookingRequestForm() {
   const [selectedPricing, setSelectedPricing] =
     useState<UnitTypePricing | null>(null);
   const [period, setPeriod] = useState<number>(1);
+  const [customNights, setCustomNights] = useState<number>(1);
 
   const createBookingRequest = useCreateBookingRequest();
 
@@ -178,6 +193,7 @@ export function BookingRequestForm() {
   const isPropertySelected = !!formData.propertyId;
   const isUnitSelected = !!formData.unitId;
   const isPricingSelected = !!selectedPricing;
+  const isCustomDuration = selectedPricing?.duration === "custom";
 
   const isMaxGuestsValid =
     formData.numberOfGuests !== undefined &&
@@ -186,10 +202,7 @@ export function BookingRequestForm() {
       ? formData.numberOfGuests <= selectedUnit.maxGuests
       : true);
 
-  // Calculate savings
-  const isCustomDuration = selectedPricing?.duration === "custom";
-  const actualPeriod = isCustomDuration ? 1 : period;
-
+  // Calculate discounted price
   const discountedPrice = selectedPricing
     ? calculateDiscountedPrice(
         selectedPricing.price,
@@ -197,37 +210,76 @@ export function BookingRequestForm() {
       )
     : 0;
 
+  // Calculate total nights and total amount based on pricing type
+  const totalNights = selectedPricing
+    ? isCustomDuration
+      ? customNights
+      : calculateTotalNights(
+          selectedPricing.duration as PriceDuration,
+          period,
+          selectedPricing.fromDate,
+          selectedPricing.toDate,
+        )
+    : 0;
+
+  const totalAmount = selectedPricing
+    ? isCustomDuration
+      ? discountedPrice * customNights
+      : calculateTotalAmount(discountedPrice, period)
+    : 0;
+
+  // Calculate savings
   const savings = selectedPricing
-    ? calculateTotalAmount(selectedPricing.price, actualPeriod) -
-      calculateTotalAmount(discountedPrice, actualPeriod)
+    ? isCustomDuration
+      ? (selectedPricing.price - discountedPrice) * customNights
+      : calculateTotalAmount(selectedPricing.price, period) -
+        calculateTotalAmount(discountedPrice, period)
     : 0;
 
   // Update checkout date when check-in, duration, or period changes
   useEffect(() => {
     if (formData.checkInDate && selectedPricing) {
       const checkIn = new Date(formData.checkInDate);
-      const periodValue = selectedPricing.duration === "custom" ? 1 : period;
 
-      const checkOut = calculateCheckoutDate(
-        checkIn,
-        selectedPricing.duration as PriceDuration,
-        periodValue,
-        selectedPricing.fromDate,
-        selectedPricing.toDate,
-      );
+      let checkOut: Date;
+
+      if (isCustomDuration) {
+        // For custom: add customNights to check-in date
+        checkOut = new Date(checkIn);
+        checkOut.setDate(checkOut.getDate() + customNights);
+      } else {
+        checkOut = calculateCheckoutDate(
+          checkIn,
+          selectedPricing.duration as PriceDuration,
+          period,
+          selectedPricing.fromDate,
+          selectedPricing.toDate,
+        );
+      }
 
       const discounted = calculateDiscountedPrice(
         selectedPricing.price,
         selectedPricing.discountRate,
       );
-      const total = calculateTotalAmount(discounted, periodValue);
+
+      const total = isCustomDuration
+        ? discounted * customNights
+        : calculateTotalAmount(discounted, period);
 
       setValue("checkOutDate", checkOut);
       setValue("unitPrice", discounted);
       setValue("discountRate", selectedPricing.discountRate || null);
       setValue("totalAmount", total);
+      setValue("period", isCustomDuration ? customNights : period);
     }
-  }, [formData.checkInDate, selectedPricing, period, setValue]);
+  }, [
+    formData.checkInDate,
+    selectedPricing,
+    period,
+    customNights,
+    isCustomDuration,
+    setValue,
+  ]);
 
   // Step field mapping — only trigger relevant fields
   const getStepFields = (step: number): (keyof BookingRequestFormData)[] => {
@@ -297,6 +349,25 @@ export function BookingRequestForm() {
       if (!selectedPricing) {
         toast.error("Please select a pricing option.");
         return false;
+      }
+
+      // Validate check-in date for custom pricing
+      if (
+        isCustomDuration &&
+        selectedPricing?.fromDate &&
+        selectedPricing?.toDate &&
+        formData.checkInDate
+      ) {
+        const checkInDate = new Date(formData.checkInDate);
+        const fromDate = getStartOfDay(selectedPricing.fromDate);
+        const toDate = getEndOfDay(selectedPricing.toDate);
+
+        if (checkInDate < fromDate || checkInDate > toDate) {
+          toast.error(
+            `Check-in date must be between ${formatDateKE(selectedPricing.fromDate)} and ${formatDateKE(selectedPricing.toDate)}`,
+          );
+          return false;
+        }
       }
     }
 
@@ -368,18 +439,24 @@ export function BookingRequestForm() {
     setValue("unitPrice", discounted);
     setValue("discountRate", pricing.discountRate || null);
 
-    if (pricing.duration === "custom") {
-      setPeriod(1);
-      setValue("period", 1);
-    }
+    // Reset period and custom nights when pricing changes
+    setPeriod(1);
+    setCustomNights(1);
+    setValue("period", 1);
   };
 
-  // Handle period change
+  // Handle period change (for non-custom pricing)
   const handlePeriodChange = (newPeriod: number) => {
     if (newPeriod < 1) return;
-    if (selectedPricing?.duration === "custom") return;
     setPeriod(newPeriod);
     setValue("period", newPeriod);
+  };
+
+  // Handle custom nights change
+  const handleCustomNightsChange = (nights: number) => {
+    if (nights < 1) return;
+    setCustomNights(nights);
+    setValue("period", nights);
   };
 
   // Handle property change
@@ -396,6 +473,7 @@ export function BookingRequestForm() {
     setValue("totalAmount", 0);
     setSelectedPricing(null);
     setPeriod(1);
+    setCustomNights(1);
   };
 
   // Handle unit change
@@ -408,6 +486,7 @@ export function BookingRequestForm() {
     setValue("discountRate", null);
     setValue("totalAmount", 0);
     setPeriod(1);
+    setCustomNights(1);
 
     const unit = selectedProperty?.units.find((u) => u.id.toString() === value);
     const firstPricing = unit?.pricingOptions?.[0];
@@ -468,8 +547,11 @@ export function BookingRequestForm() {
         selectedPricing.price,
         selectedPricing.discountRate,
       );
-      const periodValue = selectedPricing.duration === "custom" ? 1 : period;
-      const totalAmount = calculateTotalAmount(discounted, periodValue);
+
+      const finalPeriod = isCustomDuration ? customNights : period;
+      const finalTotalAmount = isCustomDuration
+        ? discounted * customNights
+        : calculateTotalAmount(discounted, period);
 
       const requestData: Parameters<
         typeof createBookingRequest.mutateAsync
@@ -482,9 +564,9 @@ export function BookingRequestForm() {
         numberOfGuests: formData.numberOfGuests,
         priceDuration: formData.priceDuration,
         unitPrice: discounted,
-        period: periodValue,
+        period: finalPeriod,
         discountRate: selectedPricing.discountRate || null,
-        totalAmount,
+        totalAmount: finalTotalAmount,
         paymentMethod: formData.paymentMethod,
         paymentCode: formData.paymentCode,
         purpose: formData.purpose || null,
@@ -1119,7 +1201,7 @@ export function BookingRequestForm() {
                                   disabled={isUnavailable}
                                   className={cn(isUnavailable && "opacity-50")}
                                 >
-                                  {unit.name} - {unit.type}
+                                  {unit.name} - {getUnitTypeLabel(unit.type)}
                                   {isUnavailable && (
                                     <span className="ml-2 text-xs text-muted-foreground capitalize">
                                       ({unit.status.replace("_", " ")})
@@ -1186,59 +1268,6 @@ export function BookingRequestForm() {
                 </div>
               </div>
 
-              {/* Check-in & check-out Dates */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="checkInDate">
-                    Check-in Date & Time{" "}
-                    <span className="text-lipstick-red">*</span>
-                  </Label>
-                  <Input
-                    id="checkInDate"
-                    type="datetime-local"
-                    min={now}
-                    disabled={isCustomDuration}
-                    className={cn(
-                      errors.checkInDate && "border-destructive",
-                      isCustomDuration && "bg-muted",
-                    )}
-                    onChange={(e) => {
-                      setValue("checkInDate", e.target.value);
-                      clearErrors("checkInDate");
-                    }}
-                    value={formData.checkInDate || ""}
-                  />
-                  {isCustomDuration && (
-                    <p className="text-xs text-muted-foreground">
-                      Fixed dates for custom pricing period
-                    </p>
-                  )}
-                  {errors.checkInDate && (
-                    <p className="text-sm text-destructive">
-                      {errors.checkInDate.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="checkOutDate">Check-out Date</Label>
-                  <Input
-                    id="checkOutDate"
-                    type="date"
-                    disabled
-                    className="bg-muted"
-                    value={
-                      formData.checkOutDate
-                        ? format(new Date(formData.checkOutDate), "yyyy-MM-dd")
-                        : ""
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Auto-calculated based on duration and period
-                  </p>
-                </div>
-              </div>
-
               {/* Pricing Selection */}
               {isUnitSelected &&
                 isMaxGuestsValid &&
@@ -1275,6 +1304,7 @@ export function BookingRequestForm() {
                             className={cn(
                               "cursor-pointer",
                               pricing.duration === "monthly" && "md:col-span-2",
+                              pricing.duration === "custom" && "md:col-span-2",
                             )}
                           >
                             <Card
@@ -1365,11 +1395,13 @@ export function BookingRequestForm() {
                   </div>
                 )}
 
-              {/* Period Selector */}
-              {isPricingSelected && !isCustomDuration && (
+              {/* Period/Nights Selector */}
+              {isPricingSelected && (
                 <div className="space-y-3">
                   <Label>
-                    How many {getPeriodLabel(formData.priceDuration)}?
+                    {isCustomDuration
+                      ? "How many nights?"
+                      : `How many ${getPeriodLabel(formData.priceDuration)}?`}
                   </Label>
                   <div className="flex items-center gap-3">
                     <Button
@@ -1377,19 +1409,31 @@ export function BookingRequestForm() {
                       variant="outline"
                       size="icon"
                       className="w-1/12"
-                      onClick={() => handlePeriodChange(period - 1)}
-                      disabled={period <= 1}
+                      onClick={() => {
+                        if (isCustomDuration) {
+                          handleCustomNightsChange(customNights - 1);
+                        } else {
+                          handlePeriodChange(period - 1);
+                        }
+                      }}
+                      disabled={
+                        isCustomDuration ? customNights <= 1 : period <= 1
+                      }
                     >
                       <Minus className="size-4" />
                     </Button>
 
                     <Input
                       type="number"
-                      value={period}
+                      value={isCustomDuration ? customNights : period}
                       onChange={(e) => {
                         const val = parseInt(e.target.value);
                         if (!isNaN(val) && val >= 1) {
-                          handlePeriodChange(val);
+                          if (isCustomDuration) {
+                            handleCustomNightsChange(val);
+                          } else {
+                            handlePeriodChange(val);
+                          }
                         }
                       }}
                       className="w-9/12 text-center"
@@ -1401,18 +1445,132 @@ export function BookingRequestForm() {
                       variant="outline"
                       size="icon"
                       className="w-1/12"
-                      onClick={() => handlePeriodChange(period + 1)}
+                      onClick={() => {
+                        if (isCustomDuration) {
+                          handleCustomNightsChange(customNights + 1);
+                        } else {
+                          handlePeriodChange(period + 1);
+                        }
+                      }}
                     >
                       <Plus className="size-4" />
                     </Button>
 
                     <span className="text-sm text-muted-foreground">
-                      {getPeriodLabel(formData.priceDuration)}
+                      {isCustomDuration
+                        ? customNights === 1
+                          ? "night"
+                          : "nights"
+                        : getPeriodLabel(formData.priceDuration)}
                     </span>
                   </div>
                 </div>
               )}
 
+              {/* Check-in & check-out Dates */}
+              {isPricingSelected && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="checkInDate">
+                      Check-in Date & Time{" "}
+                      <span className="text-lipstick-red">*</span>
+                    </Label>
+                    <Input
+                      id="checkInDate"
+                      type="datetime-local"
+                      min={
+                        isCustomDuration && selectedPricing?.fromDate
+                          ? formatDateTimeLocal(
+                              getStartOfDay(selectedPricing.fromDate),
+                            )
+                          : now
+                      }
+                      max={
+                        isCustomDuration && selectedPricing?.toDate
+                          ? formatDateTimeLocal(
+                              getEndOfDay(selectedPricing.toDate),
+                            )
+                          : undefined
+                      }
+                      className={cn(errors.checkInDate && "border-destructive")}
+                      onChange={(e) => {
+                        setValue("checkInDate", e.target.value);
+                        clearErrors("checkInDate");
+                      }}
+                      value={formData.checkInDate || ""}
+                    />
+                    {isCustomDuration &&
+                      selectedPricing?.fromDate &&
+                      selectedPricing?.toDate && (
+                        <p className="text-xs text-muted-foreground">
+                          Must be between{" "}
+                          {formatDateKE(selectedPricing.fromDate)} and{" "}
+                          {formatDateKE(selectedPricing.toDate)}
+                        </p>
+                      )}
+                    {errors.checkInDate && (
+                      <p className="text-sm text-destructive">
+                        {errors.checkInDate.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="checkOutDate">Check-out Date</Label>
+                    <Input
+                      id="checkOutDate"
+                      type="date"
+                      disabled
+                      className="bg-muted"
+                      value={
+                        formData.checkOutDate
+                          ? format(
+                              new Date(formData.checkOutDate),
+                              "yyyy-MM-dd",
+                            )
+                          : ""
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Auto-calculated based on{" "}
+                      {isCustomDuration ? "nights" : "duration and period"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Total Amount Display */}
+              {isPricingSelected && (
+                <div className="p-4 rounded-lg bg-muted">
+                  <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
+                    <span>
+                      {formatPrice(discountedPrice)} × {totalNights}{" "}
+                      {totalNights === 1 ? "night" : "nights"}
+                    </span>
+                    {selectedPricing?.discountRate &&
+                      selectedPricing.discountRate > 0 && (
+                        <span className="text-green-600 text-xs">
+                          {(selectedPricing.discountRate * 100).toFixed(0)}%
+                          discount applied
+                        </span>
+                      )}
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Total Amount</span>
+                    <span className="text-2xl font-bold text-foreground">
+                      {formatPrice(totalAmount)}
+                    </span>
+                  </div>
+                  {hasDiscount(selectedPricing?.discountRate) &&
+                    savings > 0 && (
+                      <p className="text-xs text-green-600 mt-1 text-right">
+                        You save {formatPrice(savings)}
+                      </p>
+                    )}
+                </div>
+              )}
+
+              {/* Payment Method */}
               {isPricingSelected && (
                 <article className="space-y-4">
                   <div className="space-y-2">
@@ -1477,39 +1635,6 @@ export function BookingRequestForm() {
                 </article>
               )}
 
-              {/* Total Calculation */}
-              {isPricingSelected && (
-                <div className="p-4 rounded-lg bg-muted">
-                  <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
-                    <span>
-                      {formatPrice(discountedPrice)} × {actualPeriod}{" "}
-                      {getPeriodLabel(formData.priceDuration)}
-                    </span>
-                    <span>
-                      {calculateTotalNights(
-                        formData.priceDuration as PriceDuration,
-                        actualPeriod,
-                        selectedPricing?.fromDate,
-                        selectedPricing?.toDate,
-                      )}{" "}
-                      nights total
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Total Amount</span>
-                    <span className="text-2xl font-bold text-foreground">
-                      {formatPrice(formData.totalAmount || 0)}
-                    </span>
-                  </div>
-                  {hasDiscount(selectedPricing?.discountRate) &&
-                    savings > 0 && (
-                      <p className="text-xs text-green-600 mt-1 text-right">
-                        You save {formatPrice(savings)}
-                      </p>
-                    )}
-                </div>
-              )}
-
               {/* Purpose */}
               <div className="space-y-2">
                 <Label>
@@ -1563,7 +1688,7 @@ export function BookingRequestForm() {
             idDocumentPreview={idDocumentPreview}
             idDocumentFile={idDocumentFile}
             selectedPricing={selectedPricing}
-            period={period}
+            period={isCustomDuration ? customNights : period}
             propertyName={selectedProperty?.name || ""}
             unitName={selectedUnit?.name || ""}
             savings={savings}

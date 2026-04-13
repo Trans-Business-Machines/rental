@@ -28,7 +28,6 @@ import {
   formatDiscount,
   hasDiscount,
   getDurationLabel,
-  getPeriodLabel,
   calculateTotalNights,
   formatFileSize,
 } from "@/lib/utils";
@@ -67,14 +66,17 @@ export function BookingRequestConfirmation({
   paymentCode,
 }: BookingRequestConfirmationProps) {
   const isCustomDuration = selectedPricing?.duration === "custom";
-  const actualPeriod = isCustomDuration ? 1 : period;
 
-  const totalNights = calculateTotalNights(
-    formData.priceDuration as PriceDuration,
-    actualPeriod,
-    selectedPricing?.fromDate,
-    selectedPricing?.toDate,
-  );
+  // For custom pricing, period represents nights directly
+  // For other pricing types, calculate total nights from duration and period
+  const totalNights = isCustomDuration
+    ? period
+    : calculateTotalNights(
+        formData.priceDuration as PriceDuration,
+        period,
+        selectedPricing?.fromDate,
+        selectedPricing?.toDate
+      );
 
   // Get guest display info based on type
   const guestName =
@@ -316,7 +318,7 @@ export function BookingRequestConfirmation({
                   {formData.checkInDate
                     ? format(
                         new Date(formData.checkInDate),
-                        "EEE, MMM d, yyyy 'at' h:mm a",
+                        "EEE, MMM d, yyyy 'at' h:mm a"
                       )
                     : "-"}
                 </p>
@@ -329,10 +331,7 @@ export function BookingRequestConfirmation({
                 <p className="text-xs text-muted-foreground">Check-out</p>
                 <p className="font-medium">
                   {formData.checkOutDate
-                    ? format(
-                        new Date(formData.checkOutDate),
-                        "EEE, MMM d, yyyy",
-                      )
+                    ? format(new Date(formData.checkOutDate), "EEE, MMM d, yyyy")
                     : "-"}
                 </p>
               </div>
@@ -430,10 +429,10 @@ export function BookingRequestConfirmation({
               </div>
 
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {getPeriodLabel(formData.priceDuration)}
+                <span className="text-muted-foreground">Duration</span>
+                <span className="font-medium">
+                  × {totalNights} {totalNights === 1 ? "night" : "nights"}
                 </span>
-                <span className="font-medium"> &times; {actualPeriod}</span>
               </div>
 
               <Separator />

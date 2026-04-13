@@ -24,6 +24,7 @@ import {
   Users,
   FileText,
   Image as ImageIcon,
+  XCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Header from "./Header";
@@ -61,6 +62,9 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
 
   // Check if ID document is an image or PDF
   const isDocumentImage = guest.media?.mimeType?.startsWith("image/");
+
+  // Check if guest is rejected
+  const isRejected = guest.verificationStatus === "rejected";
 
   return (
     <section className="space-y-6 pb-4">
@@ -135,6 +139,23 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Rejection Reason - Show prominently at top if rejected */}
+      {isRejected && guest.notes && (
+        <Card className="border-destructive bg-destructive/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <XCircle className="size-5" />
+              Rejection Reason
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-destructive leading-relaxed">
+              {guest.notes}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Guest Details */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -461,8 +482,8 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
             </Card>
           )}
 
-          {/* Notes */}
-          {guest.notes && (
+          {/* Notes - Only show if not rejected (rejection reason is shown separately above) */}
+          {guest.notes && !isRejected && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

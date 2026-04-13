@@ -21,6 +21,7 @@ import {
   Users,
   ClipboardPaste,
   Loader2,
+  CircleX,
 } from "lucide-react";
 import { StatCards, StatCardsProps } from "@/components/StatCards";
 import { useTableMode } from "@/hooks/useTableMode";
@@ -143,6 +144,13 @@ export default function GuestsPage() {
       value: guestStats?.verified || 0,
       icon: UserCheck,
       color: "green",
+      subtitle: " ",
+    },
+    {
+      title: "Rejected Guests",
+      value: guestStats?.rejected || 0,
+      icon: CircleX,
+      color: "red",
       subtitle: " ",
     },
   ];

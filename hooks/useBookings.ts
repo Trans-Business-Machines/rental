@@ -143,7 +143,6 @@ export const useCreateBooking = () => {
 			);
 		},
 		onError: (error: any) => {
-			// Show specific error if double booking
 			if (
 				error instanceof Error &&
 				error.message.includes(
@@ -161,6 +160,10 @@ export const useCreateBooking = () => {
 				)) {
 
 				toast.error("Unauthorized, Insufficent permissions.", {
+					duration: 5000
+				})
+			} else if (error?.message && error.message.includes("Unique constraint failed on the fields: (`paymentCode`)")) {
+				toast.error("This payment code already exists!", {
 					duration: 5000
 				})
 			}

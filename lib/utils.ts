@@ -1,25 +1,23 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { countries } from "@nexisltd/country";
 import { addDays, differenceInDays } from "date-fns"
+import nationalities from 'i18n-nationality';
+import enLocale from 'i18n-nationality/langs/en.json' assert { type: 'json' }
 import type { BookingStatus, UnitStatus, Guest, InventoryItem, PriceDuration } from "@/lib/types/types";
 
 export const LIMIT = 9;
 const TIMEZONE = "Africa/Nairobi";
-export const BUCKET = "media_dev"
+export const BUCKET = "media_dev";
+nationalities.registerLocale(enLocale);
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function getNationalities() {
-  const worldCountries = countries();
 
-  const nationalities = worldCountries
-    .map((country) => country.nationality)
-    .sort((a, b) => a.localeCompare(b));
-
-  return nationalities;
+  const nationalitiesObj = nationalities.getNames("en");
+  return Object.values(nationalitiesObj).sort();
 }
 
 export function evaluateUnitStatus(bookingStatus: BookingStatus): UnitStatus {
@@ -223,6 +221,37 @@ export const formatDateInTimezone = (
 
   return new Intl.DateTimeFormat("en-KE", options || defaultOptions).format(new Date(date))
 
+}
+
+export function getStartOfDay(date: Date | string): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+export function getEndOfDay(date: Date | string): Date {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+export function formatDateKE(date: Date | string): string {
+  return new Intl.DateTimeFormat("en-KE", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Africa/Nairobi",
+  }).format(new Date(date));
+}
+
+export function formatDateTimeLocal(date: Date | string): string {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 export function normalizeCheckOutTo10amEAT(date: Date | string): Date {

@@ -602,6 +602,7 @@ export const getBookingFormData = async () => {
 						name: true,
 						maxGuests: true,
 						status: true,
+						type:true,
 					},
 					orderBy: {
 						name: "asc",
