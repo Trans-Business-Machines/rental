@@ -194,7 +194,7 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
                     </SelectItem>
                     <SelectItem value="weekly">Weekly (7 nights)</SelectItem>
                     <SelectItem value="monthly">Monthly (30 nights)</SelectItem>
-                    <SelectItem value="custom">Custom (Date Range)</SelectItem>
+                    {/* <SelectItem value="custom">Custom (Date Range)</SelectItem> */}
                   </SelectContent>
                 </Select>
               )}
@@ -204,7 +204,7 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
             )}
           </div>
 
-          {/* Custom Date Range */}
+         {/* 
           {watchedDuration === "custom" && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -269,7 +269,7 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
                 )}
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Price */}
           <div className="space-y-2">

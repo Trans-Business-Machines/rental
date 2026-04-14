@@ -12,7 +12,7 @@ import type {
 	GetBookingsParams,
 	UpdatedBookingData,
 	Role
-} from "@/lib/types/types"
+} from "@/lib/types/types";
 
 
 
@@ -328,7 +328,12 @@ export async function updateBooking(
 		// Fetch existing booking so we can detect real status transitions
 		const existing = await prisma.booking.findUnique({
 			where: { id },
-			select: { status: true, propertyId: true },
+			select: {
+				status: true,
+				propertyId: true,
+				priceDuration: true,
+				period: true,
+			},
 		});
 
 		if (!existing) {
@@ -338,18 +343,41 @@ export async function updateBooking(
 		// Get the corresponding unit status based on the new booking status
 		const unitStatus = evaluateUnitStatus(data.status);
 
-		// Build the update payload
-		const updatedBookingData = {
-			...data,
-			...(data.checkOutDate && {
-				checkOutDate: normalizeCheckOutTo10amEAT(data.checkOutDate),
-			}),
-			...(data.status === "checked_in" && { checkInDate: new Date() }),
-		};
-
 		// Only increment occupied on an actual transition into checked_in
 		const isCheckingInNow =
 			data.status === "checked_in" && existing.status !== "checked_in";
+
+		// Build the update payload
+		const updatedBookingData: Record<string, unknown> = {
+			...data,
+		};
+
+		// When transitioning to checked_in, update checkInDate and recalculate checkOutDate
+		if (isCheckingInNow) {
+			const newCheckInDate = new Date();
+
+			// Calculate nights based on pricing duration
+			let nightsToAdd: number;
+			if (existing.priceDuration === "one_night") {
+				nightsToAdd = existing.period;
+			} else if (existing.priceDuration === "weekly") {
+				nightsToAdd = existing.period * 7;
+			} else if (existing.priceDuration === "monthly") {
+				nightsToAdd = existing.period * 30;
+			} else {
+				// Default fallback
+				nightsToAdd = existing.period;
+			}
+
+			const newCheckOutDate = new Date(newCheckInDate);
+			newCheckOutDate.setDate(newCheckOutDate.getDate() + nightsToAdd);
+
+			updatedBookingData.checkInDate = newCheckInDate;
+			updatedBookingData.checkOutDate = normalizeCheckOutTo10amEAT(newCheckOutDate);
+		} else if (data.checkOutDate) {
+			// For non-check-in updates, normalize the checkout date if provided
+			updatedBookingData.checkOutDate = normalizeCheckOutTo10amEAT(data.checkOutDate);
+		}
 
 		// Use a prisma transaction to ensure atomicity and data consistency
 		const result = await prisma.$transaction(
@@ -602,7 +630,7 @@ export const getBookingFormData = async () => {
 						name: true,
 						maxGuests: true,
 						status: true,
-						type:true,
+						type: true,
 					},
 					orderBy: {
 						name: "asc",
