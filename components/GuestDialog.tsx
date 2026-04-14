@@ -13,10 +13,15 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
+import { redirect } from "next/navigation";
 
 export function GuestDialog() {
-  const { isAgent } = usePermissions();
+  const { isAgent, userId } = usePermissions();
   const [open, setOpen] = useState(false);
+
+  if (!userId) {
+    redirect("/login");
+  }
 
   const handleSuccess = () => {
     setOpen(false);
@@ -38,7 +43,11 @@ export function GuestDialog() {
         <DialogHeader>
           <DialogTitle>Add New Guest</DialogTitle>
         </DialogHeader>
-        <GuestForm onSuccess={handleSuccess} onCancel={handleCancel} />
+        <GuestForm
+          onSuccess={handleSuccess}
+          onCancel={handleCancel}
+          userId={userId}
+        />
       </DialogContent>
     </Dialog>
   );

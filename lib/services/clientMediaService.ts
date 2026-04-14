@@ -1,10 +1,12 @@
 import imageCompression from "browser-image-compression";
 import { createClient } from "@supabase/supabase-js";
+import { BUCKET } from "@/lib/utils"
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
 
 export interface UploadResult {
     url: string;
@@ -30,9 +32,10 @@ const ALLOWED_IMAGE_MIMETYPES = [
 ];
 
 const ALLOWED_DOCUMENT_MIMETYPES = ALLOWED_IMAGE_MIMETYPES.slice(0)
-
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_DOCUMENT_SIZE = 5 * 1024 * 1024;
+const MAX_PAYMENT_IMAGE_SIZE = MAX_FILE_SIZE;
+const PAYMENT_FOLDER = "payments";
 
 type EntityType = "property" | "unit" | "guest";
 
@@ -128,7 +131,7 @@ export class ClientMediaService {
     ): Promise<string> {
         const filePath = folder ? `${folder}/${filename}` : filename;
 
-        const { error } = await supabase.storage.from("media").upload(filePath, file, {
+        const { error } = await supabase.storage.from(BUCKET).upload(filePath, file, {
             contentType: file.type,
             cacheControl: "3600",
             upsert: false,
@@ -139,7 +142,7 @@ export class ClientMediaService {
         }
 
         const { data: urlData } = supabase.storage
-            .from("media")
+            .from(BUCKET)
             .getPublicUrl(filePath);
 
         return urlData.publicUrl;
@@ -216,7 +219,7 @@ export class ClientMediaService {
     static async deleteFromSupabase(filenames: string[]): Promise<void> {
         if (filenames.length === 0) return;
 
-        const { error } = await supabase.storage.from("media").remove(filenames);
+        const { error } = await supabase.storage.from(BUCKET).remove(filenames);
 
         if (error) {
             console.error("Failed to delete files from Supabase:", error);
@@ -227,7 +230,7 @@ export class ClientMediaService {
     static async deleteGuestDocument(filename: string): Promise<void> {
         const filePath = `guest-documents/${filename}`;
 
-        const { error } = await supabase.storage.from("media").remove([filePath]);
+        const { error } = await supabase.storage.from(BUCKET).remove([filePath]);
 
         if (error) {
             console.error("Failed to delete guest document:", error);
@@ -235,7 +238,7 @@ export class ClientMediaService {
     }
 }
 
-/* Upload booking request ID document (single file) */
+// ---------------------- METHODS TO HANDLE BOOKING REQUESTS IMAGES ----------------------
 export async function uploadBookingRequestDocument(file: File) {
     try {
         // Step 1: Validate the document
@@ -254,7 +257,7 @@ export async function uploadBookingRequestDocument(file: File) {
 
         // Step 4: Upload to Supabase in booking-requests folder 
         const { error: uploadError, } = await supabase.storage
-            .from("media")
+            .from(BUCKET)
             .upload(filePath, processedFile, {
                 contentType: processedFile.type,
                 cacheControl: "3600",
@@ -268,7 +271,7 @@ export async function uploadBookingRequestDocument(file: File) {
 
         // Step 5. Get the public URL
         const { data: urlData } = supabase.storage
-            .from("media")
+            .from(BUCKET)
             .getPublicUrl(filePath);
 
         return {
@@ -305,7 +308,7 @@ export async function moveBookingRequestDocument(
 
         // Download the file
         const { data: fileData, error: downloadError } = await supabase.storage
-            .from("media")
+            .from(BUCKET)
             .download(oldPath);
 
         if (downloadError || !fileData) {
@@ -318,7 +321,7 @@ export async function moveBookingRequestDocument(
 
         // Upload to new location
         const { error: uploadError } = await supabase.storage
-            .from("media")
+            .from(BUCKET)
             .upload(newPath, fileData, {
                 cacheControl: "3600",
                 upsert: false,
@@ -334,7 +337,7 @@ export async function moveBookingRequestDocument(
 
         // Delete old file
         const { error: deleteError } = await supabase.storage
-            .from("media")
+            .from(BUCKET)
             .remove([oldPath]);
 
         if (deleteError) {
@@ -343,7 +346,7 @@ export async function moveBookingRequestDocument(
 
         // Get new public URL
         const { data: urlData } = supabase.storage
-            .from("media")
+            .from(BUCKET)
             .getPublicUrl(newPath);
 
         return {
@@ -366,7 +369,7 @@ export async function deleteBookingRequestDocument(filename: string) {
         const filePath = `booking-requests/${filename}`;
 
         const { error } = await supabase.storage
-            .from("media")
+            .from(BUCKET)
             .remove([filePath]);
 
         if (error) {
@@ -380,6 +383,101 @@ export async function deleteBookingRequestDocument(filename: string) {
         return { success: true };
     } catch (error) {
         console.error("Error deleting booking request document:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Delete failed",
+        };
+    }
+}
+
+// ---------------------- METHODS TO HANDLE PAYBILL IMAGE ----------------------
+
+/* Upload payment info image */
+export async function uploadPaymentImage(
+    file: File,
+    existingFilename?: string | null
+) {
+    try {
+        // Step 1: Validate file type
+        if (!ALLOWED_IMAGE_MIMETYPES.includes(file.type)) {
+            return {
+                success: false,
+                error: "Invalid file type. Only JPEG, PNG, WebP, and AVIF are allowed.",
+            };
+        }
+
+        // Step 2: Validate file size (30MB max)
+        if (file.size > MAX_PAYMENT_IMAGE_SIZE) {
+            return {
+                success: false,
+                error: "File is too large. Maximum is 10MB.",
+            };
+        }
+
+        // Step 3: Delete existing file if provided (handles the "update" case)
+        if (existingFilename) {
+            const existingPath = `${PAYMENT_FOLDER}/${existingFilename}`;
+            await supabase.storage.from(BUCKET).remove([existingPath]);
+        }
+
+        // Step 4: Generate unique filename
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        const extension = file.name.split(".").pop()?.toLowerCase() || "png";
+        const filename = `payment-info-${timestamp}-${randomStr}.${extension}`;
+        const filePath = `${PAYMENT_FOLDER}/${filename}`;
+
+        // Step 5: Upload new file (no upsert)
+        const { error: uploadError } = await supabase.storage
+            .from(BUCKET)
+            .upload(filePath, file, {
+                contentType: file.type,
+                cacheControl: "0",
+                upsert: false,
+            });
+
+        if (uploadError) {
+            console.error("Error uploading payment image:", uploadError);
+            return { success: false, error: uploadError.message };
+        }
+
+        // Step 6: Get public URL
+        const { data: urlData } = supabase.storage
+            .from(BUCKET)
+            .getPublicUrl(filePath);
+
+        return {
+            success: true,
+            imageName: filename,
+            originalName: file.name,
+            imageUrl: urlData.publicUrl,
+            imageSize: file.size,
+            mimeType: file.type,
+        };
+    } catch (error) {
+        console.error("Error uploading payment image:", error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+        };
+    }
+}
+
+/* Delete payment image from storage */
+export async function deletePaymentImageFromStorage(filename: string) {
+    try {
+        const filePath = `${PAYMENT_FOLDER}/${filename}`;
+
+        const { error } = await supabase.storage.from(BUCKET).remove([filePath]);
+
+        if (error) {
+            console.error("Error deleting payment image:", error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting payment image:", error);
         return {
             success: false,
             error: error instanceof Error ? error.message : "Delete failed",

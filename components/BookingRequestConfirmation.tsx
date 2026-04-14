@@ -28,7 +28,6 @@ import {
   formatDiscount,
   hasDiscount,
   getDurationLabel,
-  getPeriodLabel,
   calculateTotalNights,
   formatFileSize,
 } from "@/lib/utils";
@@ -50,6 +49,7 @@ interface BookingRequestConfirmationProps {
   propertyName: string;
   unitName: string;
   savings: number;
+  paymentCode: string;
 }
 
 export function BookingRequestConfirmation({
@@ -63,16 +63,20 @@ export function BookingRequestConfirmation({
   propertyName,
   unitName,
   savings,
+  paymentCode,
 }: BookingRequestConfirmationProps) {
   const isCustomDuration = selectedPricing?.duration === "custom";
-  const actualPeriod = isCustomDuration ? 1 : period;
 
-  const totalNights = calculateTotalNights(
-    formData.priceDuration as PriceDuration,
-    actualPeriod,
-    selectedPricing?.fromDate,
-    selectedPricing?.toDate
-  );
+  // For custom pricing, period represents nights directly
+  // For other pricing types, calculate total nights from duration and period
+  const totalNights = isCustomDuration
+    ? period
+    : calculateTotalNights(
+        formData.priceDuration as PriceDuration,
+        period,
+        selectedPricing?.fromDate,
+        selectedPricing?.toDate
+      );
 
   // Get guest display info based on type
   const guestName =
@@ -312,7 +316,10 @@ export function BookingRequestConfirmation({
                 <p className="text-xs text-muted-foreground">Check-in</p>
                 <p className="font-medium">
                   {formData.checkInDate
-                    ? format(new Date(formData.checkInDate), "EEE, MMM d, yyyy 'at' h:mm a")
+                    ? format(
+                        new Date(formData.checkInDate),
+                        "EEE, MMM d, yyyy 'at' h:mm a"
+                      )
                     : "-"}
                 </p>
               </div>
@@ -324,10 +331,7 @@ export function BookingRequestConfirmation({
                 <p className="text-xs text-muted-foreground">Check-out</p>
                 <p className="font-medium">
                   {formData.checkOutDate
-                    ? format(
-                        new Date(formData.checkOutDate),
-                        "EEE, MMM d, yyyy"
-                      )
+                    ? format(new Date(formData.checkOutDate), "EEE, MMM d, yyyy")
                     : "-"}
                 </p>
               </div>
@@ -425,10 +429,10 @@ export function BookingRequestConfirmation({
               </div>
 
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {getPeriodLabel(formData.priceDuration)}
+                <span className="text-muted-foreground">Duration</span>
+                <span className="font-medium">
+                  × {totalNights} {totalNights === 1 ? "night" : "nights"}
                 </span>
-                <span className="font-medium"> &times; {actualPeriod}</span>
               </div>
 
               <Separator />
@@ -445,6 +449,10 @@ export function BookingRequestConfirmation({
                 <span className="text-2xl font-bold text-primary">
                   {formatPrice(formData.totalAmount || 0)}
                 </span>
+              </div>
+              <div className="flex justify-between items-center pt-2 text-base font-medium">
+                <span>Payment code</span>
+                <span className="text-primary">{paymentCode}</span>
               </div>
             </div>
 

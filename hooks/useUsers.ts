@@ -172,7 +172,6 @@ export const useSetUserRole = () => {
 			userId: string;
 			role: Role;
 		}) => {
-			console.log(userId, role)
 			const result = await authClient.admin.setRole({ userId, role });
 			return result;
 		},

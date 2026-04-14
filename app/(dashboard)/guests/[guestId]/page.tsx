@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { notFound, redirect } from "next/navigation";
 import { format } from "date-fns";
-import { formatDateInTimezone } from "@/lib/utils";
+import { formatDateInTimezone, cn } from "@/lib/utils";
 import { getServerSession } from "@/lib/check-permissions";
 import { UnauthorizedUI } from "../unauthorised-ui";
 import {
@@ -24,6 +24,7 @@ import {
   Users,
   FileText,
   Image as ImageIcon,
+  XCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Header from "./Header";
@@ -32,19 +33,6 @@ import type { Role } from "@/lib/types/types";
 interface GuestDetailsPageProps {
   params: Promise<{ guestId: string | number }>;
 }
-
-const getVerificationColor = (status: string) => {
-  switch (status) {
-    case "verified":
-      return "bg-chart-2/10 text-chart-2 border-chart-2/20";
-    case "pending":
-      return "bg-chart-3/10 text-chart-3 border-chart-3/20";
-    case "rejected":
-      return "bg-destructive/10 text-destructive border-destructive/20";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-};
 
 async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
   const session = await getServerSession();
@@ -75,17 +63,37 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
   // Check if ID document is an image or PDF
   const isDocumentImage = guest.media?.mimeType?.startsWith("image/");
 
+  // Check if guest is rejected
+  const isRejected = guest.verificationStatus === "rejected";
+
   return (
     <section className="space-y-6 pb-4">
       <Header guest={guest} />
 
       {/* Guest status banner */}
-      <Card className="border-l-4 border-l-chart-1">
+      <Card
+        className={cn(
+          "border-l-4",
+          guest.verificationStatus === "pending" && "border-l-princeton-orange",
+          guest.verificationStatus === "verified" && "border-l-medium-jungle",
+          guest.verificationStatus === "rejected" && "border-l-lipstick-red",
+        )}
+      >
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20">
-                <AvatarFallback className="bg-chart-1/10 capitalize text-chart-1 text-2xl font-semibold">
+                <AvatarFallback
+                  className={cn(
+                    "capitalize  text-2xl font-semibold",
+                    guest.verificationStatus === "pending" &&
+                      "bg-princeton-orange/10 text-princeton-orange",
+                    guest.verificationStatus === "verified" &&
+                      "bg-medium-jungle/10 text-medium-jungle",
+                    guest.verificationStatus === "rejected" &&
+                      "bg-lipstick-red/10 text-lipstick-red",
+                  )}
+                >
                   {guest.firstName[0]}
                   {guest.lastName[0]}
                 </AvatarFallback>
@@ -97,7 +105,15 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                 {guest.verificationStatus && (
                   <Badge
                     variant="secondary"
-                    className={`${getVerificationColor(guest.verificationStatus)} capitalize mt-2`}
+                    className={cn(
+                      "capitalize mt-2 border",
+                      guest.verificationStatus === "pending" &&
+                        "bg-princeton-orange/10 text-princeton-orange border-princeton-orange",
+                      guest.verificationStatus === "verified" &&
+                        "bg-medium-jungle/10 text-medium-jungle border-medium-jungle",
+                      guest.verificationStatus === "rejected" &&
+                        "bg-lipstick-red/10 text-lipstick-red border-lipstick-red",
+                    )}
                   >
                     {guest.verificationStatus}
                   </Badge>
@@ -123,6 +139,23 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Rejection Reason - Show prominently at top if rejected */}
+      {isRejected && guest.notes && (
+        <Card className="border-destructive bg-destructive/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <XCircle className="size-5" />
+              Rejection Reason
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-destructive leading-relaxed">
+              {guest.notes}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Guest Details */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -285,7 +318,9 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <IdCard className="size-5 text-chart-1" />
-                ID Document
+                {guest.idType === "passport"
+                  ? "Passport Image"
+                  : "National ID image"}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -307,10 +342,6 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                   {/* Document Info & Actions */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
                     <div className="text-sm text-muted-foreground">
-                      <p>
-                        <span className="font-medium">File:</span>{" "}
-                        {guest.media.originalName}
-                      </p>
                       <p>
                         <span className="font-medium">Size:</span>{" "}
                         {(guest.media.fileSize / 1024).toFixed(1)} KB
@@ -451,8 +482,8 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
             </Card>
           )}
 
-          {/* Notes */}
-          {guest.notes && (
+          {/* Notes - Only show if not rejected (rejection reason is shown separately above) */}
+          {guest.notes && !isRejected && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -524,6 +555,17 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {guest.registeredBy && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Registered By
+                  </p>
+                  <p className="text-sm font-semibold text-foreground capitalize">
+                    {guest.registeredBy.name}
+                  </p>
+                </div>
+              )}
+
               {guest.registrationDate && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">
@@ -534,10 +576,12 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                   </p>
                 </div>
               )}
-
+              <Separator />
               {guest.createdAt && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Created</p>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Created At
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {formatDateInTimezone(guest.createdAt)}
                   </p>

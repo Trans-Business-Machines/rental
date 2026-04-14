@@ -73,34 +73,46 @@ export default async function BookingsPage({
       propertiesPromise,
     ]);
 
+  const isAgent = user.role === "agent";
+
+  const subtitleSuffix = isAgent
+    ? "from your requests"
+    : "across all properties";
+
   const stats: StatCardsProps[] = [
     {
       title: "Total Bookings",
       value: bookingStatsResponse.total,
+      subtitle: `All bookings ${subtitleSuffix}`,
       icon: Calendar,
       color: "blue",
     },
-    {
-      title: "Pending",
-      value: bookingStatsResponse.pending,
-      icon: CircleDashed,
-      color: "orange",
-    },
+    ...(!isAgent
+      ? [
+          {
+            title: "Pending",
+            value: bookingStatsResponse.pending ?? 0,
+            subtitle: "Awaiting confirmation",
+            icon: CircleDashed,
+            color: "orange",
+          },
+        ]
+      : []),
     {
       title: "Checked In",
       value: bookingStatsResponse.checkedIn,
+      subtitle: "Currently staying",
       icon: CircleCheckBig,
       color: "green",
     },
     {
       title: "Reserved",
       value: bookingStatsResponse.reserved,
+      subtitle: "Upcoming stays",
       icon: CalendarClock,
       color: "",
     },
   ];
-
-  const isAgent = user.role === "agent";
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

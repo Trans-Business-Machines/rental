@@ -57,6 +57,7 @@ import {
   getPeriodLabel,
   getPeriodLabelSingular,
   calculateTotalNights,
+  formatDateInTimezone,
 } from "@/lib/utils";
 import { BookingRequestDetailsSkeleton } from "@/components/BookingRequestDetailsSkeleton";
 import type { PriceDuration, Role } from "@/lib/types/types";
@@ -136,7 +137,7 @@ export function BookingRequestDetails({
   // Calculate pricing details using utils
   const totalNights = calculateTotalNights(
     bookingRequest.priceDuration as PriceDuration,
-    bookingRequest.period
+    bookingRequest.period,
   );
 
   // unitPrice is already the discounted price
@@ -181,7 +182,7 @@ export function BookingRequestDetails({
             status === "rejected" &&
               "border-red-500 bg-red-500/10 text-red-500",
             status === "approved" &&
-              "border-medium-jungle bg-medium-jungle/10 text-medium-jungle"
+              "border-medium-jungle bg-medium-jungle/10 text-medium-jungle",
           )}
         >
           {status}
@@ -199,7 +200,9 @@ export function BookingRequestDetails({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm">{bookingRequest.rejectionReason}</p>
+              <p className="text-sm text-lipstick-red">
+                {bookingRequest.rejectionReason}
+              </p>
             </CardContent>
           </Card>
         )}
@@ -265,7 +268,7 @@ export function BookingRequestDetails({
                         {bookingRequest.guestDateOfBirth
                           ? format(
                               new Date(bookingRequest.guestDateOfBirth),
-                              "PPP"
+                              "PPP",
                             )
                           : "-"}
                       </p>
@@ -339,12 +342,11 @@ export function BookingRequestDetails({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FileText className="size-5" />
-                  ID Document
+                  <IdCard className="size-5" />
+                  {bookingRequest.guestIdType === "passport"
+                    ? "Passport image"
+                    : "National ID image "}
                 </CardTitle>
-                <CardDescription>
-                  Uploaded identification document
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {bookingRequest.idDocumentUrl ? (
@@ -475,12 +477,9 @@ export function BookingRequestDetails({
             <div className="flex items-start gap-3">
               <Calendar className="size-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Check-in</p>
+                <p className="text-sm text-muted-foreground">Check in</p>
                 <p className="font-medium">
-                  {format(
-                    new Date(bookingRequest.checkInDate),
-                    "EEE, MMM d, yyyy 'at' h:mm a"
-                  )}
+                  {formatDateInTimezone(new Date(bookingRequest.checkInDate))}
                 </p>
               </div>
             </div>
@@ -488,12 +487,9 @@ export function BookingRequestDetails({
             <div className="flex items-start gap-3">
               <Calendar className="size-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Check-out</p>
+                <p className="text-sm text-muted-foreground">Check out</p>
                 <p className="font-medium">
-                  {format(
-                    new Date(bookingRequest.checkOutDate),
-                    "EEE, MMM d, yyyy"
-                  )}
+                  {formatDateInTimezone(new Date(bookingRequest.checkOutDate))}
                 </p>
               </div>
             </div>
@@ -592,7 +588,7 @@ export function BookingRequestDetails({
                   {getPeriodLabel(bookingRequest.priceDuration)}
                 </span>
                 <span className="font-medium">
-                  × {bookingRequest.period} ({totalNights} night
+                  &times; {bookingRequest.period} ({totalNights} night
                   {totalNights !== 1 ? "s" : ""})
                 </span>
               </div>
@@ -642,6 +638,12 @@ export function BookingRequestDetails({
                   {formatPrice(bookingRequest.totalAmount)}
                 </span>
               </div>
+              <div className="flex justify-between text-base font-medium">
+                <span>Payment code</span>
+                <span className="text-primary">
+                  {bookingRequest.paymentCode}
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -669,7 +671,7 @@ export function BookingRequestDetails({
               <div className="pb-4">
                 <p className="font-medium">Request Submitted</p>
                 <p className="text-sm text-muted-foreground">
-                  {format(new Date(bookingRequest.createdAt), "PPP 'at' p")}
+                  {formatDateInTimezone(new Date(bookingRequest.createdAt))}
                 </p>
                 <p className="text-sm mt-1">
                   Submitted by{" "}
@@ -715,7 +717,7 @@ export function BookingRequestDetails({
                         : "Request Cancelled"}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(bookingRequest.reviewedAt), "PPP 'at' p")}
+                    {formatDateInTimezone(new Date(bookingRequest.reviewedAt))}
                   </p>
                   <p className="text-sm mt-1">
                     By{" "}
@@ -761,7 +763,9 @@ export function BookingRequestDetails({
               Request Actions
             </CardTitle>
             <CardDescription>
-              You can either approve or reject this booking request.
+              {isAgent
+                ? "You can cancel the request and provide a valid reason."
+                : "You can either approve or reject this booking request."}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">

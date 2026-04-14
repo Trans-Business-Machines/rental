@@ -3,7 +3,14 @@
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { format } from "date-fns";
-import { MoreHorizontal, Eye, Pencil, Mail, Phone, Archive } from "lucide-react";
+import {
+  MoreHorizontal,
+  Eye,
+  Pencil,
+  Mail,
+  Phone,
+  Archive,
+} from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -22,19 +29,6 @@ import {
 import Link from "next/link";
 import { cn, shouldDisableDelete } from "@/lib/utils";
 import type { GuestsTableAndCardsProps } from "@/lib/types/types";
-
-const getVerificationColor = (status: string) => {
-  switch (status) {
-    case "verified":
-      return "default";
-    case "pending":
-      return "outline";
-    case "rejected":
-      return "destructive";
-    default:
-      return "secondary";
-  }
-};
 
 function GuestsTable({
   guests,
@@ -61,7 +55,7 @@ function GuestsTable({
               <TableHead className="font-semibold text-foreground">
                 phone
               </TableHead>
-              <TableHead className="font-semibold text-center  text-foreground">
+              <TableHead className="font-semibold text-foreground">
                 total stays
               </TableHead>
               <TableHead className="font-semibold text-foreground">
@@ -78,13 +72,17 @@ function GuestsTable({
                 <TableCell>
                   {guest.firstName} {guest.lastName}
                 </TableCell>
-                <TableCell>
+                <TableCell className="pl-4">
                   <Badge
-                    variant={
-                      getVerificationColor(
-                        guest.verificationStatus || "pending"
-                      ) as "default" | "secondary" | "destructive" | "outline"
-                    }
+                    className={cn(
+                      "py-1 px-3 rounded-lg capitalize border text-white",
+                      guest.verificationStatus === "pending" &&
+                        "border-princeton-orange bg-princeton-orange",
+                      guest.verificationStatus === "verified" &&
+                        "border-medium-jungle bg-medium-jungle",
+                      guest.verificationStatus === "rejected" &&
+                        "border-lipstick-red bg-lipstick-red",
+                    )}
                   >
                     {guest.verificationStatus || "pending"}
                   </Badge>
@@ -101,7 +99,7 @@ function GuestsTable({
                     <span>{guest.phone}</span>
                   </div>
                 </TableCell>
-                <TableCell className="grid place-items-center">{guest.totalStays}</TableCell>
+                <TableCell className=" lg:pl-8">{guest.totalStays}</TableCell>
                 <TableCell>
                   {guest.lastStay
                     ? format(new Date(guest.lastStay), "dd/MM/yyyy")
@@ -115,7 +113,13 @@ function GuestsTable({
                         variant="ghost"
                         className="size-8 cursor-pointer p-0"
                       >
-                        <MoreHorizontal className="size-4" />
+                        <MoreHorizontal
+                          className={cn(
+                            "size-4 rotate-90",
+                            guest.verificationStatus === "pending" &&
+                              "text-princeton-orange font-bold",
+                          )}
+                        />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
@@ -156,14 +160,14 @@ function GuestsTable({
                           shouldDisableDelete(guest) || isArchivePending
                         }
                         className={cn(
-                          "hover:bg-orange-500/30 focus:bg-orange-5/30 cursor-pointer",
-                          isArchivePending && "cursor-not-allowed opacity-40"
+                          "bg-lipstick-red/80 hover:bg-crimson-red focus:bg-crimson-red cursor-pointer",
+                          isArchivePending && "cursor-not-allowed opacity-40",
                         )}
                         onClick={() => handleClick(guest.id)}
                       >
                         <div className="flex gap-2 items-center">
-                          <Archive className="size-4 text-orange-500" />
-                          <span className="text-orange-500">Archive guest</span>
+                          <Archive className="size-4 text-white" />
+                          <span className="text-white">Archive guest</span>
                         </div>
                       </DropdownMenuItem>
                     </DropdownMenuContent>

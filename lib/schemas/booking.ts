@@ -23,7 +23,10 @@ export const BookingFormSchema = z.object({
     unitPrice: z.number().min(0),
     discountRate: z.number().nullable().optional(),
     paymentMethod: z.string().min(1, "Payment method is required"),
-    paymentCode: z.string().min(1, "Payment reference code is required").length(10, "Must be 10 characters").toUpperCase(),
+    paymentCode: z
+        .string()
+        .min(8, "Payment code must be atleast 8 characters")
+        .max(12, "Payment code must be atleast 10 characters").toUpperCase(),
     status: z.enum(["pending", "reserved", "checked_in"]),
     specialRequests: z.string().optional(),
 });

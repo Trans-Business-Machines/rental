@@ -18,7 +18,7 @@ export function StatCards({ stats }: { stats: StatCardsProps[] }) {
         "grid gap-2 md:grid-cols-2 lg:grid-cols-3",
         statsLength === 4 && "lg:grid-cols-4",
         statsLength === 5 && "lg:grid-cols-5",
-        statsLength === 6 && "lg:grid-cols-3"
+        statsLength === 6 && "lg:grid-cols-3",
       )}
     >
       {stats.map((stat) => {
@@ -38,9 +38,9 @@ export function StatCards({ stats }: { stats: StatCardsProps[] }) {
                   stat.color === "blue"
                     ? "bg-chart-1/10"
                     : stat.color === "green"
-                      ? "bg-chart-2/10"
+                      ? "bg-medium-jungle/10"
                       : stat.color === "orange"
-                        ? "bg-chart-3/10"
+                        ? "bg-princeton-orange/10"
                         : stat.color === "red"
                           ? "bg-chart-5/10"
                           : "bg-chart-4/10"
@@ -51,9 +51,9 @@ export function StatCards({ stats }: { stats: StatCardsProps[] }) {
                     stat.color === "blue"
                       ? "text-chart-1"
                       : stat.color === "green"
-                        ? "text-chart-2"
+                        ? "text-medium-jungle"
                         : stat.color === "orange"
-                          ? "text-chart-3"
+                          ? "text-princeton-orange"
                           : stat.color === "red"
                             ? "text-chart-5"
                             : "text-chart-4"
@@ -67,9 +67,9 @@ export function StatCards({ stats }: { stats: StatCardsProps[] }) {
                   stat.color === "blue"
                     ? "text-chart-1"
                     : stat.color === "green"
-                      ? "text-chart-2"
+                      ? "text-medium-jungle"
                       : stat.color === "orange"
-                        ? "text-chart-3"
+                        ? "text-princeton-orange"
                         : stat.color === "red"
                           ? "text-chart-5"
                           : "text-chart-4"

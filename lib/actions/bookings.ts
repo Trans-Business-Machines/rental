@@ -6,26 +6,15 @@ import { evaluateUnitStatus, normalizeCheckOutTo10amEAT } from "@/lib/utils"
 import { requirePermission, getServerSession } from "@/lib/check-permissions"
 import { LIMIT } from "@/lib/utils"
 import { redirect } from "next/navigation";
-import type { BookingStatus, CreateBookingData, Role } from "@/lib/types/types"
+import type {
+	BookingStatus,
+	CreateBookingData,
+	GetBookingsParams,
+	UpdatedBookingData,
+	Role
+} from "@/lib/types/types";
 
-interface GetBookingsParams {
-	page?: number;
-	search?: string;
-	status?: string;
-	propertyId?: string;
-}
 
-interface UpdatedBookingData {
-	checkInDate?: Date;
-	checkOutDate?: Date;
-	numberOfGuests?: number;
-	totalAmount?: number;
-	paymentMethod?: string;
-	source?: string;
-	purpose?: string;
-	specialRequests?: string;
-	status: BookingStatus;
-}
 
 export async function getBookings({
 	page = 1,
@@ -339,7 +328,12 @@ export async function updateBooking(
 		// Fetch existing booking so we can detect real status transitions
 		const existing = await prisma.booking.findUnique({
 			where: { id },
-			select: { status: true, propertyId: true },
+			select: {
+				status: true,
+				propertyId: true,
+				priceDuration: true,
+				period: true,
+			},
 		});
 
 		if (!existing) {
@@ -349,18 +343,41 @@ export async function updateBooking(
 		// Get the corresponding unit status based on the new booking status
 		const unitStatus = evaluateUnitStatus(data.status);
 
-		// Build the update payload
-		const updatedBookingData = {
-			...data,
-			...(data.checkOutDate && {
-				checkOutDate: normalizeCheckOutTo10amEAT(data.checkOutDate),
-			}),
-			...(data.status === "checked_in" && { checkInDate: new Date() }),
-		};
-
 		// Only increment occupied on an actual transition into checked_in
 		const isCheckingInNow =
 			data.status === "checked_in" && existing.status !== "checked_in";
+
+		// Build the update payload
+		const updatedBookingData: Record<string, unknown> = {
+			...data,
+		};
+
+		// When transitioning to checked_in, update checkInDate and recalculate checkOutDate
+		if (isCheckingInNow) {
+			const newCheckInDate = new Date();
+
+			// Calculate nights based on pricing duration
+			let nightsToAdd: number;
+			if (existing.priceDuration === "one_night") {
+				nightsToAdd = existing.period;
+			} else if (existing.priceDuration === "weekly") {
+				nightsToAdd = existing.period * 7;
+			} else if (existing.priceDuration === "monthly") {
+				nightsToAdd = existing.period * 30;
+			} else {
+				// Default fallback
+				nightsToAdd = existing.period;
+			}
+
+			const newCheckOutDate = new Date(newCheckInDate);
+			newCheckOutDate.setDate(newCheckOutDate.getDate() + nightsToAdd);
+
+			updatedBookingData.checkInDate = newCheckInDate;
+			updatedBookingData.checkOutDate = normalizeCheckOutTo10amEAT(newCheckOutDate);
+		} else if (data.checkOutDate) {
+			// For non-check-in updates, normalize the checkout date if provided
+			updatedBookingData.checkOutDate = normalizeCheckOutTo10amEAT(data.checkOutDate);
+		}
 
 		// Use a prisma transaction to ensure atomicity and data consistency
 		const result = await prisma.$transaction(
@@ -494,26 +511,51 @@ export async function restoreBooking(id: number) {
 
 export async function getBookingStats() {
 	try {
+
+		const session = await getServerSession();
+		const user = session?.user;
+
+		if (!user) {
+			redirect("/login")
+		}
+
+		const isAgent = user.role === "agent"
+
 		const totalBookings = await prisma.booking.count({
 			where: {
-				deletedAt: null
+				deletedAt: null,
+				...(isAgent && {
+					requestedById: user.id
+				})
 			}
 		});
 		const pendingBookings = await prisma.booking.count({
 			where: { status: "pending", deletedAt: null },
 		});
 		const checkedInBookings = await prisma.booking.count({
-			where: { status: "checked_in", deletedAt: null },
+			where: {
+				status: "checked_in",
+				deletedAt: null,
+				...(isAgent && {
+					requestedById: user.id
+				})
+			},
 		});
 		const reservedBookings = await prisma.booking.count({
-			where: { status: "reserved", deletedAt: null },
+			where: {
+				status: "reserved",
+				deletedAt: null,
+				...(isAgent && {
+					requestedById: user.id
+				})
+			},
 		});
 
 		return {
 			total: totalBookings,
 			checkedIn: checkedInBookings,
-			pending: pendingBookings,
 			reserved: reservedBookings,
+			...(!isAgent && { pending: pendingBookings, })
 		};
 	} catch (error) {
 		console.error("Error fetching booking stats:", error);
@@ -527,12 +569,11 @@ export async function getBookingStats() {
 }
 
 export const getBookingFormData = async () => {
-	// Retrieve guest and property info from the DB all in one go
 	const [guests, properties] = await Promise.all([
 		prisma.guest.findMany({
 			where: {
 				verificationStatus: "verified",
-				deletedAt: null
+				deletedAt: null,
 			},
 			select: {
 				id: true,
@@ -542,28 +583,43 @@ export const getBookingFormData = async () => {
 				bookings: {
 					where: {
 						status: {
-							in: ["checked_in", "pending", "reserved"]
+							in: ["checked_in", "pending", "reserved"],
 						},
 					},
 					orderBy: {
-						checkOutDate: "desc"
+						checkOutDate: "desc",
 					},
 					select: {
 						id: true,
 						status: true,
 						unitPrice: true,
 					},
-					take: 1
-				}
+					take: 1,
+				},
+				bookingRequests: {
+					where: {
+						status: {
+							in: ["pending", "approved"],
+						},
+					},
+					orderBy: {
+						createdAt: "desc",
+					},
+					select: {
+						id: true,
+						status: true,
+					},
+					take: 1,
+				},
 			},
 			orderBy: {
-				createdAt: "desc"
-			}
+				createdAt: "desc",
+			},
 		}),
 
 		prisma.property.findMany({
 			where: {
-				deletedAt: null
+				deletedAt: null,
 			},
 			select: {
 				id: true,
@@ -574,26 +630,26 @@ export const getBookingFormData = async () => {
 						name: true,
 						maxGuests: true,
 						status: true,
+						type: true,
 					},
 					orderBy: {
-						name: "asc"
-					}
-				}
+						name: "asc",
+					},
+				},
 			},
 			orderBy: {
-				name: "asc"
-			}
-		})
-	])
+				name: "asc",
+			},
+		}),
+	]);
 
-	// Add an isCheckedIn field to guests data
-	const processedGuests = guests.map(guest => ({
+	const processedGuests = guests.map((guest) => ({
 		...guest,
-		isCheckedIn: guest.bookings.length > 0
-	}))
+		isCheckedIn: guest.bookings.length > 0 || guest.bookingRequests.length > 0,
+	}));
 
 	return {
 		properties,
-		guests: processedGuests
-	}
-}
+		guests: processedGuests,
+	};
+};

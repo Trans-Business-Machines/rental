@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Wrench } from "lucide-react";
+import { Home, UserCheck, CalendarClock, Calendar } from "lucide-react";
 import { InventoryTable } from "./_components/inventory-table";
 import { RecentBookingsTable } from "./_components/recent-bookings-table";
 import { UnitAvailabilityTable } from "./_components/unit-availability-table";
@@ -118,14 +118,28 @@ export default async function DashboardPage({
       value: unitsStatsResponse.available,
       subtitle: "Ready for booking",
       icon: Home,
+      color: "green",
+    },
+    {
+      title: "Occupied",
+      value: unitsStatsResponse.occupied,
+      subtitle: "Occupied units",
+      icon: UserCheck,
+      color: "red",
+    },
+    {
+      title: "Booked units",
+      value: unitsStatsResponse.booked,
+      subtitle: "Units that are booked",
+      icon: Calendar,
       color: "orange",
     },
     {
-      title: "Maintenance",
-      value: unitsStatsResponse.maintenance,
-      subtitle: "Units under maintenance",
-      icon: Wrench,
-      color: "red",
+      title: "Reserved",
+      value: unitsStatsResponse.reserved,
+      subtitle: "Units with a reservation",
+      icon: CalendarClock,
+      color: "",
     },
   ];
 
@@ -138,7 +152,9 @@ export default async function DashboardPage({
             Dashboard
           </h1>
           <p className="text-muted-foreground text-lg">
-            Here&apos;s an overview of your rental properties.
+            {userRole === "agent"
+              ? "Here is an overview of all property units "
+              : " Here is an overview of your rental properties."}
           </p>
         </div>
       </div>

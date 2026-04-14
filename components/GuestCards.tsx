@@ -26,19 +26,6 @@ import { cn, shouldDisableDelete } from "@/lib/utils";
 import Link from "next/link";
 import type { GuestsTableAndCardsProps } from "@/lib/types/types";
 
-const getVerificationColor = (status: string) => {
-  switch (status) {
-    case "verified":
-      return "default";
-    case "pending":
-      return "outline";
-    case "rejected":
-      return "destructive";
-    default:
-      return "secondary";
-  }
-};
-
 function GuestCards({
   guests,
   setEditGuest,
@@ -66,11 +53,15 @@ function GuestCards({
 
                   <div className="flex  items-center gap-1">
                     <Badge
-                      variant={
-                        getVerificationColor(
-                          guest.verificationStatus || "pending"
-                        ) as "default" | "secondary" | "destructive" | "outline"
-                      }
+                      className={cn(
+                        "rounded-lg capitalize border text-white",
+                        guest.verificationStatus === "pending" &&
+                          "border-princeton-orange bg-princeton-orange",
+                        guest.verificationStatus === "verified" &&
+                          "border-medium-jungle bg-medium-jungle",
+                        guest.verificationStatus === "rejected" &&
+                          "border-lipstick-red bg-lipstick-red",
+                      )}
                     >
                       {guest.verificationStatus || "pending"}
                     </Badge>
@@ -90,7 +81,13 @@ function GuestCards({
                     variant="ghost"
                     className="size-8 cursor-pointer p-0"
                   >
-                    <MoreHorizontal className="size-4 rotate-90" />
+                    <MoreHorizontal
+                      className={cn(
+                        "size-4 rotate-90",
+                        guest.verificationStatus === "pending" &&
+                          "text-princeton-orange font-bold",
+                      )}
+                    />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -127,14 +124,14 @@ function GuestCards({
                   <DropdownMenuItem
                     disabled={shouldDisableDelete(guest) || isArchivePending}
                     className={cn(
-                      "hover:bg-orange-500/30 focus:bg-orange-5/30 cursor-pointer",
-                      isArchivePending && "cursor-not-allowed opacity-40"
+                      "bg-lipstick-red/80 hover:bg-crimson-red focus:bg-crimson-red cursor-pointer",
+                      isArchivePending && "cursor-not-allowed opacity-40",
                     )}
                     onClick={() => handleClick(guest.id)}
                   >
                     <div className="flex gap-2 items-center">
-                      <Archive className="size-4 text-orange-500" />
-                      <span className="text-orange-500">Archive guest</span>
+                      <Archive className="size-4 text-white" />
+                      <span className="text-white">Archive guest</span>
                     </div>
                   </DropdownMenuItem>
                 </DropdownMenuContent>

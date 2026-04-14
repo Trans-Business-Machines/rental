@@ -55,11 +55,39 @@ export function useCreateBookingRequest() {
     return useMutation({
         mutationFn: createBookingRequest,
         onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: bookingRequestKeys.lists() });
-            toast.success("Booking request submitted successfully");
+
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: bookingRequestKeys.lists() }),
+                queryClient.invalidateQueries({
+                    queryKey: ["booking-form-data"]
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ["booking-request-form-data"]
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ["guests", "search"]
+                }),
+
+            ])
+
+            toast.success("Booking request submitted successfully and notification sent to admin.", {
+                duration: 6000
+            });
         },
-        onError: (error: Error) => {
-            toast.error(error.message || "Failed to submit booking request");
+        onError: (error) => {
+            let errorMessage = error.message;
+
+            if (errorMessage.includes("constraint failed on the fields: (`paymentCode`)")) {
+                errorMessage = "This payment code already exists!"
+            }
+
+            if (errorMessage.includes("constraint failed on the fields: (`guestEmail`)")) {
+                errorMessage = "This email already exists!"
+            }
+
+            toast.error(errorMessage || "Failed to submit booking request", {
+                duration: 6000
+            });
         },
     });
 }
@@ -150,9 +178,9 @@ export function useApproveBookingRequest() {
             queryClient.invalidateQueries({ queryKey: ["guests"] });
 
             if (data.isExistingGuest) {
-                toast.success("Booking request approved. Booking created for existing guest.");
+                toast.success("Booking request approved. Booking created for existing guest and email sent to agent.");
             } else {
-                toast.success("Booking request approved. Guest and booking created.");
+                toast.success("Booking request approved. Guest and booking created and email sent to agent.");
             }
         },
         onError: (error: Error) => {
@@ -190,9 +218,21 @@ export function useRejectBookingRequest() {
 
             return result;
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: bookingRequestKeys.lists() });
-            toast.success("Booking request rejected");
+        onSuccess: async () => {
+
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: bookingRequestKeys.lists() }),
+                queryClient.invalidateQueries({
+                    queryKey: ["booking-form-data"]
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ["booking-request-form-data"]
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ["guests", "search"]
+                }),])
+
+            toast.success("Booking request rejected and email sent to agent");
         },
         onError: (error: Error) => {
             toast.error(error.message || "Failed to reject booking request");
@@ -231,7 +271,16 @@ export function useCancelBookingRequest() {
             queryClient.invalidateQueries({ queryKey: bookingRequestKeys.lists() });
             toast.success("Booking request cancelled");
         },
-        onError: (error: Error) => {
+        onError: async (error: Error) => {
+            await Promise.all([queryClient.invalidateQueries({
+                queryKey: ["booking-form-data"]
+            }),
+            queryClient.invalidateQueries({
+                queryKey: ["booking-request-form-data"]
+            }),
+            queryClient.invalidateQueries({
+                queryKey: ["guests", "search"]
+            })])
             toast.error(error.message || "Failed to cancel booking request");
         },
     });

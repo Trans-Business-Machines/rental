@@ -31,6 +31,7 @@ import {
   Users,
   UserPlus,
   X,
+  CreditCard,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -58,6 +59,7 @@ const navigationConfig: NavItem[] = [
   { id: "guests", label: "Guests", icon: Users },
   { id: "inventory", label: "Inventory", icon: Box },
   { id: "properties", label: "Properties", icon: Building2 },
+  { id: "payments", label: "Payments", icon: CreditCard },
   { id: "users", label: "Users", icon: User, roles: ["admin", "superAdmin"] },
 ];
 

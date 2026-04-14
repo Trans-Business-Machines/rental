@@ -22,6 +22,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useUpdateGuest } from "@/hooks/useGuests";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import type { Guest } from "@/lib/types/types";
 
 interface GuestEditDialogProps {
@@ -50,7 +52,6 @@ export function GuestEditDialog({
     dateOfBirth: guest.dateOfBirth || "",
     address: guest.address || "",
     city: guest.city || "",
-    country: guest.country || "",
     occupation: guest.occupation || "",
     employer: guest.employer || "",
     emergencyContactName: guest.emergencyContactName || "",
@@ -58,6 +59,8 @@ export function GuestEditDialog({
     emergencyContactRelation: guest.emergencyContactRelation || "",
     verificationStatus: guest.verificationStatus || "verified",
   });
+
+  const [errors, setErrors] = useState<{ notes?: string }>({});
 
   // Define state for uncontrolled dialog box
   const [internalOpen, setInternalOpen] = useState(false);
@@ -79,6 +82,11 @@ export function GuestEditDialog({
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Clear error when user starts typing in notes
+    if (name === "notes" && errors.notes) {
+      setErrors((prev) => ({ ...prev, notes: undefined }));
+    }
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -90,15 +98,38 @@ export function GuestEditDialog({
       }
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
+
+      // Clear notes error if status changes from rejected
+      if (name === "verificationStatus" && value !== "rejected") {
+        setErrors((prev) => ({ ...prev, notes: undefined }));
+      }
     }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: { notes?: string } = {};
+
+    if (formData.verificationStatus === "rejected" && !formData.notes.trim()) {
+      newErrors.notes = "Rejection reason is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!validateForm()) {
+      toast.error("Please provide a rejection reason in the notes field.");
+      return;
+    }
+
     // Update the guest
     mutate({ guestId: guest.id, values: formData });
   };
+
+  const isRejected = formData.verificationStatus === "rejected";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -242,23 +273,13 @@ export function GuestEditDialog({
                   onChange={handleChange}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="city">City</Label>
                 <Input
                   id="city"
                   name="city"
                   value={formData.city}
                   placeholder="e.g Nairobi"
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  name="country"
-                  placeholder="e.g Kenya"
-                  value={formData.country}
                   onChange={handleChange}
                 />
               </div>
@@ -366,18 +387,39 @@ export function GuestEditDialog({
           {/* Notes */}
           <article className="space-y-4">
             <h3 className="font-semibold text-foreground">
-              Additional Notes (optional)
+              {isRejected ? "Rejection Reason" : "Additional Notes"}{" "}
+              {isRejected ? (
+                <span className="text-chart-5">*</span>
+              ) : (
+                "(optional)"
+              )}
             </h3>
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">
+                {isRejected ? "Reason for rejection" : "Notes"}
+              </Label>
               <Textarea
                 id="notes"
                 name="notes"
                 value={formData.notes}
                 onChange={handleChange}
-                placeholder="Add any additional notes about this guest..."
+                placeholder={
+                  isRejected
+                    ? "Please provide a reason for rejecting this guest's verification..."
+                    : "Add any additional notes about this guest..."
+                }
                 rows={4}
+                className={cn(errors.notes && "border-destructive")}
               />
+              {errors.notes && (
+                <p className="text-sm text-destructive">{errors.notes}</p>
+              )}
+              {isRejected && !errors.notes && (
+                <p className="text-xs text-muted-foreground">
+                  A rejection reason is required when setting status to
+                  rejected.
+                </p>
+              )}
             </div>
           </article>
 

@@ -43,9 +43,16 @@ export async function getDashboardStats() {
 
 
     // Get all units under maintenance from DB
-    const maintenanceUnits = await prisma.unit.count({
+    const reservedUnits = await prisma.unit.count({
         where: {
-            status: "maintenance"
+            status: "reserved"
+        }
+    })
+
+    // Get all booked units  from DB
+    const bookedUnits = await prisma.unit.count({
+        where: {
+            status: "booked"
         }
     })
 
@@ -53,7 +60,8 @@ export async function getDashboardStats() {
         total: totalUnits,
         occupied: occupiedUnits,
         available: availableUnits,
-        maintenance: maintenanceUnits
+        reserved: reservedUnits,
+        booked: bookedUnits
     };
 }
 

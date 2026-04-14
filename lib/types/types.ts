@@ -38,6 +38,7 @@ export type PriceDuration = "one_night" | "weekly" | "monthly" | "custom"
 export type BadgeVariant = "dashboard" | "listing" | "details";
 
 export type Role = "user" | "admin" | "superAdmin" | "agent"
+export type VerificationStatus = "pending" | "verified" | "rejected"
 
 
 interface IdDocumentData {
@@ -60,6 +61,7 @@ export type CreateNewGuest = {
     passportNumber?: string | undefined;
     notes?: string | undefined;
     idDocument?: IdDocumentData;
+    registeredBy?: string;
 } | {
     idType: "passport";
     firstName: string;
@@ -72,6 +74,7 @@ export type CreateNewGuest = {
     idNumber?: string | undefined;
     notes?: string | undefined;
     idDocument?: IdDocumentData;
+    registeredBy?: string;
 }
 
 export type GroupedAssigments = {
@@ -97,7 +100,6 @@ export interface BookingsTableAndCardsProps {
     setEditBooking: (booking: Booking) => void;
     setIsDialogOpen: (open: boolean) => void;
 }
-
 
 export interface GuestsTableAndCardsProps {
     guests: Guest[];
@@ -193,7 +195,7 @@ export interface GuestUpdateFormData {
     emergencyContactName?: string;
     emergencyContactPhone?: string;
     emergencyContactRelation?: string;
-    verificationStatus: string;
+    verificationStatus: VerificationStatus;
 }
 
 export interface Invitation {
@@ -235,6 +237,25 @@ export interface CreateBookingData {
     purpose: string;
     paymentCode: string;
     paymentMethod: string;
+    specialRequests?: string;
+    status: BookingStatus;
+}
+
+export interface GetBookingsParams {
+    page?: number;
+    search?: string;
+    status?: string;
+    propertyId?: string;
+}
+
+export interface UpdatedBookingData {
+    checkInDate?: Date;
+    checkOutDate?: Date;
+    numberOfGuests?: number;
+    totalAmount?: number;
+    paymentMethod?: string;
+    source?: string;
+    purpose?: string;
     specialRequests?: string;
     status: BookingStatus;
 }
@@ -305,44 +326,6 @@ export type UnitMedia = UnitDetailsResponse["media"][number];
 export type UnitBooking = UnitDetailsResponse["bookings"][number];
 
 
-export interface CreateBookingRequestParams {
-    // Guest Details
-    guestFirstName: string;
-    guestLastName: string;
-    guestEmail: string;
-    guestPhone: string;
-    guestDateOfBirth: string;
-    guestNationality: string;
-    guestIdType: IdType;
-    guestIdNumber?: string | null;
-    guestPassportNumber?: string | null;
-    guestNotes?: string | null;
-
-    // ID Document
-    idDocumentFilename: string;
-    idDocumentOriginalName: string;
-    idDocumentMimeType: string;
-    idDocumentFileSize: number;
-    idDocumentUrl: string;
-
-    // Booking Details
-    propertyId: number;
-    unitId: number;
-    checkInDate: Date;
-    checkOutDate: Date;
-    numberOfGuests: number;
-    priceDuration: PriceDuration;
-    unitPrice: number;
-    period: number;
-    discountRate?: number | null;
-    paymentMethod: string;
-    paymentCode: string;
-    totalAmount: number;
-    purpose?: string | null;
-    specialRequests?: string | null;
-
-}
-
 export interface GetBookingRequestsParams {
     page?: number;
     status?: "pending" | "approved" | "rejected" | "cancelled";
@@ -385,47 +368,45 @@ export interface UpdateBookingRequestParams {
     specialRequests?: string | null;
 }
 
-export type BookingRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
+export interface CreateBookingRequestParams {
+    // Guest type
+    guestType: "existing" | "new";
 
-export interface BookingRequestListItem {
-  id: number;
-  // For existing guests
-  existingGuestId: number | null;
-  existingGuest: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-  } | null;
-  // For new guests (optional when existingGuestId is set)
-  guestFirstName: string | null;
-  guestLastName: string | null;
-  guestEmail: string | null;
-  guestPhone: string | null;
-  status: BookingRequestStatus;
-  checkInDate: Date;
-  checkOutDate: Date;
-  totalAmount: number;
-  createdAt: Date;
-  // ID document fields (optional - only for new guests)
-  idDocumentFilename: string | null;
-  idDocumentOriginalName: string | null;
-  idDocumentMimeType: string | null;
-  idDocumentFileSize: number | null;
-  idDocumentUrl: string | null;
-  property: {
-    id: number;
-    name: string;
-  };
-  unit: {
-    id: number;
-    name: string;
-  };
-  requestedBy: {
-    id: string;
-    name: string;
-  };
+    // For existing guest
+    existingGuestId?: number;
+
+    // For new guest (optional when guestType is "existing")
+    guestFirstName?: string;
+    guestLastName?: string;
+    guestEmail?: string;
+    guestPhone?: string;
+    guestDateOfBirth?: string; // Changed from Date to string
+    guestNationality?: string;
+    guestIdType?: "national_id" | "passport";
+    guestIdNumber?: string | null;
+    guestPassportNumber?: string | null;
+    guestNotes?: string | null;
+    idDocumentFilename?: string;
+    idDocumentOriginalName?: string;
+    idDocumentMimeType?: string;
+    idDocumentFileSize?: number;
+    idDocumentUrl?: string;
+
+    // Booking details (always required)
+    propertyId: number;
+    unitId: number;
+    checkInDate: Date;
+    checkOutDate: Date;
+    numberOfGuests: number;
+    priceDuration: string;
+    unitPrice: number;
+    period: number;
+    discountRate?: number | null;
+    totalAmount: number;
+    paymentMethod: string;
+    paymentCode: string;
+    purpose?: string | null;
+    specialRequests?: string | null;
 }
 
 export interface ApproveMediaData {
@@ -434,6 +415,73 @@ export interface ApproveMediaData {
     mediaOriginalName: string;
     mediaMimeType: string;
     mediaSize: number;
+}
+
+export interface NotifyAgentApprovedParams {
+    agentEmail: string;
+    agentName: string;
+    guestName: string;
+    propertyName: string;
+    unitName: string;
+    checkInDate: Date;
+    checkOutDate: Date;
+    numberOfGuests: number;
+    totalAmount: number;
+    bookingId: number;
+}
+
+export interface NotifyAgentRejectedParams {
+    agentEmail: string;
+    agentName: string;
+    guestName: string;
+    propertyName: string;
+    unitName: string;
+    checkInDate: Date;
+    checkOutDate: Date;
+    rejectionReason: string;
+}
+
+export type BookingRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
+
+export interface BookingRequestListItem {
+    id: number;
+    // For existing guests
+    existingGuestId: number | null;
+    existingGuest: {
+        id: number;
+        firstName: string;
+        lastName: string;
+        email: string;
+        phone: string;
+    } | null;
+    // For new guests (optional when existingGuestId is set)
+    guestFirstName: string | null;
+    guestLastName: string | null;
+    guestEmail: string | null;
+    guestPhone: string | null;
+    status: BookingRequestStatus;
+    checkInDate: Date;
+    checkOutDate: Date;
+    totalAmount: number;
+    createdAt: Date;
+    // ID document fields (optional - only for new guests)
+    idDocumentFilename: string | null;
+    idDocumentOriginalName: string | null;
+    idDocumentMimeType: string | null;
+    idDocumentFileSize: number | null;
+    idDocumentUrl: string | null;
+    property: {
+        id: number;
+        name: string;
+    };
+    unit: {
+        id: number;
+        name: string;
+    };
+    requestedBy: {
+        id: string;
+        name: string;
+    };
 }
 
 export interface NotifyAdminsOfBookingRequestParams {

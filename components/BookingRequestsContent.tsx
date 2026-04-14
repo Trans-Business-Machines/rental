@@ -125,31 +125,8 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
 
   return (
     <section className="space-y-3">
-      {/* Header */}
-      <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Booking Requests
-          </h1>
-          <p className="text-muted-foreground">
-            {isAgent
-              ? "View and manage your booking requests"
-              : "Review and approve booking requests from agents"}
-          </p>
-        </div>
-
-        {isAgent && (
-          <Button asChild>
-            <Link href="/booking-requests/new">
-              <Plus className="size-4 mr-2" />
-              New Request
-            </Link>
-          </Button>
-        )}
-      </header>
-
       {/* Filters */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center my-3">
         <DebouncedSearch
           value={search}
           onSearch={handleSearch}
@@ -327,7 +304,13 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
                               className="cursor-pointer"
                             >
                               <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="size-4 rotate-90" />
+                                <MoreHorizontal
+                                  className={cn(
+                                    "size-4 rotate-90",
+                                    request.status === "pending" &&
+                                      "text-princeton-orange",
+                                  )}
+                                />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">

@@ -114,12 +114,21 @@ export const useCreateBooking = () => {
 		onSuccess: async (newBooking) => {
 			toast.success("Booking created successfully");
 
-			// Invalidate and refetch bookings list and unit details
+			// Invalidate queries
 			await Promise.all([
 				queryClient.invalidateQueries({ queryKey: bookingKeys.lists() }),
 				queryClient.invalidateQueries({
 					queryKey: unitKeys.details(newBooking.unitId.toString(), newBooking.propertyId.toString())
-				})
+				}),
+				queryClient.invalidateQueries({
+					queryKey: ["booking-form-data"]
+				}),
+				queryClient.invalidateQueries({
+					queryKey: ["booking-request-form-data"]
+				}),
+				queryClient.invalidateQueries({
+					queryKey: ["guests", "search"]
+				}),
 			])
 
 			// Optionally update the cache with the new booking
@@ -134,7 +143,6 @@ export const useCreateBooking = () => {
 			);
 		},
 		onError: (error: any) => {
-			// Show specific error if double booking
 			if (
 				error instanceof Error &&
 				error.message.includes(
@@ -152,6 +160,10 @@ export const useCreateBooking = () => {
 				)) {
 
 				toast.error("Unauthorized, Insufficent permissions.", {
+					duration: 5000
+				})
+			} else if (error?.message && error.message.includes("Unique constraint failed on the fields: (`paymentCode`)")) {
+				toast.error("This payment code already exists!", {
 					duration: 5000
 				})
 			}

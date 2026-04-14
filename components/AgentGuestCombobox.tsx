@@ -20,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useDebouncedCallback } from "use-debounce";
-import { searchGuestsForBooking } from "@/lib/actions/guests";
+import { useSearchGuestsForBooking } from "@/hooks/useGuests";
 import type { GuestSearchResult } from "@/lib/types/types";
 
 interface GuestComboboxProps {
@@ -49,32 +49,26 @@ export function GuestCombobox({
 }: GuestComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [guests, setGuests] = useState<GuestSearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // Debounced search
-  const debouncedSearch = useDebouncedCallback(async (query: string) => {
-    setIsLoading(true);
-    try {
-      const results = await searchGuestsForBooking(query);
-      setGuests(results);
-    } catch (error) {
-      console.error("Failed to search guests:", error);
-      setGuests([]);
-    } finally {
-      setIsLoading(false);
-    }
+  // Debounce the search query
+  const debouncedSetSearch = useDebouncedCallback((query: string) => {
+    setDebouncedSearch(query);
   }, 300);
 
-  // Initial load
+  // Use the custom hook
+  const { data: guests = [], isLoading } =
+    useSearchGuestsForBooking(debouncedSearch);
+
+  // Initial load - trigger search with empty string
   useEffect(() => {
-    debouncedSearch("");
-  }, [debouncedSearch]);
+    setDebouncedSearch("");
+  }, []);
 
   // Handle search change
   const handleSearchChange = (query: string) => {
     setSearch(query);
-    debouncedSearch(query);
+    debouncedSetSearch(query);
   };
 
   // Handle selection
@@ -120,7 +114,10 @@ export function GuestCombobox({
             <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-0" align="start">
+        <PopoverContent
+          className="p-0 w-[var(--radix-popover-trigger-width)]"
+          align="start"
+        >
           <Command shouldFilter={false}>
             <CommandInput
               placeholder="Search by name, email, or phone..."
@@ -153,7 +150,7 @@ export function GuestCombobox({
                 </CommandEmpty>
               ) : (
                 <>
-                  <CommandGroup heading="Existing Guests">
+                  <CommandGroup heading="Only verified guests will appear">
                     {guests.map((guest) => {
                       const hasActiveBooking = !!guest.activeBookingStatus;
                       const statusInfo = guest.activeBookingStatus
