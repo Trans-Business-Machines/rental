@@ -7,7 +7,7 @@ import type { BookingStatus, UnitStatus, Guest, InventoryItem, PriceDuration } f
 
 export const LIMIT = 9;
 const TIMEZONE = "Africa/Nairobi";
-export const BUCKET = "media_dev";
+export const BUCKET = "media";
 nationalities.registerLocale(enLocale);
 
 export function cn(...inputs: ClassValue[]) {
