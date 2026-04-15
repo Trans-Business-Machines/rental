@@ -359,13 +359,13 @@ export async function createBookingRequest(data: CreateBookingRequestParams) {
             },
         });
 
-        // Mark the unit as reserved
+        // Mark the unit as booked
         await prisma.unit.update({
             where: {
                 id: unit.id
             },
             data: {
-                status: "reserved"
+                status: "booked"
             }
         })
 
@@ -416,9 +416,25 @@ export async function createBookingRequest(data: CreateBookingRequestParams) {
         });
 
         return { success: true, bookingRequest };
-    } catch (error) {
+    } catch (error: any) {
+
         console.error("Error creating booking request:", error);
-        throw error;
+
+        const message = error?.message || "";
+
+        if (message.includes("Unique constraint failed on the fields: (`paymentCode`)")) {
+            throw new Error("This payment code already exists!");
+        }
+
+        if (message.includes("Unique constraint failed on the fields: (`guestEmail`)")) {
+            throw new Error("This email already exists!");
+        }
+
+        if (error instanceof Error) {
+            throw error;
+        }
+
+        throw new Error("Failed to create booking request!");
     }
 }
 
@@ -561,6 +577,7 @@ export async function approveBookingRequest(
                 },
             });
 
+
             // Update booking request status
             await tx.bookingRequest.update({
                 where: { id },
@@ -570,6 +587,16 @@ export async function approveBookingRequest(
                     reviewedAt: new Date(),
                 },
             });
+
+            // Mark the unit as booked
+            await tx.unit.update({
+                where: {
+                    id: booking.unitId
+                },
+                data: {
+                    status: "reserved"
+                }
+            })
 
             return { guestId, guestName, booking };
         });
@@ -600,9 +627,24 @@ export async function approveBookingRequest(
             bookingId: result.booking.id,
             isExistingGuest,
         };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error approving booking request:", error);
-        throw error;
+
+        const message = error?.message || "";
+
+        if (message.includes("Unique constraint failed on the fields: (`paymentCode`)")) {
+            throw new Error("This payment code already exists!");
+        }
+
+        if (message.includes("Unique constraint failed on the fields: (`guestEmail`)")) {
+            throw new Error("This email already exists!");
+        }
+
+        if (error instanceof Error) {
+            throw error;
+        }
+
+        throw new Error("Failed to create booking request!");
     }
 }
 

@@ -142,35 +142,12 @@ export const useCreateBooking = () => {
 				}
 			);
 		},
-		onError: (error: any) => {
-			if (
-				error instanceof Error &&
-				error.message.includes(
-					"booking already exists"
-				)
-			) {
-				toast.error(error.message, {
-					duration: 5000
-				});
-			}
+		onError: (error) => {
+			const errorMessage = error.message
+			toast.error(errorMessage, {
+				duration: 6000
+			})
 
-			else if (error instanceof Error &&
-				error.message.includes(
-					"Unauthorized: Insufficent permissions."
-				)) {
-
-				toast.error("Unauthorized, Insufficent permissions.", {
-					duration: 5000
-				})
-			} else if (error?.message && error.message.includes("Unique constraint failed on the fields: (`paymentCode`)")) {
-				toast.error("This payment code already exists!", {
-					duration: 5000
-				})
-			}
-
-			else {
-				toast.error("Failed to create booking");
-			}
 		},
 	});
 };

@@ -311,11 +311,28 @@ export async function createBooking(booking: CreateBookingData) {
 		revalidatePath("/properties");
 
 		return result;
-	} catch (error) {
+	} catch (error: any) {
 		console.error("Error creating booking:", error);
-		throw error;
+
+		const message = error?.message || "";
+
+		if (message.includes("Unique constraint failed on the fields: (`paymentCode`)")) {
+			throw new Error("This payment code already exists!");
+		}
+
+		if (message.includes("Unique constraint failed on the fields: (`guestEmail`)")) {
+			throw new Error("This email already exists!");
+		}
+
+		// Re-throw your own validation errors (thrown earlier in the function)
+		if (error instanceof Error) {
+			throw error;
+		}
+
+		throw new Error("Failed to create booking!");
 	}
 }
+
 
 export async function updateBooking(
 	id: number,

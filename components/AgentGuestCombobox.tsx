@@ -182,7 +182,7 @@ export function GuestCombobox({
                                 {guest.firstName} {guest.lastName}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {guest.email} • {guest.phone}
+                                {guest.email}
                               </p>
                             </div>
                           </div>
@@ -234,9 +234,7 @@ export function GuestCombobox({
             <p className="font-medium">
               {value.firstName} {value.lastName}
             </p>
-            <p className="text-sm text-muted-foreground">
-              {value.email} • {value.phone}
-            </p>
+            <p className="text-sm text-muted-foreground">{value.email}</p>
           </div>
           <Button
             type="button"

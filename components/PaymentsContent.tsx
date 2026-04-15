@@ -239,17 +239,6 @@ export function PaymentsContent({ userRole }: PaymentsContentProps) {
                   />
                 </div>
 
-                <div className="text-sm text-muted-foreground">
-                  <p>
-                    <span className="font-medium">File:</span>{" "}
-                    {settings.originalName}
-                  </p>
-                  <p>
-                    <span className="font-medium">Size:</span>{" "}
-                    {(settings.imageSize / 1024 / 1024).toFixed(2)} MB
-                  </p>
-                </div>
-
                 {isSuperAdmin && (
                   <div className="flex gap-2">
                     <Button
