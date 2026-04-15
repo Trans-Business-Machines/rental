@@ -75,16 +75,7 @@ export function useCreateBookingRequest() {
             });
         },
         onError: (error) => {
-            let errorMessage = error.message;
-
-            if (errorMessage.includes("constraint failed on the fields: (`paymentCode`)")) {
-                errorMessage = "This payment code already exists!"
-            }
-
-            if (errorMessage.includes("constraint failed on the fields: (`guestEmail`)")) {
-                errorMessage = "This email already exists!"
-            }
-
+            const errorMessage = error.message;
             toast.error(errorMessage || "Failed to submit booking request", {
                 duration: 6000
             });

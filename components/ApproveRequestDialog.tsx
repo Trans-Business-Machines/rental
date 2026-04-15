@@ -38,15 +38,22 @@ export function ApproveRequestDialog({
   mutation,
 }: ApproveRequestDialogProps) {
   const handleApprove = async () => {
-    await mutation.mutateAsync({
-      id: requestId,
-      isExistingGuest,
-      guestId,
-      idDocumentFilename,
-      idDocumentOriginalName,
-      idDocumentMimeType,
-      idDocumentFileSize,
-    });
+    await mutation.mutateAsync(
+      {
+        id: requestId,
+        isExistingGuest,
+        guestId,
+        idDocumentFilename,
+        idDocumentOriginalName,
+        idDocumentMimeType,
+        idDocumentFileSize,
+      },
+      {
+        onSettled: () => {
+          onOpenChange(false);
+        },
+      },
+    );
 
     onOpenChange(false);
   };
@@ -63,9 +70,7 @@ export function ApproveRequestDialog({
           </div>
           <AlertDialogDescription className="p-4 border border-green-600 bg-green-600/10 text-green-600 rounded-lg">
             {isExistingGuest ? (
-              <>
-                This will create a booking for the existing guest.
-              </>
+              <>This will create a booking for the existing guest.</>
             ) : (
               <>
                 This will create a new guest and booking from this request. The
