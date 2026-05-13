@@ -400,7 +400,7 @@ model CheckoutItem {
   inventoryAssignment   InventoryAssignment @relation(fields: [inventoryAssignmentId], references: [id], onDelete: Cascade)
 
   condition  CheckoutItemStatus @default(good)
-  damageCost Int                @default(0)
+  damageCost Int?                @default(0)
   notes      String?
   createdAt  DateTime           @default(now())
 
