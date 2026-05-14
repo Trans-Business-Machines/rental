@@ -1,11 +1,27 @@
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   getBookingsForCheckout,
   getInventoryAssignmentsForUnit,
 } from "@/lib/actions/checkout";
 import { Button } from "@/components/ui/button";
 import { notFound } from "next/navigation";
+import { Clock } from "lucide-react";
 import Link from "next/link";
+
+// Check if current time is within checkout hours (6 AM - 10 AM EAT)
+function isCheckoutTimeAllowed() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Nairobi",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(new Date());
+  const h = parseInt(parts.find((p) => p.type === "hour")?.value || "0");
+  const m = parseInt(parts.find((p) => p.type === "minute")?.value || "0");
+  const totalMinutes = h * 60 + m;
+  return totalMinutes >= 360 && totalMinutes <= 600;
+}
 
 interface CheckoutProcessPageProps {
   params: Promise<{ bookingId: string }>;
@@ -17,6 +33,28 @@ async function CheckoutProcessPage({ params }: CheckoutProcessPageProps) {
 
   if (isNaN(parsedBookingId)) {
     notFound();
+  }
+
+  if (!isCheckoutTimeAllowed()) {
+    return (
+      <section className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardContent className="py-12 text-center space-y-4">
+            <div className="mx-auto p-4 rounded-full bg-orange-100 w-fit">
+              <Clock className="size-8 text-orange-500" />
+            </div>
+            <h2 className="text-xl font-semibold">Checkout Unavailable</h2>
+            <p className="text-muted-foreground">
+              Check-out is only allowed between 6:00 AM and 10:00 AM (EAT).
+              Please come back during checkout hours.
+            </p>
+            <Button asChild>
+              <Link href="/checkout">Back to Checkout</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </section>
+    );
   }
 
   // Fetch all checked in bookings for the select list
@@ -31,7 +69,7 @@ async function CheckoutProcessPage({ params }: CheckoutProcessPageProps) {
 
   // Fetch inventory assignments for the unit
   const assignments = await getInventoryAssignmentsForUnit(
-    selectedBooking.unit.id
+    selectedBooking.unit.id,
   );
 
   return (

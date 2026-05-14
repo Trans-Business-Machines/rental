@@ -87,7 +87,7 @@ export async function getUsers({
             // Admin can only see users with "user" role
             ...(currentUserRole === "admin" && {
                 role: {
-                    in: ["user", "agent"]
+                    in: ["user"]
                 },
             }),
 

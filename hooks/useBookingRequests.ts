@@ -7,6 +7,7 @@ import {
     approveBookingRequest,
     rejectBookingRequest,
     cancelBookingRequest,
+    getPendingBookingRequestCount
 } from "@/lib/actions/booking-requests";
 import {
     moveBookingRequestDocument,
@@ -45,6 +46,16 @@ export function useBookingRequest(id: number) {
         queryKey: bookingRequestKeys.detail(id),
         queryFn: () => getBookingRequestById(id),
         enabled: !!id,
+    });
+}
+
+// Get pending count
+export function usePendingBookingRequestCount(enabled: boolean = true) {
+    return useQuery({
+        queryKey: ["pending-booking-request-count"],
+        queryFn: () => getPendingBookingRequestCount(),
+        enabled,
+        refetchInterval: 30000, // Poll every 30 seconds
     });
 }
 

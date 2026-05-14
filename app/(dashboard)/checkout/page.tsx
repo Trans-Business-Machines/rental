@@ -69,6 +69,24 @@ function CheckoutLandingPage() {
       return;
     }
 
+    // Enforce checkout hours: 6:00 AM - 10:00 AM EAT
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Nairobi",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    }).formatToParts(new Date());
+    const h = parseInt(parts.find((p) => p.type === "hour")?.value || "0");
+    const m = parseInt(parts.find((p) => p.type === "minute")?.value || "0");
+    const totalMinutes = h * 60 + m;
+
+    if (totalMinutes < 360 || totalMinutes > 600) {
+      toast.error(
+        "Check-out is only allowed between 6:00 AM and 10:00 AM (EAT)",
+      );
+      return;
+    }
+
     if (selectedBooking) {
       router.push(`/checkout/${selectedBookingId}`);
     }

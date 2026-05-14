@@ -16,6 +16,8 @@ import {
   calculateTotalAmount,
   calculateDiscountedPrice,
   calculateTotalNights,
+  calculateTotalWithVAT,
+  calculateVAT,
   formatPrice,
   getPeriodLabel,
   getStartOfDay,
@@ -96,7 +98,7 @@ export function BookingForm({
       unitPrice: 0,
       discountRate: null,
       paymentCode: "",
-      paymentMethod: "",
+      paymentMethod: "mpesa_till",
       status: "pending",
       specialRequests: "",
     },
@@ -152,11 +154,15 @@ export function BookingForm({
         )
     : 0;
 
-  const totalAmount = selectedPricing
+  // With:
+  const subtotal = selectedPricing
     ? isCustomDuration
       ? discountedPrice * customNights
       : calculateTotalAmount(discountedPrice, period)
     : 0;
+
+  const vatAmount = calculateVAT(subtotal);
+  const totalAmount = calculateTotalWithVAT(subtotal);
 
   // Update checkout date when check-in, duration, or period changes
   useEffect(() => {
@@ -179,7 +185,7 @@ export function BookingForm({
         );
       }
 
-      setValue("checkOutDate", format(checkOut, "yyyy-MM-dd"));
+      setValue("checkOutDate", format(checkOut, "yyyy-MM-dd") + "T10:00");
     }
   }, [
     formData.checkInDate,
@@ -236,9 +242,10 @@ export function BookingForm({
     );
 
     const finalPeriod = isCustomDuration ? customNights : period;
-    const finalTotalAmount = isCustomDuration
+    const finalSubtotal = isCustomDuration
       ? discounted * customNights
       : calculateTotalAmount(discounted, period);
+    const finalTotalAmount = calculateTotalWithVAT(finalSubtotal);
 
     const newBooking = {
       guestId: parseInt(data.guestId),
@@ -278,7 +285,7 @@ export function BookingForm({
     setValue("numberOfGuests", 1);
     setValue("checkInDate", now);
     setValue("checkOutDate", "");
-    setValue("paymentMethod", "");
+    setValue("paymentMethod", "mpesa_till");
     setValue("priceDuration", undefined as unknown as PriceDuration);
     setValue("unitPrice", 0);
     setValue("period", 1);
@@ -294,7 +301,7 @@ export function BookingForm({
     setValue("numberOfGuests", 1);
     setValue("checkInDate", now);
     setValue("checkOutDate", "");
-    setValue("paymentMethod", "");
+    setValue("paymentMethod", "mpesa_till");
     setValue("priceDuration", undefined as unknown as PriceDuration);
     setValue("unitPrice", 0);
     setValue("period", 1);
@@ -631,6 +638,9 @@ export function BookingForm({
                   },
                 })}
               />
+              <p className="text-xs text-muted-foreground">
+                Check-in is allowed between 12:00 PM and 6:00 PM
+              </p>
               {isCustomDuration &&
                 selectedPricing?.fromDate &&
                 selectedPricing?.toDate && (
@@ -650,14 +660,13 @@ export function BookingForm({
               <Label htmlFor="checkOutDate">Check-out Date</Label>
               <Input
                 id="checkOutDate"
-                type="date"
+                type="datetime-local"
                 disabled
                 className="bg-muted"
                 {...register("checkOutDate")}
               />
               <p className="text-xs text-muted-foreground">
-                Auto-calculated based on{" "}
-                {isCustomDuration ? "nights" : "duration and period"}
+                Auto-calculated · Default check-out time is 10:00 AM
               </p>
             </div>
           </article>
@@ -679,7 +688,15 @@ export function BookingForm({
                   </span>
                 )}
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
+              <span>Subtotal</span>
+              <span>{formatPrice(subtotal)}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
+              <span>VAT (16%)</span>
+              <span>{formatPrice(vatAmount)}</span>
+            </div>
+            <div className="flex justify-between items-center pt-2 border-t">
               <span className="font-medium">Total Amount</span>
               <span className="text-2xl font-bold text-foreground">
                 {formatPrice(totalAmount)}
@@ -725,7 +742,11 @@ export function BookingForm({
               <Input
                 id="payment-code"
                 type="text"
-                placeholder="e.g KTUDKLM90"
+                placeholder={
+                  formData.paymentMethod === "mpesa_till"
+                    ? "e.g. KTUDKLM900 (10 characters)"
+                    : "e.g. KTUDKLM90012345 (15 characters)"
+                }
                 className={cn(errors.paymentCode && "border border-red-400")}
                 {...register("paymentCode")}
               />

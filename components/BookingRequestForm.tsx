@@ -52,6 +52,8 @@ import {
   calculateCheckoutDate,
   calculateTotalNights,
   calculateTotalAmount,
+  calculateTotalWithVAT,
+  calculateVAT,
   calculateDiscountedPrice,
   getStartOfDay,
   getEndOfDay,
@@ -129,7 +131,7 @@ export function BookingRequestForm() {
   });
 
   // Get current datetime for datetime-local input
-  const now = new Date().toISOString().slice(0, 16);
+  const now = format(new Date(), "yyyy-MM-dd'T'HH:mm");
 
   const {
     register,
@@ -163,13 +165,12 @@ export function BookingRequestForm() {
       period: 1,
       numberOfGuests: 1,
       unitPrice: 0,
-      paymentMethod: "",
+      paymentMethod: "mpesa_till",
       paymentCode: "",
       totalAmount: 0,
       propertyId: 0,
       unitId: 0,
-      checkInDate: "",
-      checkOutDate: new Date(),
+      checkInDate: now,
     },
   });
 
@@ -222,11 +223,15 @@ export function BookingRequestForm() {
         )
     : 0;
 
-  const totalAmount = selectedPricing
+  // Total Price with VAT
+  const subtotal = selectedPricing
     ? isCustomDuration
       ? discountedPrice * customNights
       : calculateTotalAmount(discountedPrice, period)
     : 0;
+
+  const vatAmount = calculateVAT(subtotal);
+  const totalAmount = calculateTotalWithVAT(subtotal);
 
   // Calculate savings
   const savings = selectedPricing
@@ -262,10 +267,12 @@ export function BookingRequestForm() {
         selectedPricing.discountRate,
       );
 
-      const total = isCustomDuration
+      const subtotalCalc = isCustomDuration
         ? discounted * customNights
         : calculateTotalAmount(discounted, period);
+      const total = calculateTotalWithVAT(subtotalCalc);
 
+      checkOut.setHours(10, 0, 0, 0);
       setValue("checkOutDate", checkOut);
       setValue("unitPrice", discounted);
       setValue("discountRate", selectedPricing.discountRate || null);
@@ -464,8 +471,12 @@ export function BookingRequestForm() {
     setValue("propertyId", Number(value));
     setValue("unitId", 0);
     setValue("numberOfGuests", 1);
-    setValue("checkInDate", "");
-    setValue("checkOutDate", new Date());
+    setValue("checkInDate", now);
+
+    const defaultCheckout = new Date();
+    defaultCheckout.setHours(10, 0, 0, 0);
+    setValue("checkOutDate", defaultCheckout);
+
     setValue("priceDuration", "one_night");
     setValue("unitPrice", 0);
     setValue("period", 1);
@@ -480,8 +491,12 @@ export function BookingRequestForm() {
   const handleUnitChange = (value: string) => {
     setValue("unitId", Number(value));
     setValue("numberOfGuests", 1);
-    setValue("checkInDate", "");
-    setValue("checkOutDate", new Date());
+    setValue("checkInDate", now);
+
+    const defaultCheckout = new Date();
+    defaultCheckout.setHours(10, 0, 0, 0);
+    setValue("checkOutDate", defaultCheckout);
+
     setValue("period", 1);
     setValue("discountRate", null);
     setValue("totalAmount", 0);
@@ -549,9 +564,10 @@ export function BookingRequestForm() {
       );
 
       const finalPeriod = isCustomDuration ? customNights : period;
-      const finalTotalAmount = isCustomDuration
+      const finalSubtotal = isCustomDuration
         ? discounted * customNights
         : calculateTotalAmount(discounted, period);
+      const finalTotalAmount = calculateTotalWithVAT(finalSubtotal);
 
       const requestData: Parameters<
         typeof createBookingRequest.mutateAsync
@@ -1499,6 +1515,9 @@ export function BookingRequestForm() {
                       }}
                       value={formData.checkInDate || ""}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Check-in is allowed between 12:00 PM and 6:00 PM
+                    </p>
                     {isCustomDuration &&
                       selectedPricing?.fromDate &&
                       selectedPricing?.toDate && (
@@ -1519,21 +1538,20 @@ export function BookingRequestForm() {
                     <Label htmlFor="checkOutDate">Check-out Date</Label>
                     <Input
                       id="checkOutDate"
-                      type="date"
+                      type="datetime-local"
                       disabled
                       className="bg-muted"
                       value={
                         formData.checkOutDate
                           ? format(
                               new Date(formData.checkOutDate),
-                              "yyyy-MM-dd",
+                              "yyyy-MM-dd'T'HH:mm",
                             )
                           : ""
                       }
                     />
                     <p className="text-xs text-muted-foreground">
-                      Auto-calculated based on{" "}
-                      {isCustomDuration ? "nights" : "duration and period"}
+                      Auto-calculated · Default check-out time is 10:00 AM
                     </p>
                   </div>
                 </div>
@@ -1555,7 +1573,15 @@ export function BookingRequestForm() {
                         </span>
                       )}
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
+                    <span>Subtotal</span>
+                    <span>{formatPrice(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
+                    <span>VAT (16%)</span>
+                    <span>{formatPrice(vatAmount)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t">
                     <span className="font-medium">Total Amount</span>
                     <span className="text-2xl font-bold text-foreground">
                       {formatPrice(totalAmount)}
@@ -1622,7 +1648,11 @@ export function BookingRequestForm() {
                     <Input
                       id="payment-code"
                       type="text"
-                      placeholder="e.g KTUDKLM901"
+                      placeholder={
+                        formData.paymentMethod === "mpesa_till"
+                          ? "e.g. KTUDKLM900 (10 characters)"
+                          : "e.g. KTUDKLM90012345 (15 characters)"
+                      }
                       className={cn(errors.paymentCode && "border-destructive")}
                       {...register("paymentCode")}
                     />

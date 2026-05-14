@@ -2,7 +2,6 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { UseFormRegister, FieldErrors } from "react-hook-form";
 import { CheckoutFormData } from "@/lib/schemas/checkout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -131,26 +130,6 @@ export function Step1InspectionDetails({
                 {errors.checkoutDate.message}
               </p>
             )}
-          </div>
-
-          {/* Overall inspection Notes  */}
-          <div className="space-y-2">
-            <Label htmlFor="notes" className="text-base font-medium">
-              Overall Inspection Notes{" "}
-              <span className="text-muted-foreground font-normal">
-                (Optional)
-              </span>
-            </Label>
-            <Textarea
-              id="notes"
-              placeholder="General observations, guest cooperation, unit condition..."
-              {...register("notes")}
-              className="min-h-[120px] resize-none border-2 focus:border-chart-3"
-              rows={4}
-            />
-            <p className="text-sm text-muted-foreground">
-              You can add specific item notes in the next step
-            </p>
           </div>
         </CardContent>
       </Card>

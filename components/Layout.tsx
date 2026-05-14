@@ -36,6 +36,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AppSkeleton } from "./AppSkeleton";
+import { usePendingBookingRequestCount } from "@/hooks/useBookingRequests";
 import type { Role } from "@/lib/types/types";
 
 /* ------------------   INTERFACES  ------------------*/
@@ -86,6 +87,11 @@ export function Layout({ children }: LayoutProps) {
     return initialOpen;
   });
 
+  const userRole = (session?.user?.role as Role) || "user";
+  const isAdminOrSuper = userRole === "admin" || userRole === "superAdmin";
+  const { data: pendingCount = 0 } =
+    usePendingBookingRequestCount(isAdminOrSuper);
+
   if (session === undefined) {
     return <AppSkeleton />;
   }
@@ -124,7 +130,6 @@ export function Layout({ children }: LayoutProps) {
   };
 
   const userName = session?.user?.name || "User";
-  const userRole = (session?.user?.role as Role) || "user";
   const userEmail = session?.user?.email || "user@example.com";
 
   const renderNavItem = (item: NavItem) => {
@@ -200,6 +205,13 @@ export function Layout({ children }: LayoutProps) {
       >
         {Icon && <Icon className="size-5" />}
         <span>{item.label}</span>
+        {item.id === "booking-requests" &&
+          isAdminOrSuper &&
+          pendingCount > 0 && (
+            <span className="flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
+              {pendingCount > 99 ? "99+" : pendingCount}
+            </span>
+          )}
       </button>
     );
   };

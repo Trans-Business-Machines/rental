@@ -45,6 +45,7 @@ import {
   getDurationLabel,
   getPeriodLabel,
   calculateCheckoutDate,
+  calculateTotalWithVAT,
   calculateTotalNights,
   calculateTotalAmount,
   calculateDiscountedPrice,
@@ -94,8 +95,9 @@ export function BookingEditDialog({
   const [selectedPricing, setSelectedPricing] =
     useState<UnitTypePricing | null>(null);
   const [formData, setFormData] = useState({
-    checkInDate: new Date(booking.checkInDate).toISOString().split("T")[0],
-    checkOutDate: new Date(booking.checkOutDate).toISOString().split("T")[0],
+    checkInDate: format(new Date(booking.checkInDate), "yyyy-MM-dd'T'HH:mm"),
+    checkOutDate:
+      format(new Date(booking.checkOutDate), "yyyy-MM-dd") + "T10:00",
     numberOfGuests: booking.numberOfGuests,
     priceDuration: booking.priceDuration,
     unitPrice: booking.unitPrice,
@@ -149,11 +151,13 @@ export function BookingEditDialog({
         selectedPricing.price,
         selectedPricing.discountRate,
       );
-      const total = calculateTotalAmount(discountedPrice, actualPeriod);
+
+      const subtotalCalc = calculateTotalAmount(discountedPrice, actualPeriod);
+      const total = calculateTotalWithVAT(subtotalCalc);
 
       setFormData((prev) => ({
         ...prev,
-        checkOutDate: format(checkOut, "yyyy-MM-dd"),
+        checkOutDate: format(checkOut, "yyyy-MM-dd") + "T10:00",
         unitPrice: discountedPrice,
         discountRate: selectedPricing.discountRate,
         totalAmount: total,
@@ -204,6 +208,22 @@ export function BookingEditDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate check-in time: 12:00 PM - 6:00 PM
+    const [, time] = formData.checkInDate.split("T");
+    if (time) {
+      const [hours, minutes] = time.split(":").map(Number);
+      const totalMinutes = hours * 60 + minutes;
+      if (totalMinutes < 720 || totalMinutes > 1080) {
+        toast.error("Check-in time must be between 12:00 PM and 6:00 PM");
+        return;
+      }
+    }
+
+    if (booking.status === "reserved" && formData.status === "pending") {
+      toast.error("You cannot move from reserved to pending!");
+      return;
+    }
+
     if (booking.status === "reserved" && formData.status === "pending") {
       toast.error("You cannot move from reserved to pending!");
       return;
@@ -240,6 +260,13 @@ export function BookingEditDialog({
         toast.warning(
           "Unauthorized: Insufficient permissions to update booking.",
         );
+      } else if (
+        error instanceof Error &&
+        error.message.includes(
+          "Check-in is only allowed between 12:00 PM and 6:00 PM (EAT)",
+        )
+      ) {
+        toast.error(error.message);
       } else {
         toast.error("Update failed, try again!");
       }
@@ -312,7 +339,7 @@ export function BookingEditDialog({
                     if (pricing) handlePricingSelect(pricing);
                   }}
                   className="grid gap-3 md:grid-cols-2"
-                  disabled={isCheckedIn}
+                  disabled
                 >
                   {pricingOptions.map((pricing) => {
                     const Icon =
@@ -329,9 +356,8 @@ export function BookingEditDialog({
                         key={pricing.id}
                         htmlFor={`edit-${pricing.duration}`}
                         className={cn(
-                          "cursor-pointer",
+                          "opacity-50 cursor-not-allowed",
                           pricing.duration === "monthly" && "md:col-span-2",
-                          isCheckedIn && "opacity-50 cursor-not-allowed",
                         )}
                       >
                         <Card
@@ -514,17 +540,20 @@ export function BookingEditDialog({
             <h3 className="font-semibold text-foreground">Stay Dates</h3>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="checkInDate">Check-in Date</Label>
+                <Label htmlFor="checkInDate">Check-in Date & Time</Label>
                 <Input
                   id="checkInDate"
                   name="checkInDate"
-                  type="date"
+                  type="datetime-local"
                   value={formData.checkInDate}
                   onChange={handleChange}
                   disabled={isCheckedIn || isCustomDuration}
                   className={cn(isCustomDuration && "bg-muted")}
                   required
                 />
+                <p className="text-xs text-muted-foreground">
+                  Check-in is allowed between 12:00 PM and 6:00 PM
+                </p>
                 {isCustomDuration && (
                   <p className="text-xs text-muted-foreground">
                     Fixed dates for custom pricing period
@@ -536,13 +565,13 @@ export function BookingEditDialog({
                 <Input
                   id="checkOutDate"
                   name="checkOutDate"
-                  type="date"
+                  type="datetime-local"
                   value={formData.checkOutDate}
                   disabled
                   className="bg-muted"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Auto-calculated based on duration and period
+                  Auto-calculated · Default check-out time is 10:00 AM
                 </p>
               </div>
             </div>
@@ -613,7 +642,7 @@ export function BookingEditDialog({
                 <Label htmlFor="paymentMethod">Payment Method</Label>
                 <Select
                   value={formData.paymentMethod}
-                  disabled={isAgent}
+                  disabled
                   onValueChange={(value) =>
                     handleSelectChange("paymentMethod", value)
                   }
@@ -675,7 +704,7 @@ export function BookingEditDialog({
           </article>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex flex-row-reverse justify-end gap-3 pt-4">
             <Button
               type="button"
               onClick={() => setOpen(false)}
@@ -687,7 +716,7 @@ export function BookingEditDialog({
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-chart-1 hover:bg-chart-1/90 cursor-pointer"
+              className="flex-1 bg-chart-1 hover:bg-chart-1/90 cursor-pointer"
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">

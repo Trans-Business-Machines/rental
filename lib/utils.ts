@@ -2,12 +2,16 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { addDays, differenceInDays } from "date-fns"
 import nationalities from 'i18n-nationality';
-import enLocale from 'i18n-nationality/langs/en.json' assert { type: 'json' }
+import enLocale from 'i18n-nationality/langs/en.json';
 import type { BookingStatus, UnitStatus, Guest, InventoryItem, PriceDuration } from "@/lib/types/types";
 
+// Constants
 export const LIMIT = 9;
 const TIMEZONE = "Africa/Nairobi";
 export const BUCKET = "media";
+export const KENYA_VAT_RATE = 0.16;
+
+
 nationalities.registerLocale(enLocale);
 
 export function cn(...inputs: ClassValue[]) {
@@ -172,6 +176,16 @@ export function calculateTotalAmount(
 ): number {
   const subtotal = unitPrice * period;
   return calculateDiscountedPrice(subtotal, discountRate);
+}
+
+// Calculate VAT amount
+export function calculateVAT(amount: number): number {
+  return Math.round(amount * KENYA_VAT_RATE);
+}
+
+// Calculate total including VAT
+export function calculateTotalWithVAT(amount: number): number {
+  return amount + calculateVAT(amount);
 }
 
 //  Format discount rate as percentage string
