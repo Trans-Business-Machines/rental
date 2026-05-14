@@ -30,6 +30,7 @@ import {
   getDurationLabel,
   calculateTotalNights,
   formatFileSize,
+  calculateVAT,
 } from "@/lib/utils";
 import type { BookingRequestFormData } from "@/lib/schemas/booking-requests";
 import type {
@@ -75,7 +76,7 @@ export function BookingRequestConfirmation({
         formData.priceDuration as PriceDuration,
         period,
         selectedPricing?.fromDate,
-        selectedPricing?.toDate
+        selectedPricing?.toDate,
       );
 
   // Get guest display info based on type
@@ -318,7 +319,7 @@ export function BookingRequestConfirmation({
                   {formData.checkInDate
                     ? format(
                         new Date(formData.checkInDate),
-                        "EEE, MMM d, yyyy 'at' h:mm a"
+                        "EEE, MMM d, yyyy 'at' h:mm a",
                       )
                     : "-"}
                 </p>
@@ -331,7 +332,10 @@ export function BookingRequestConfirmation({
                 <p className="text-xs text-muted-foreground">Check-out</p>
                 <p className="font-medium">
                   {formData.checkOutDate
-                    ? format(new Date(formData.checkOutDate), "EEE, MMM d, yyyy")
+                    ? format(
+                        new Date(formData.checkOutDate),
+                        "EEE, MMM d, yyyy 'at' h:mm a",
+                      )
                     : "-"}
                 </p>
               </div>
@@ -435,8 +439,6 @@ export function BookingRequestConfirmation({
                 </span>
               </div>
 
-              <Separator />
-
               {hasDiscount(selectedPricing?.discountRate) && savings > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>You Save</span>
@@ -444,12 +446,33 @@ export function BookingRequestConfirmation({
                 </div>
               )}
 
+              <Separator />
+
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="font-medium">
+                  {formatPrice((formData.unitPrice || 0) * period)}
+                </span>
+              </div>
+
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">VAT (16%)</span>
+                <span className="font-medium">
+                  {formatPrice(
+                    calculateVAT((formData.unitPrice || 0) * period),
+                  )}
+                </span>
+              </div>
+
+              <Separator />
+
               <div className="flex justify-between items-center pt-2">
-                <span className="font-semibold">Total Amount</span>
+                <span className="font-semibold">Total Amount (incl. VAT)</span>
                 <span className="text-2xl font-bold text-primary">
                   {formatPrice(formData.totalAmount || 0)}
                 </span>
               </div>
+
               <div className="flex justify-between items-center pt-2 text-base font-medium">
                 <span>Payment code</span>
                 <span className="text-primary">{paymentCode}</span>

@@ -70,7 +70,7 @@ export function ApproveRequestDialog({
           </div>
           <AlertDialogDescription className="p-4 border border-green-600 bg-green-600/10 text-green-600 rounded-lg">
             {isExistingGuest ? (
-              <>This will create a booking for the existing guest.</>
+              <>This will create a reserved booking for the existing guest.</>
             ) : (
               <>
                 This will create a new guest and booking from this request. The

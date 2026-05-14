@@ -648,6 +648,20 @@ export async function approveBookingRequest(
     }
 }
 
+export async function getPendingBookingRequestCount() {
+  try {
+    const count = await prisma.bookingRequest.count({
+      where: {
+        status: "pending",
+      },
+    });
+    return count;
+  } catch (error) {
+    console.error("Error fetching pending booking request count:", error);
+    return 0;
+  }
+}
+
 export async function getBookingRequests(params: GetBookingRequestsParams = {}) {
     try {
         const session = await getServerSession();

@@ -2,6 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UseFormWatch, UseFormRegister, FieldErrors } from "react-hook-form";
 import { CheckoutFormData } from "@/lib/schemas/checkout";
@@ -13,22 +14,18 @@ import {
   User,
   Mail,
   ShieldUser,
-  Book,
   Building,
   House,
   Calendar,
   Info,
-  MessageSquareWarning,
 } from "lucide-react";
-import type {
-  BookingsForCheckout,
-  InventoryAssignmentForUnit,
-} from "@/lib/types/types";
+import type { BookingsForCheckout } from "@/lib/types/types";
+import type { AggregatedAssignment } from "@/lib/actions/checkout";
 import { usePermissions } from "@/hooks/usePermissions";
 
 interface Step3Props {
   selectedBooking: BookingsForCheckout[number] | null;
-  assignments: InventoryAssignmentForUnit;
+  assignments: AggregatedAssignment[];
   watch: UseFormWatch<CheckoutFormData>;
   register: UseFormRegister<CheckoutFormData>;
   errors: FieldErrors<CheckoutFormData>;
@@ -36,7 +33,6 @@ interface Step3Props {
 
 export function Step3FinancialSummary({
   selectedBooking,
-  assignments,
   watch,
   register,
   errors,
@@ -45,20 +41,26 @@ export function Step3FinancialSummary({
   const { currentUser } = usePermissions();
   const checkoutItems = formData.checkoutItems || [];
 
-  const checkedItems = checkoutItems.filter((item) => item.checked);
-
-  const damagedItems = checkedItems.filter(
-    (item) => item.condition === "damaged",
+  // Aggregated counts
+  const totalItems = checkoutItems.reduce(
+    (sum, item) => sum + item.totalQuantity,
+    0,
   );
-  const missingItems = checkedItems.filter(
-    (item) => item.condition === "missing",
+  const totalDamaged = checkoutItems.reduce(
+    (sum, item) => sum + item.damagedCount,
+    0,
+  );
+  const totalMissing = checkoutItems.reduce(
+    (sum, item) => sum + item.missingCount,
+    0,
+  );
+  const totalGood = totalItems - totalDamaged - totalMissing;
+
+  // Items with issues for the detail list
+  const itemsWithIssues = checkoutItems.filter(
+    (item) => item.damagedCount > 0 || item.missingCount > 0,
   );
 
-  const totalDamage = checkoutItems.reduce((total, item) => {
-    return total + (item.checked ? item.damageCost : 0);
-  }, 0);
-
-  const depositDeduction = formData.depositDeduction || 0;
 
   return (
     <div className="space-y-6 pb-12 md:pb-6">
@@ -81,7 +83,6 @@ export function Step3FinancialSummary({
                 <div className="p-2 rounded-lg bg-chart-1/20 flex items-center justify-center">
                   <User className="text-chart-1 size-6" />
                 </div>
-
                 <div>
                   <p className="text-sm text-muted-foreground">
                     Guest&apos;s name
@@ -97,7 +98,6 @@ export function Step3FinancialSummary({
                 <div className="p-2 rounded-lg bg-chart-1/20 flex items-center justify-center">
                   <Mail className="text-chart-1 size-6" />
                 </div>
-
                 <div>
                   <p className="text-sm text-muted-foreground">
                     Guest&apos;s email
@@ -130,7 +130,6 @@ export function Step3FinancialSummary({
                 <div className="p-2 rounded-lg bg-chart-4/20 flex items-center justify-center">
                   <ShieldUser className="text-chart-4 size-6" />
                 </div>
-
                 {currentUser?.name && (
                   <div>
                     <p className="text-sm text-muted-foreground">Inspector</p>
@@ -153,20 +152,6 @@ export function Step3FinancialSummary({
                 </div>
               </article>
             </div>
-
-            {formData.notes && (
-              <article className="flex gap-3 items-start">
-                <div className="p-2 rounded-lg bg-chart-3-4/30 flex items-center justify-center">
-                  <Book className="text-chart-3 size-6" />
-                </div>
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Inspection Notes
-                  </p>
-                  <p className="text-sm">{formData.notes}</p>
-                </div>
-              </article>
-            )}
           </CardContent>
         </Card>
       )}
@@ -180,72 +165,54 @@ export function Step3FinancialSummary({
           <div className="grid grid-cols-3 gap-4 text-center">
             <div className="p-4 bg-green-50 rounded-lg">
               <CheckCircle2 className="h-6 w-6 text-green-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-green-500">
-                {checkedItems.length -
-                  damagedItems.length -
-                  missingItems.length}
-              </p>
+              <p className="text-2xl font-bold text-green-500">{totalGood}</p>
               <p className="text-sm text-muted-foreground">Good</p>
             </div>
             <div className="p-4 bg-amber-50 rounded-lg">
               <AlertCircle className="h-6 w-6 text-amber-500 mx-auto mb-2" />
               <p className="text-2xl font-bold text-amber-500">
-                {damagedItems.length}
+                {totalDamaged}
               </p>
               <p className="text-sm text-muted-foreground">Damaged</p>
             </div>
             <div className="p-4 bg-red-50 rounded-lg">
               <XCircle className="h-6 w-6 text-red-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-red-500">
-                {missingItems.length}
-              </p>
+              <p className="text-2xl font-bold text-red-500">{totalMissing}</p>
               <p className="text-sm text-muted-foreground">Missing</p>
             </div>
           </div>
 
-          {/* Damaged/Missing items details */}
-          {(damagedItems.length > 0 || missingItems.length > 0) && (
+          {/* Items with issues */}
+          {itemsWithIssues.length > 0 && (
             <div className="pt-4 border-t space-y-3">
-              <p className="font-medium text-sm">Damage Details:</p>
-              {[...damagedItems, ...missingItems].map((item) => {
-                const assignment = assignments.find(
-                  (a) => a.id === item.assignmentId,
-                );
-                if (!assignment) return null;
-
-                return (
-                  <div
-                    key={item.assignmentId}
-                    className="flex justify-between items-start p-3 bg-gray-50 rounded"
-                  >
-                    <div>
-                      <p className="font-medium text-sm">
-                        {assignment.inventoryItem.itemName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {assignment.inventoryItem.category} •{" "}
-                        <span
-                          className={
-                            item.condition === "damaged"
-                              ? "text-amber-500"
-                              : "text-red-500"
-                          }
-                        >
-                          {item.condition}
-                        </span>
-                      </p>
-                      {item.notes && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {item.notes}
-                        </p>
-                      )}
-                    </div>
-                    <p className="font-bold text-red-500">
-                      KES {item.damageCost.toLocaleString()}
+              <p className="font-medium text-sm">Items with Issues:</p>
+              {itemsWithIssues.map((item) => (
+                <div
+                  key={item.itemId}
+                  className="flex justify-between items-start p-3 bg-gray-50 rounded"
+                >
+                  <div>
+                    <p className="font-medium text-sm">{item.itemName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.category} • {item.totalQuantity} total
                     </p>
                   </div>
-                );
-              })}
+                  <div className="flex gap-3 text-xs font-medium">
+                    {item.damagedCount > 0 && (
+                      <span className="text-amber-500 flex items-center gap-1">
+                        <AlertCircle className="size-3.5" />
+                        {item.damagedCount} damaged
+                      </span>
+                    )}
+                    {item.missingCount > 0 && (
+                      <span className="text-red-500 flex items-center gap-1">
+                        <XCircle className="size-3.5" />
+                        {item.missingCount} missing
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
@@ -256,56 +223,55 @@ export function Step3FinancialSummary({
         <CardHeader>
           <CardTitle className="text-lg">Financial Details</CardTitle>
         </CardHeader>
-
         <CardContent className="space-y-4">
           <div className="space-y-3">
-            <div className="flex justify-between items-center pb-1 border-b">
-              <span className="text-muted-foreground">Total Damage Cost</span>
-              <span className="text-xl font-bold text-red-500">
-                KES {totalDamage.toLocaleString()}
-              </span>
-            </div>
-
-            <div className="space-y-2 pt-2">
-              <Label htmlFor="depositDeduction">
-                Deposit Deduction (KES) *
+            <div className="space-y-2">
+              <Label htmlFor="overallDamageCost">
+                Total Damage / Replacement Cost (KES)
               </Label>
               <Input
-                id="depositDeduction"
+                id="overallDamageCost"
                 type="number"
                 placeholder="0"
                 min="0"
-                max={totalDamage}
-                {...register("depositDeduction")}
-                className={errors.depositDeduction && "border-red-500"}
+                {...register("overallDamageCost", { valueAsNumber: true })}
+                className={errors.overallDamageCost ? "border-red-500" : ""}
               />
-              {errors.depositDeduction && (
+              {errors.overallDamageCost && (
                 <p className="text-sm text-red-500 mt-1">
-                  {errors.depositDeduction.message}
+                  {errors.overallDamageCost.message}
                 </p>
               )}
-
-              <p className="text-xs text-muted-foreground mt-1">
-                Amount to deduct from guest&apos;s deposit (max: KES{" "}
-                {totalDamage.toLocaleString()})
+              <p className="text-xs text-muted-foreground">
+                Enter the total cost for all damaged and missing items
               </p>
             </div>
 
-            {depositDeduction > totalDamage && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-sm space-x-2 text-amber-500 flex items-center">
-                  <MessageSquareWarning className="text-amber-500 size-4" />
-                  <span>Deduction exceeds total damage cost</span>
-                </p>
-              </div>
-            )}
-
-            <div className="flex justify-between items-center pt-1 border-t">
-              <span className="font-medium">Amount to Deduct</span>
-              <span className="text-2xl font-bold">
-                KES {depositDeduction.toLocaleString()}
+            <div className="flex justify-between items-center pt-2 border-t">
+              <span className="font-medium">Total Damage Cost</span>
+              <span className="text-2xl font-bold text-red-500">
+                KES {(formData.overallDamageCost || 0).toLocaleString()}
               </span>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Overall Notes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Checkout Notes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Textarea
+              id="notes"
+              placeholder="Any additional notes about the checkout, damages, or guest interactions..."
+              rows={4}
+              {...register("notes")}
+              className="resize-none"
+            />
           </div>
         </CardContent>
       </Card>
@@ -313,25 +279,21 @@ export function Step3FinancialSummary({
       {/* Checkout checklist */}
       <Card className="border-blue-500 bg-blue-50">
         <CardContent>
-          <p className="text-sm  flex items-center gap-2 font-medium mb-2 text-blue-500">
+          <p className="text-sm flex items-center gap-2 font-medium mb-2 text-blue-500">
             <Info className="size-5 text-blue-500" />
             <span>Before completing ensure:</span>
           </p>
           <ul className="text-sm pl-5 md:pl-8 space-y-2 text-muted-foreground">
             <li className="flex item-center gap-3">
-              <CircleCheck className="size-5 text-blue-400" />{" "}
-              <span>All inventory items have been checked</span>
+              <CircleCheck className="size-5 text-blue-500" />
+              <span>All inventory items have been reviewed</span>
             </li>
             <li className="flex item-center gap-3">
-              <CircleCheck className="size-5 text-blue-400" />
-              <span>Damage costs have been accurately recorded</span>
+              <CircleCheck className="size-5 text-blue-500" />
+              <span>Damage and replacement costs are accurately entered</span>
             </li>
             <li className="flex item-center gap-3">
-              <CircleCheck className="size-5 text-blue-400" />
-              <span>Deposit deduction amount is correct</span>
-            </li>
-            <li className="flex item-center gap-3">
-              <CircleCheck className="size-5 text-blue-400" />
+              <CircleCheck className="size-5 text-blue-500" />
               <span>Guest has been informed of any deductions</span>
             </li>
           </ul>

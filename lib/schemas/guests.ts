@@ -40,7 +40,7 @@ export const GuestSchema = z.discriminatedUnion("idType", [
             .string()
             .regex(
                 phoneRegex,
-                "Enter a valid phone number (7–15 digits). Only digits, spaces, hyphens, and a leading + are allowed."
+                "Enter a valid phone number (7-15 digits). Only digits, spaces, hyphens, and a leading + are allowed."
             ),
         nationality: z.string().min(1, "Nationality is required."),
         idType: z.literal("national_id"),

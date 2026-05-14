@@ -1,26 +1,24 @@
-
 import { z } from "zod"
 
+const checkoutItemSchema = z.object({
+    itemId: z.number(),
+    itemName: z.string(),
+    category: z.string(),
+    totalQuantity: z.number().min(1),
+    damagedCount: z.number().min(0),
+    missingCount: z.number().min(0),
+    assignmentIds: z.array(z.number()),
+}).refine(
+    (item) => item.damagedCount + item.missingCount <= item.totalQuantity,
+    { message: "Damaged plus missing cannot exceed total quantity" }
+);
+
 export const CheckoutFormSchema = z.object({
-    // step 1 Inspection details
     checkoutDate: z.string().min(1, "Checkout date is required"),
+    checkoutItems: z.array(checkoutItemSchema),
+    depositDeduction: z.number().min(0),
+    overallDamageCost: z.number().min(0),
     notes: z.string().optional(),
+});
 
-    // step 2 Inventory Checklist
-    checkoutItems: z.array(
-        z.object({
-            assignmentId: z.number(),
-            checked: z.boolean(),
-            condition: z.enum(["good", "damaged", "missing"]),
-            damageCost: z.coerce.number().min(0, "Damage cost must be positive"),
-            notes: z.string().optional(),
-        })
-    ),
-
-    // step 3 Final summary
-    depositDeduction: z.coerce
-        .number()
-        .min(0, "Deposit deduction must be positive"),
-})
-
-export type CheckoutFormData = z.infer<typeof CheckoutFormSchema>
+export type CheckoutFormData = z.infer<typeof CheckoutFormSchema>;

@@ -1,16 +1,7 @@
 "use client";
 
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   type UseFormWatch,
@@ -20,12 +11,11 @@ import {
 } from "react-hook-form";
 import type { CheckoutFormData } from "@/lib/schemas/checkout";
 import { useEffect } from "react";
-import { cn } from "@/lib/utils";
-import type { InventoryAssignmentForUnit } from "@/lib/types/types";
+import type { AggregatedAssignment } from "@/lib/actions/checkout";
 import { Package, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
 
 interface Step2Props {
-  assignments: InventoryAssignmentForUnit;
+  assignments: AggregatedAssignment[];
   watch: UseFormWatch<CheckoutFormData>;
   setValue: UseFormSetValue<CheckoutFormData>;
   control: Control<CheckoutFormData>;
@@ -42,66 +32,49 @@ export function Step2InventoryChecklist({
     name: "checkoutItems",
   });
 
+  // Initialize aggregated items
   useEffect(() => {
     if (assignments.length > 0 && fields.length === 0) {
-      const initialItems = assignments.map((assignment) => ({
-        assignmentId: assignment.id,
-        checked: false,
-        condition: "good" as const,
-        damageCost: 0,
-        notes: "",
+      const initialItems = assignments.map((item) => ({
+        itemId: item.itemId,
+        itemName: item.itemName,
+        category: item.category,
+        totalQuantity: item.totalQuantity,
+        damagedCount: 0,
+        missingCount: 0,
+        assignmentIds: item.assignmentIds,
       }));
-
       replace(initialItems);
     }
   }, [assignments, fields.length, replace]);
 
   const checkoutItems = watch("checkoutItems") || [];
 
-  const handleItemCheck = (index: number, checked: boolean) => {
-    setValue(`checkoutItems.${index}.checked`, checked);
-  };
-
-  const handleConditionChange = (index: number, condition: string) => {
-    setValue(
-      `checkoutItems.${index}.condition`,
-      condition as "good" | "damaged" | "missing"
-    );
-    if (condition === "good") {
-      setValue(`checkoutItems.${index}.damageCost`, 0);
-    }
-  };
-
-  const calculateTotalDamage = () => {
-    return checkoutItems.reduce((total, item) => {
-      return total + (item.checked ? item.damageCost : 0);
-    }, 0);
-  };
-
-  const getCheckedCounts = () => {
-    const checked = checkoutItems.filter((item) => item.checked);
-    return {
-      total: checked.length,
-      good: checked.filter((item) => item.condition === "good").length,
-      damaged: checked.filter((item) => item.condition === "damaged").length,
-      missing: checked.filter((item) => item.condition === "missing").length,
-    };
-  };
-
-  const counts = getCheckedCounts();
-  const totalDamage = calculateTotalDamage();
+  // Summary calculations
+  const totalItems = checkoutItems.reduce((sum, i) => sum + i.totalQuantity, 0);
+  const totalDamaged = checkoutItems.reduce(
+    (sum, i) => sum + i.damagedCount,
+    0,
+  );
+  const totalMissing = checkoutItems.reduce(
+    (sum, i) => sum + i.missingCount,
+    0,
+  );
+  const totalGood = totalItems - totalDamaged - totalMissing;
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-2">Inventory Checklist</h2>
         <p className="text-muted-foreground">
-          Check items being returned and note their condition
+          Report any damaged or missing items. Items not flagged are assumed to
+          be in good condition.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4 pb-4 lg:pb-0">
+        {/* Item list */}
+        <div className="lg:col-span-2 space-y-3 pb-4 lg:pb-0">
           {assignments.length === 0 ? (
             <Card>
               <CardContent className="py-12">
@@ -118,146 +91,99 @@ export function Step2InventoryChecklist({
             </Card>
           ) : (
             <div className="space-y-3">
-              {assignments.map((assignment, index) => {
-                const item = checkoutItems[index];
-                if (!item) return null;
+              {checkoutItems.map((item, index) => {
+                const hasIssues =
+                  item.damagedCount > 0 || item.missingCount > 0;
+                const isOverflow =
+                  item.damagedCount + item.missingCount > item.totalQuantity;
 
                 return (
-                  <Card key={assignment.id} className={cn("transition-all")}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-4">
-                        <Checkbox
-                          checked={item.checked}
-                          onCheckedChange={(checked) =>
-                            handleItemCheck(index, checked as boolean)
-                          }
-                          className="mt-1"
-                        />
+                  <Card
+                    key={item.itemId}
+                    className={hasIssues ? "border-amber-300" : ""}
+                  >
+                    <CardContent className="p-4 space-y-3">
+                      {/* Item header */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium capitalize">
+                            {item.itemName}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {item.category}
+                          </p>
+                        </div>
+                        <span className="text-sm font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                          {item.totalQuantity} assigned
+                        </span>
+                      </div>
 
-                        <div className="flex-1 space-y-3 min-w-0">
-                          <div>
-                            <p className="font-medium truncate">
-                              {assignment.inventoryItem.itemName}
-                            </p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
-                              <span className="truncate">
-                                {assignment.inventoryItem.category}
-                              </span>
-                              {assignment.serialNumber && (
-                                <>
-                                  <span className="hidden sm:inline">•</span>
-                                  <span className="truncate text-xs">
-                                    S/N: {assignment.serialNumber}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                            {assignment.notes && (
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                Original notes: {assignment.notes}
-                              </p>
-                            )}
-                          </div>
+                      {/* Damaged / Missing inputs */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label
+                            htmlFor={`damaged-${index}`}
+                            className="text-sm flex items-center gap-1.5"
+                          >
+                            <AlertCircle className="size-3.5 text-amber-500" />
+                            Damaged
+                          </Label>
+                          <Input
+                            id={`damaged-${index}`}
+                            type="number"
+                            min={0}
+                            max={item.totalQuantity - item.missingCount}
+                            value={item.damagedCount || ""}
+                            placeholder="0"
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0;
+                              const clamped = Math.min(
+                                val,
+                                item.totalQuantity - item.missingCount,
+                              );
+                              setValue(
+                                `checkoutItems.${index}.damagedCount`,
+                                Math.max(0, clamped),
+                              );
+                            }}
+                          />
+                        </div>
 
-                          {item.checked && (
-                            <div className="space-y-3 pt-2 border-t">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                                <div
-                                  className={cn(
-                                    "space-y-1.5",
-                                    item.condition === "good"
-                                      ? "sm:col-span-2"
-                                      : "sm:col-span-1"
-                                  )}
-                                >
-                                  <Label htmlFor={`condition-${index}`}>
-                                    Condition
-                                  </Label>
-                                  <Select
-                                    value={item.condition}
-                                    onValueChange={(value) =>
-                                      handleConditionChange(index, value)
-                                    }
-                                  >
-                                    <SelectTrigger
-                                      id={`condition-${index}`}
-                                      className="w-full"
-                                    >
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="good">
-                                        <div className="flex items-center gap-2">
-                                          <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                          Good
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="damaged">
-                                        <div className="flex items-center gap-2">
-                                          <AlertCircle className="w-4 h-4 text-amber-500" />
-                                          Damaged
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="missing">
-                                        <div className="flex items-center gap-2">
-                                          <XCircle className="w-4 h-4 text-red-500" />
-                                          Missing
-                                        </div>
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                {(item.condition === "damaged" ||
-                                  item.condition === "missing") && (
-                                  <div className="space-y-1.5">
-                                    <Label htmlFor={`damage-cost-${index}`}>
-                                      {item.condition === "missing"
-                                        ? "Replacement Cost (KES)"
-                                        : "Damage Cost (KES)"}
-                                    </Label>
-                                    <Input
-                                      id={`damage-cost-${index}`}
-                                      type="number"
-                                      placeholder="0"
-                                      min="0"
-                                      value={item.damageCost || ""}
-                                      onChange={(e) =>
-                                        setValue(
-                                          `checkoutItems.${index}.damageCost`,
-                                          Number.parseInt(e.target.value) || 0
-                                        )
-                                      }
-                                    />
-                                  </div>
-                                )}
-                              </div>
-
-                              {(item.condition === "damaged" ||
-                                item.condition === "missing") && (
-                                <div className="space-y-1.5">
-                                  <Label htmlFor={`notes-${index}`}>
-                                    Notes (Optional)
-                                  </Label>
-                                  <Textarea
-                                    id={`notes-${index}`}
-                                    placeholder="Describe the damage or provide additional details..."
-                                    rows={2}
-                                    value={item.notes || ""}
-                                    onChange={(e) =>
-                                      setValue(
-                                        `checkoutItems.${index}.notes`,
-                                        e.target.value
-                                      )
-                                    }
-                                    className="resize-none"
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          )}
+                        <div className="space-y-1.5">
+                          <Label
+                            htmlFor={`missing-${index}`}
+                            className="text-sm flex items-center gap-1.5"
+                          >
+                            <XCircle className="size-3.5 text-red-500" />
+                            Missing
+                          </Label>
+                          <Input
+                            id={`missing-${index}`}
+                            type="number"
+                            min={0}
+                            max={item.totalQuantity - item.damagedCount}
+                            value={item.missingCount || ""}
+                            placeholder="0"
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0;
+                              const clamped = Math.min(
+                                val,
+                                item.totalQuantity - item.damagedCount,
+                              );
+                              setValue(
+                                `checkoutItems.${index}.missingCount`,
+                                Math.max(0, clamped),
+                              );
+                            }}
+                          />
                         </div>
                       </div>
+
+                      {isOverflow && (
+                        <p className="text-xs text-red-500">
+                          Damaged + missing cannot exceed {item.totalQuantity}
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 );
@@ -266,6 +192,7 @@ export function Step2InventoryChecklist({
           )}
         </div>
 
+        {/* Summary sidebar */}
         <div className="block lg:col-span-1 pb-14 lg:pb-0">
           <Card className="sticky top-4">
             <CardHeader className="pb-4">
@@ -276,13 +203,13 @@ export function Step2InventoryChecklist({
             <CardContent className="space-y-4">
               <div className="bg-primary/5 rounded-lg p-4">
                 <p className="text-sm text-muted-foreground mb-1">
-                  Items Checked
+                  Unique Items
                 </p>
                 <p className="text-3xl font-bold text-primary">
-                  {counts.total}
+                  {assignments.length}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  of {assignments.length} total
+                  {totalItems} individual items total
                 </p>
               </div>
 
@@ -290,11 +217,9 @@ export function Step2InventoryChecklist({
                 <div className="flex justify-between items-center text-sm p-2 rounded-md bg-green-50">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    <span className="font-medium">Good Condition</span>
+                    <span className="font-medium">Good</span>
                   </div>
-                  <span className="font-bold text-green-500">
-                    {counts.good}
-                  </span>
+                  <span className="font-bold text-green-500">{totalGood}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm p-2 rounded-md bg-amber-50">
                   <div className="flex items-center gap-2">
@@ -302,7 +227,7 @@ export function Step2InventoryChecklist({
                     <span className="font-medium">Damaged</span>
                   </div>
                   <span className="font-bold text-amber-500">
-                    {counts.damaged}
+                    {totalDamaged}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm p-2 rounded-md bg-red-50">
@@ -310,18 +235,7 @@ export function Step2InventoryChecklist({
                     <XCircle className="w-4 h-4 text-red-500" />
                     <span className="font-medium">Missing</span>
                   </div>
-                  <span className="font-bold text-red-500">
-                    {counts.missing}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <div className="bg-red-50  rounded-lg p-4">
-                  <p className="text-sm font-medium mb-2">Total Damage Cost</p>
-                  <p className="text-2xl font-bold text-red-500">
-                    KES {totalDamage.toLocaleString()}
-                  </p>
+                  <span className="font-bold text-red-500">{totalMissing}</span>
                 </div>
               </div>
             </CardContent>

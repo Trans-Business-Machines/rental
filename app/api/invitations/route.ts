@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
 		const { email, invitedById, role, name } = userInvitationSchema.parse(body)
 
-		if (currentUserRole === "admin" && ["admin", "superAdmin"].includes(role)) {
+		if (currentUserRole === "admin" && ["admin", "superAdmin", "agent"].includes(role)) {
 			throw new Error("An admin can only invite regular users.")
 		}
 

@@ -203,6 +203,25 @@ export async function createBooking(booking: CreateBookingData) {
 		// Determine if user is an agent or admin/superAdmin
 		const isAgent = user.role === "agent";
 
+		// Ensure that check-in is between 12PM and 6PM
+		if (booking.status === "checked_in") {
+			const parts = new Intl.DateTimeFormat("en-US", {
+				timeZone: "Africa/Nairobi",
+				hour: "numeric",
+				minute: "numeric",
+				hour12: false,
+			}).formatToParts(new Date());
+			const h = parseInt(parts.find((p) => p.type === "hour")?.value || "0");
+			const m = parseInt(parts.find((p) => p.type === "minute")?.value || "0");
+			const totalMinutes = h * 60 + m;
+
+			if (totalMinutes < 720 || totalMinutes > 1080) {
+				throw new Error(
+					"Check-in is only allowed between 12:00 PM and 6:00 PM (EAT)"
+				);
+			}
+		}
+
 		// Prevent double booking: check if any booking exists for this property with checkInDate on the same day
 		const checkInUTC = new Date(booking.checkInDate);
 		const startOfDay = new Date(checkInUTC);
@@ -333,7 +352,6 @@ export async function createBooking(booking: CreateBookingData) {
 	}
 }
 
-
 export async function updateBooking(
 	id: number,
 	data: UpdatedBookingData
@@ -369,11 +387,30 @@ export async function updateBooking(
 			...data,
 		};
 
-		// When transitioning to checked_in, update checkInDate and recalculate checkOutDate
+		// When transitioning to checked_in, 
+		// Enusre time is between 12PM and 6PM
+		//update checkInDate and recalculate checkOutDate
 		if (isCheckingInNow) {
+			// Enforce check-in hours: 12:00 PM - 6:00 PM EAT
+			const parts = new Intl.DateTimeFormat("en-US", {
+				timeZone: "Africa/Nairobi",
+				hour: "numeric",
+				minute: "numeric",
+				hour12: false,
+			}).formatToParts(new Date());
+			const h = parseInt(parts.find((p) => p.type === "hour")?.value || "0");
+			const m = parseInt(parts.find((p) => p.type === "minute")?.value || "0");
+			const totalMinutes = h * 60 + m;
+
+			if (totalMinutes < 720 || totalMinutes > 1080) {
+				throw new Error(
+					"Check-in is only allowed between 12:00 PM and 6:00 PM (EAT)"
+				);
+			}
+
+			// Update checkInDate and recalculate checkOutDate
 			const newCheckInDate = new Date();
 
-			// Calculate nights based on pricing duration
 			let nightsToAdd: number;
 			if (existing.priceDuration === "one_night") {
 				nightsToAdd = existing.period;
@@ -382,7 +419,6 @@ export async function updateBooking(
 			} else if (existing.priceDuration === "monthly") {
 				nightsToAdd = existing.period * 30;
 			} else {
-				// Default fallback
 				nightsToAdd = existing.period;
 			}
 
@@ -391,6 +427,8 @@ export async function updateBooking(
 
 			updatedBookingData.checkInDate = newCheckInDate;
 			updatedBookingData.checkOutDate = normalizeCheckOutTo10amEAT(newCheckOutDate);
+		} else if (data.checkOutDate) {
+			updatedBookingData.checkOutDate = normalizeCheckOutTo10amEAT(data.checkOutDate);
 		} else if (data.checkOutDate) {
 			// For non-check-in updates, normalize the checkout date if provided
 			updatedBookingData.checkOutDate = normalizeCheckOutTo10amEAT(data.checkOutDate);
@@ -442,8 +480,8 @@ export async function updateBooking(
 		revalidatePath("/bookings");
 		revalidatePath("/dashboard");
 		return result;
+
 	} catch (error) {
-		console.error("Error updating booking:", error);
 		throw error;
 	}
 }

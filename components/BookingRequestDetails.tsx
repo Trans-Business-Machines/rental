@@ -58,6 +58,7 @@ import {
   getPeriodLabelSingular,
   calculateTotalNights,
   formatDateInTimezone,
+  calculateVAT,
 } from "@/lib/utils";
 import { BookingRequestDetailsSkeleton } from "@/components/BookingRequestDetailsSkeleton";
 import type { PriceDuration, Role } from "@/lib/types/types";
@@ -595,7 +596,7 @@ export function BookingRequestDetails({
 
               <Separator />
 
-              {hasDiscount(bookingRequest.discountRate) ? (
+              {hasDiscount(bookingRequest.discountRate) && (
                 <>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">
@@ -618,26 +619,30 @@ export function BookingRequestDetails({
                     </span>
                     <span>-{formatPrice(discountAmount)}</span>
                   </div>
-
-                  <Separator />
-                </>
-              ) : (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-medium">{formatPrice(subtotal)}</span>
-                  </div>
-
-                  <Separator />
                 </>
               )}
 
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="font-medium">{formatPrice(subtotal)}</span>
+              </div>
+
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">VAT (16%)</span>
+                <span className="font-medium">
+                  {formatPrice(calculateVAT(subtotal))}
+                </span>
+              </div>
+
+              <Separator />
+
               <div className="flex justify-between text-lg font-semibold">
-                <span>Total Amount</span>
+                <span>Total (incl. VAT)</span>
                 <span className="text-primary">
                   {formatPrice(bookingRequest.totalAmount)}
                 </span>
               </div>
+
               <div className="flex justify-between text-base font-medium">
                 <span>Payment code</span>
                 <span className="text-primary">
