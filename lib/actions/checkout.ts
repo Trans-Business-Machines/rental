@@ -359,22 +359,6 @@ export async function createCheckoutReport(data: {
 	// Check if current user can checkout a guest
 	await requirePermission("guest", "check-out");
 
-	// Enforce checkout hours: 6:00 AM - 10:00 AM EAT
-	const parts = new Intl.DateTimeFormat("en-US", {
-		timeZone: "Africa/Nairobi",
-		hour: "numeric",
-		minute: "numeric",
-		hour12: false,
-	}).formatToParts(new Date());
-	const h = parseInt(parts.find((p) => p.type === "hour")?.value || "0");
-	const m = parseInt(parts.find((p) => p.type === "minute")?.value || "0");
-	const totalMinutes = h * 60 + m;
-
-	if (totalMinutes < 360 || totalMinutes > 600) {
-		throw new Error(
-			"Check-out is only allowed between 6:00 AM and 10:00 AM (EAT)"
-		);
-	}
 
 	try {
 		const { checkoutItems, ...reportData } = data;
