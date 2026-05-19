@@ -101,18 +101,7 @@ export const BookingRequestFormSchema = z
     unitId: z.number().min(1, "Unit is required."),
     checkInDate: z
       .string()
-      .min(1, "Check-in date is required.")
-      .regex(
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
-        "Invalid check-in date format."
-      )
-      .refine((val) => {
-        if (!val.includes("T")) return true;
-        const [, time] = val.split("T");
-        const [hours, minutes] = time.split(":").map(Number);
-        const totalMinutes = hours * 60 + minutes;
-        return totalMinutes >= 720 && totalMinutes <= 1080;
-      }, "Check-in time must be between 12:00 PM and 6:00 PM"),
+      .min(1, "Check-in date is required."),
 
     checkOutDate: z.date(),
     numberOfGuests: z.number().min(1, "At least 1 guest is required."),
@@ -136,18 +125,7 @@ const bookingDetailsSchema = {
   unitId: z.number().min(1, "Unit is required"),
   checkInDate: z
     .string()
-    .min(1, "Check-in date is required.")
-    .regex(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
-      "Invalid check-in date format."
-    )
-    .refine((val) => {
-      if (!val.includes("T")) return true;
-      const [, time] = val.split("T");
-      const [hours, minutes] = time.split(":").map(Number);
-      const totalMinutes = hours * 60 + minutes;
-      return totalMinutes >= 720 && totalMinutes <= 1080;
-    }, "Check-in time must be between 12:00 PM and 6:00 PM"),
+    .min(1, "Check-in date is required."),
   checkOutDate: z.date(),
   numberOfGuests: z.number().min(1, "At least 1 guest is required"),
   priceDuration: z.enum(["one_night", "weekly", "monthly", "custom"]),

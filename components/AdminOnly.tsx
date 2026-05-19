@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
   Card,
@@ -15,7 +15,7 @@ interface AdminOnlyProps {
 }
 
 export default function AdminOnly({ children }: AdminOnlyProps) {
-  const { isAdmin, isSuperAdmin, isSessionPending } = usePermissions();
+  const { isSuperAdmin, isSessionPending } = usePermissions();
 
   if (isSessionPending) {
     return (
@@ -25,7 +25,7 @@ export default function AdminOnly({ children }: AdminOnlyProps) {
     );
   }
 
-  if (!(isAdmin || isSuperAdmin)) {
+  if (!isSuperAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="w-full max-w-md">
@@ -50,4 +50,4 @@ export default function AdminOnly({ children }: AdminOnlyProps) {
   }
 
   return <>{children}</>;
-}
+};

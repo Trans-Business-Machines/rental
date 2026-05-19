@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { BUCKET } from "@/lib/utils"
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -8,13 +7,9 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "oaqyfotwczgnsrgvouph.supabase.co",
-        port: "",
-        pathname: `/storage/v1/object/public/${BUCKET}/**`
-      }
+        pathname: "/storage/v1/object/public/**",
+      },
     ],
-
-    // Cache optimized images longer to reduce repeated timeouts
-    minimumCacheTTL: 300,
   },
 };
 

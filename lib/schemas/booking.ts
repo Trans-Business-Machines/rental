@@ -4,10 +4,10 @@ import { z } from "zod";
  * Extracts total minutes from a datetime-local string (e.g. "2025-06-01T14:30")
  * datetime-local is always the user's local time, no timezone conversion needed.
  */
-const getMinutesFromDateTimeLocal = (val: string): number => {
+/* const getMinutesFromDateTimeLocal = (val: string): number => {
     const [hours, minutes] = val.split("T")[1].split(":").map(Number);
     return hours * 60 + minutes;
-};
+} */;
 
 export const BookingFormSchema = z
     .object({
@@ -17,15 +17,7 @@ export const BookingFormSchema = z
         checkInDate: z
             .string()
             .min(1, "Check-in date is required")
-            .regex(
-                /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
-                "Invalid check-in date format"
-            )
-            .refine((val) => {
-                const totalMinutes = getMinutesFromDateTimeLocal(val);
-                // 12:00 PM (720 min) to 6:00 PM (1080 min) inclusive
-                return totalMinutes >= 720 && totalMinutes <= 1080;
-            }, "Check-in time must be between 12:00 PM and 6:00 PM"),
+            .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid check-in date format"),
         checkOutDate: z.string().min(1, "Check-out date is required"),
         numberOfGuests: z
             .number()

@@ -25,6 +25,7 @@ import { getServerSession } from "@/lib/check-permissions";
 import { redirect } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { getPaymentSettings } from "@/lib/actions/app-settings";
 
 interface BookingsPageProps {
   searchParams: Promise<{
@@ -56,10 +57,16 @@ export default async function BookingsPage({
   const queryClient = new QueryClient();
 
   // Prefetch the booking form data
-  await queryClient.prefetchQuery({
-    queryKey: ["booking-form-data"],
-    queryFn: getBookingFormData,
-  });
+  await Promise.all([
+    queryClient.prefetchQuery({
+      queryKey: ["booking-form-data"],
+      queryFn: getBookingFormData,
+    }),
+    queryClient.prefetchQuery({
+      queryKey: ["payment-settings"],
+      queryFn: () => getPaymentSettings(),
+    }),
+  ]);
 
   // Fetch data with filters
   const bookingsPromise = getBookings({ page, search, status, propertyId });

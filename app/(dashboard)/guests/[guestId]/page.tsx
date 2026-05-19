@@ -5,7 +5,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { notFound, redirect } from "next/navigation";
 import { format } from "date-fns";
-import { formatDateInTimezone, cn } from "@/lib/utils";
+import {
+  formatDateInTimezone,
+  cn,
+  maskEmail,
+  maskPhone,
+  maskIdNumber,
+} from "@/lib/utils";
 import { getServerSession } from "@/lib/check-permissions";
 import { UnauthorizedUI } from "../unauthorised-ui";
 import {
@@ -50,20 +56,15 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
 
   const { guestId } = await params;
 
-  // Ensure that guest Id is a number
   const id = typeof guestId === "string" ? Number(guestId) : guestId;
 
   const guest = await getGuestById(id);
 
-  // show not found page if no guest is found.
   if (!guest) {
     notFound();
   }
 
-  // Check if ID document is an image or PDF
   const isDocumentImage = guest.media?.mimeType?.startsWith("image/");
-
-  // Check if guest is rejected
   const isRejected = guest.verificationStatus === "rejected";
 
   return (
@@ -85,7 +86,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
               <Avatar className="h-20 w-20">
                 <AvatarFallback
                   className={cn(
-                    "capitalize  text-2xl font-semibold",
+                    "capitalize text-2xl font-semibold",
                     guest.verificationStatus === "pending" &&
                       "bg-princeton-orange/10 text-princeton-orange",
                     guest.verificationStatus === "verified" &&
@@ -140,7 +141,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
         </CardContent>
       </Card>
 
-      {/* Rejection Reason - Show prominently at top if rejected */}
+      {/* Rejection Reason */}
       {isRejected && guest.notes && (
         <Card className="border-destructive bg-destructive/5">
           <CardHeader>
@@ -180,7 +181,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                       Email Address
                     </p>
                     <p className="text-sm font-semibold text-foreground">
-                      {guest.email}
+                      {maskEmail(guest.email, userRole)}
                     </p>
                   </div>
                 </div>
@@ -194,7 +195,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                       Phone Number
                     </p>
                     <p className="text-sm font-semibold text-foreground">
-                      {guest.phone}
+                      {maskPhone(guest.phone, userRole)}
                     </p>
                   </div>
                 </div>
@@ -256,7 +257,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                         ID Number
                       </p>
                       <p className="text-sm font-semibold text-foreground">
-                        {guest.idNumber}
+                        {maskIdNumber(guest.idNumber, userRole)}
                       </p>
                     </div>
                   </div>
@@ -272,7 +273,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                         Passport Number
                       </p>
                       <p className="text-sm font-semibold text-foreground">
-                        {guest.passportNumber}
+                        {maskIdNumber(guest.passportNumber, userRole)}
                       </p>
                     </div>
                   </div>
@@ -326,7 +327,6 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
             <CardContent>
               {guest.media ? (
                 <div className="space-y-4">
-                  {/* Document Preview */}
                   {isDocumentImage && (
                     <div className="relative w-full max-w-md aspect-[3/2] rounded-lg overflow-hidden border border-border">
                       <Image
@@ -339,7 +339,6 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                     </div>
                   )}
 
-                  {/* Document Info & Actions */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
                     <div className="text-sm text-muted-foreground">
                       <p>
@@ -472,7 +471,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                           Contact Phone
                         </p>
                         <p className="text-sm font-semibold text-foreground">
-                          {guest.emergencyContactPhone}
+                          {maskPhone(guest.emergencyContactPhone, userRole)}
                         </p>
                       </div>
                     </div>
@@ -482,7 +481,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
             </Card>
           )}
 
-          {/* Notes - Only show if not rejected (rejection reason is shown separately above) */}
+          {/* Notes */}
           {guest.notes && !isRejected && (
             <Card>
               <CardHeader>

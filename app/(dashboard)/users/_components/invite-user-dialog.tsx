@@ -210,7 +210,9 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
+                  {userRole === "superAdmin" && (
+                    <SelectItem value="user">User</SelectItem>
+                  )}
                   {userRole === "superAdmin" && (
                     <SelectItem value="agent">Agent</SelectItem>
                   )}

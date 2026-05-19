@@ -18,7 +18,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, maskEmail } from "@/lib/utils";
 import { useDebouncedCallback } from "use-debounce";
 import { useSearchGuestsForBooking } from "@/hooks/useGuests";
 import type { GuestSearchResult } from "@/lib/types/types";
@@ -51,35 +51,28 @@ export function GuestCombobox({
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // Debounce the search query
   const debouncedSetSearch = useDebouncedCallback((query: string) => {
     setDebouncedSearch(query);
   }, 300);
 
-  // Use the custom hook
   const { data: guests = [], isLoading } =
     useSearchGuestsForBooking(debouncedSearch);
 
-  // Initial load - trigger search with empty string
   useEffect(() => {
     setDebouncedSearch("");
   }, []);
 
-  // Handle search change
   const handleSearchChange = (query: string) => {
     setSearch(query);
     debouncedSetSearch(query);
   };
 
-  // Handle selection
   const handleSelect = (guest: GuestSearchResult) => {
     if (guest.activeBookingStatus) return;
-
     onSelect(guest);
     setOpen(false);
   };
 
-  // Handle clear
   const handleClear = () => {
     onSelect(null);
   };
@@ -105,7 +98,7 @@ export function GuestCombobox({
                   {value.firstName} {value.lastName}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {value.email}
+                  {maskEmail(value.email, "agent")}
                 </span>
               </div>
             ) : (
@@ -182,7 +175,7 @@ export function GuestCombobox({
                                 {guest.firstName} {guest.lastName}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {guest.email}
+                                {maskEmail(guest.email, "agent")}
                               </p>
                             </div>
                           </div>
@@ -234,7 +227,9 @@ export function GuestCombobox({
             <p className="font-medium">
               {value.firstName} {value.lastName}
             </p>
-            <p className="text-sm text-muted-foreground">{value.email}</p>
+            <p className="text-sm text-muted-foreground">
+              {maskEmail(value.email, "agent")}
+            </p>
           </div>
           <Button
             type="button"

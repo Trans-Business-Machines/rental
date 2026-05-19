@@ -23,7 +23,6 @@ import {
   getStartOfDay,
   getEndOfDay,
   formatDateKE,
-  formatDateTimeLocal,
 } from "@/lib/utils";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,6 +38,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { BookingFormSchema, type BookingFormData } from "@/lib/schemas/booking";
 import { format } from "date-fns";
 import type { PriceDuration, UnitTypePricing } from "@/lib/types/types";
+import { getPaymentSettings } from "@/lib/actions/app-settings";
 
 interface BookingFormProps {
   onSuccess?: () => void;
@@ -59,8 +59,13 @@ export function BookingForm({
     queryFn: () => getBookingFormData(),
   });
 
+  const { data: paymentSettings } = useQuery({
+    queryKey: ["payment-settings"],
+    queryFn: () => getPaymentSettings(),
+  });
+
   // Get current date time
-  const now = format(new Date(), "yyyy-MM-dd'T'HH:mm");
+  const now = format(new Date(), "yyyy-MM-dd");
 
   // Get user role
   const { isAgent } = usePermissions();
@@ -599,48 +604,27 @@ export function BookingForm({
         {isPricingSelected && (
           <article className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="checkInDate">Check-in Date & Time</Label>
+              <Label htmlFor="checkInDate">Check-in Date</Label>
+
               <Input
                 id="checkInDate"
-                type="datetime-local"
+                type="date"
                 min={
                   isCustomDuration && selectedPricing?.fromDate
-                    ? formatDateTimeLocal(
+                    ? format(
                         getStartOfDay(selectedPricing.fromDate),
+                        "yyyy-MM-dd",
                       )
-                    : now
+                    : format(new Date(), "yyyy-MM-dd")
                 }
                 max={
                   isCustomDuration && selectedPricing?.toDate
-                    ? formatDateTimeLocal(getEndOfDay(selectedPricing.toDate))
+                    ? format(getEndOfDay(selectedPricing.toDate), "yyyy-MM-dd")
                     : undefined
                 }
                 className={cn(errors.checkInDate && "border border-red-400")}
-                {...register("checkInDate", {
-                  validate: (value) => {
-                    if (!value) return "Check-in date is required";
-
-                    if (
-                      isCustomDuration &&
-                      selectedPricing?.fromDate &&
-                      selectedPricing?.toDate
-                    ) {
-                      const checkInDate = new Date(value);
-                      const fromDate = getStartOfDay(selectedPricing.fromDate);
-                      const toDate = getEndOfDay(selectedPricing.toDate);
-
-                      if (checkInDate < fromDate || checkInDate > toDate) {
-                        return `Check-in date must be between ${formatDateKE(selectedPricing.fromDate)} and ${formatDateKE(selectedPricing.toDate)}`;
-                      }
-                    }
-
-                    return true;
-                  },
-                })}
+                {...register("checkInDate")}
               />
-              <p className="text-xs text-muted-foreground">
-                Check-in is allowed between 12:00 PM and 6:00 PM
-              </p>
               {isCustomDuration &&
                 selectedPricing?.fromDate &&
                 selectedPricing?.toDate && (
@@ -705,6 +689,28 @@ export function BookingForm({
           </article>
         )}
 
+        {isPricingSelected && formData.paymentMethod === "mpesa_till" && paymentSettings && (
+          <div className="flex items-center gap-4 p-3 rounded-lg border border-green-400">
+            <div className="flex-1">
+              <p className="text-xs font-medium text-green-600">
+                Paybill Number
+              </p>
+              <p className="text-sm font-bold text-green-800">
+                {paymentSettings.paybillNumber}
+              </p>
+            </div>
+            <div className="w-px h-8 bg-green-200" />
+            <div className="flex-1">
+              <p className="text-xs font-medium text-green-600">
+                Account Number
+              </p>
+              <p className="text-sm font-bold text-green-800">
+                {paymentSettings.accountNumber}
+              </p>
+            </div>
+          </div>
+        )}
+        
         {/* Payment Method */}
         {isPricingSelected && (
           <article className="space-y-4">
@@ -724,7 +730,7 @@ export function BookingForm({
                       <SelectValue placeholder="Select payment method" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="mpesa_till">Mpesa Till No.</SelectItem>
+                      <SelectItem value="mpesa_till">Mpesa Paybill</SelectItem>
                       <SelectItem value="credit_card">Credit Card</SelectItem>
                       <SelectItem value="debit_card">Debit Card</SelectItem>
                     </SelectContent>

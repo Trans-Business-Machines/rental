@@ -198,6 +198,7 @@ export function Layout({ children }: LayoutProps) {
           userRole === "agent" &&
             ["inventory", "guests"].includes(item.id) &&
             "hidden",
+          userRole === "admin" && ["users"].includes(item.id) && "hidden",
           isActive
             ? "bg-sidebar-primary font-bold"
             : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",

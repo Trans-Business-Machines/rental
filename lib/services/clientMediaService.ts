@@ -34,8 +34,6 @@ const ALLOWED_IMAGE_MIMETYPES = [
 const ALLOWED_DOCUMENT_MIMETYPES = ALLOWED_IMAGE_MIMETYPES.slice(0)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_DOCUMENT_SIZE = 5 * 1024 * 1024;
-const MAX_PAYMENT_IMAGE_SIZE = MAX_FILE_SIZE;
-const PAYMENT_FOLDER = "payments";
 
 type EntityType = "property" | "unit" | "guest";
 
@@ -390,97 +388,3 @@ export async function deleteBookingRequestDocument(filename: string) {
     }
 }
 
-// ---------------------- METHODS TO HANDLE PAYBILL IMAGE ----------------------
-
-/* Upload payment info image */
-export async function uploadPaymentImage(
-    file: File,
-    existingFilename?: string | null
-) {
-    try {
-        // Step 1: Validate file type
-        if (!ALLOWED_IMAGE_MIMETYPES.includes(file.type)) {
-            return {
-                success: false,
-                error: "Invalid file type. Only JPEG, PNG, WebP, and AVIF are allowed.",
-            };
-        }
-
-        // Step 2: Validate file size (30MB max)
-        if (file.size > MAX_PAYMENT_IMAGE_SIZE) {
-            return {
-                success: false,
-                error: "File is too large. Maximum is 10MB.",
-            };
-        }
-
-        // Step 3: Delete existing file if provided (handles the "update" case)
-        if (existingFilename) {
-            const existingPath = `${PAYMENT_FOLDER}/${existingFilename}`;
-            await supabase.storage.from(BUCKET).remove([existingPath]);
-        }
-
-        // Step 4: Generate unique filename
-        const timestamp = Date.now();
-        const randomStr = Math.random().toString(36).substring(2, 8);
-        const extension = file.name.split(".").pop()?.toLowerCase() || "png";
-        const filename = `payment-info-${timestamp}-${randomStr}.${extension}`;
-        const filePath = `${PAYMENT_FOLDER}/${filename}`;
-
-        // Step 5: Upload new file (no upsert)
-        const { error: uploadError } = await supabase.storage
-            .from(BUCKET)
-            .upload(filePath, file, {
-                contentType: file.type,
-                cacheControl: "0",
-                upsert: false,
-            });
-
-        if (uploadError) {
-            console.error("Error uploading payment image:", uploadError);
-            return { success: false, error: uploadError.message };
-        }
-
-        // Step 6: Get public URL
-        const { data: urlData } = supabase.storage
-            .from(BUCKET)
-            .getPublicUrl(filePath);
-
-        return {
-            success: true,
-            imageName: filename,
-            originalName: file.name,
-            imageUrl: urlData.publicUrl,
-            imageSize: file.size,
-            mimeType: file.type,
-        };
-    } catch (error) {
-        console.error("Error uploading payment image:", error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error",
-        };
-    }
-}
-
-/* Delete payment image from storage */
-export async function deletePaymentImageFromStorage(filename: string) {
-    try {
-        const filePath = `${PAYMENT_FOLDER}/${filename}`;
-
-        const { error } = await supabase.storage.from(BUCKET).remove([filePath]);
-
-        if (error) {
-            console.error("Error deleting payment image:", error);
-            return { success: false, error: error.message };
-        }
-
-        return { success: true };
-    } catch (error) {
-        console.error("Error deleting payment image:", error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : "Delete failed",
-        };
-    }
-}
