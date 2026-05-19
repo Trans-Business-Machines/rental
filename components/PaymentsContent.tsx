@@ -3,25 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Loader2, CreditCard, Upload } from "lucide-react";
 import {
-  Upload,
-  Loader2,
-  X,
-  Image as ImageIcon,
-  CreditCard,
-  Trash2,
-  RefreshCw,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import {
-  uploadPaymentImage,
-  deletePaymentImageFromStorage,
-} from "@/lib/services/clientMediaService";
-import {
-  getPaymentImageSettings,
-  upsertPaymentImageSettings,
-  deletePaymentImageSettings,
+  getPaymentSettings,
+  upsertPaymentSettings,
 } from "@/lib/actions/app-settings";
 import { toast } from "sonner";
 import type { Role } from "@/lib/types/types";
@@ -32,30 +19,28 @@ interface PaymentsContentProps {
 
 interface PaymentSettings {
   id: string;
-  imageType: string;
-  imageName: string;
-  originalName: string;
-  imageUrl: string;
-  imageSize: number;
-  mimeType: string;
+  paybillNumber: string;
+  accountNumber: string;
 }
 
 export function PaymentsContent({ userRole }: PaymentsContentProps) {
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [previewFile, setPreviewFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [paybillNumber, setPaybillNumber] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
 
   const isSuperAdmin = userRole === "superAdmin";
 
-  // Fetch current payment image settings on mount
   const fetchSettings = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getPaymentImageSettings();
-      setSettings(data);
+      const data = await getPaymentSettings();
+      if (data) {
+        setSettings(data);
+        setPaybillNumber(data.paybillNumber);
+        setAccountNumber(data.accountNumber);
+      }
     } catch (error) {
       console.error("Error fetching payment settings:", error);
       toast.error("Failed to load payment settings");
@@ -68,123 +53,43 @@ export function PaymentsContent({ userRole }: PaymentsContentProps) {
     fetchSettings();
   }, [fetchSettings]);
 
-  // Handle file selection
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleSave = async () => {
+    if (!paybillNumber.trim() || !accountNumber.trim()) {
+      toast.error("Both paybill number and account number are required");
+      return;
+    }
 
-    // Validate file type
-    const allowedTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/webp",
-      "image/avif",
-    ];
-    if (!allowedTypes.includes(file.type)) {
+    if (paybillNumber.trim().length !== 6) {
+      toast.error("Paybill number must be exactly 6 characters");
+      return;
+    }
+
+    if (accountNumber.trim().length !== 10) {
+      toast.error("Account number must be exactly 10 characters");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const result = await upsertPaymentSettings({
+        paybillNumber: paybillNumber.trim(),
+        accountNumber: accountNumber.trim(),
+      });
+
+      if (result.success) {
+        setSettings(result.settings);
+        setPaybillNumber("");
+        setAccountNumber("");
+        toast.success("Payment settings saved successfully");
+      }
+    } catch (error) {
+      console.error("Save error:", error);
       toast.error(
-        "Invalid file type. Only JPEG, PNG, WebP, and AVIF are allowed.",
+        error instanceof Error ? error.message : "Failed to save settings",
       );
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File is too large. Maximum is 10MB.");
-      return;
-    }
-
-    setPreviewFile(file);
-
-    // Create preview URL
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreviewUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Handle upload
-  const handleUpload = async () => {
-    if (!previewFile) return;
-
-    setIsUploading(true);
-    try {
-      // Step 1: Upload to Supabase
-      const uploadResult = await uploadPaymentImage(
-        previewFile,
-        settings?.imageName,
-      );
-
-      if (!uploadResult.success) {
-        toast.error(uploadResult.error || "Failed to upload image");
-        return;
-      }
-
-      // Step 2: Save to database
-      await upsertPaymentImageSettings({
-        imageName: uploadResult.imageName!,
-        originalName: uploadResult.originalName!,
-        imageUrl: uploadResult.imageUrl!,
-        imageSize: uploadResult.imageSize!,
-        mimeType: uploadResult.mimeType!,
-      });
-
-      // Step 3: Update local state
-      setSettings({
-        id: settings?.id || "",
-        imageType: "payment_info",
-        imageName: uploadResult.imageName!,
-        originalName: uploadResult.originalName!,
-        imageUrl: `${uploadResult.imageUrl}?v=${Date.now()}`,
-        imageSize: uploadResult.imageSize!,
-        mimeType: uploadResult.mimeType!,
-      });
-
-      setPreviewFile(null);
-      setPreviewUrl(null);
-      toast.success("Payment image uploaded successfully");
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error("Failed to upload image");
     } finally {
-      setIsUploading(false);
+      setIsSaving(false);
     }
-  };
-
-  // Handle delete
-  const handleDelete = async () => {
-    if (!settings) return;
-
-    setIsDeleting(true);
-    try {
-      // Step 1: Delete from database and get filename
-      const result = await deletePaymentImageSettings();
-
-      if (!result.success) {
-        toast.error("Failed to delete image settings");
-        return;
-      }
-
-      // Step 2: Delete from Supabase storage
-      if (result.imageName) {
-        await deletePaymentImageFromStorage(result.imageName);
-      }
-
-      // Step 3: Update local state
-      setSettings(null);
-      toast.success("Payment image deleted successfully");
-    } catch (error) {
-      console.error("Delete error:", error);
-      toast.error("Failed to delete image");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  // Cancel preview
-  const handleCancelPreview = () => {
-    setPreviewFile(null);
-    setPreviewUrl(null);
   };
 
   if (isLoading) {
@@ -202,191 +107,170 @@ export function PaymentsContent({ userRole }: PaymentsContentProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <header>
         <h1 className="text-2xl font-bold text-foreground">
           Payment Information
         </h1>
         <p className="text-muted-foreground">
           {isSuperAdmin
-            ? "Manage the payment details image displayed to agents and admins."
-            : "View payment details for processing guest payments."}
+            ? "Manage the payment details displayed to agents and admins."
+            : "Use these details when processing guest payments."}
         </p>
       </header>
 
-      <div
-        className={cn(
-          "grid gap-6",
-          isSuperAdmin ? "lg:grid-cols-2" : "max-w-2xl",
-        )}
-      >
-        {/* Current Payment Image */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="size-5 text-primary" />
-              {isSuperAdmin ? "Current Payment Details" : "Payment Details"}
+      <div className={isSuperAdmin ? "grid gap-6 lg:grid-cols-2" : "max-w-2xl"}>
+        {/* Payment Details Card - Visible to all */}
+        <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-50 via-white to-green-100">
+          <div className="h-2 bg-gradient-to-r from-green-500 via-emerald-400 to-green-600" />
+
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-green-600 text-white shadow-md">
+                <CreditCard className="size-6" />
+              </div>
+
+              <div>
+                <h2 className="text-xl font-bold text-green-800">
+                  Lipa na M-Pesa
+                </h2>
+                <p className="text-sm font-normal text-green-600">
+                  Paybill Details
+                </p>
+              </div>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            {settings?.imageUrl ? (
-              <div className="space-y-4">
-                <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted">
-                  <img
-                    src={`${settings.imageUrl}?v=${Date.now()}`}
-                    alt="Payment Information"
-                    className="w-full h-full object-contain"
-                  />
+
+          <CardContent className="space-y-5">
+            {settings ? (
+              <>
+                <div className="grid gap-4">
+                  <div className="group relative overflow-hidden rounded-2xl border border-green-200 bg-white/80 p-5 shadow-sm transition-all hover:shadow-md">
+                    <div className="absolute top-0 right-0 h-20 w-20 rounded-full bg-green-100 blur-2xl opacity-70" />
+
+                    <div className="relative">
+                      <p className="text-xs uppercase tracking-wider text-green-500 font-semibold">
+                        Paybill Number
+                      </p>
+
+                      <div className="mt-2 flex items-center justify-between">
+                        <p className="text-3xl font-extrabold tracking-widest text-green-800">
+                          {settings.paybillNumber}
+                        </p>
+
+                        <div className="rounded-xl bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+                          Business
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="group relative overflow-hidden rounded-2xl border border-green-200 bg-white/80 p-5 shadow-sm transition-all hover:shadow-md">
+                    <div className="absolute bottom-0 left-0 h-20 w-20 rounded-full bg-emerald-100 blur-2xl opacity-70" />
+
+                    <div className="relative">
+                      <p className="text-xs uppercase tracking-wider text-green-500 font-semibold">
+                        Account Number
+                      </p>
+
+                      <div className="mt-2 flex items-center justify-between">
+                        <p className="text-2xl font-bold tracking-wide text-green-800 break-all">
+                          {settings.accountNumber}
+                        </p>
+
+                        <div className="rounded-xl bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                          Active
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {isSuperAdmin && (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={fetchSettings}
-                      disabled={isLoading}
-                    >
-                      <RefreshCw className="size-4 mr-2" />
-                      Refresh
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={handleDelete}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="size-4 mr-2 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-4 mr-2" />
-                      )}
-                      Delete
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="aspect-video rounded-lg border border-dashed bg-muted/50 flex flex-col items-center justify-center gap-2">
-                <ImageIcon className="size-12 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  No payment image uploaded
-                </p>
-                {!isSuperAdmin && (
-                  <p className="text-xs text-muted-foreground">
-                    Please contact a super admin to upload payment details.
+                <div className="rounded-xl border  border-green-300 bg-green-50 px-4 py-3 text-center">
+                  <p className="text-xs leading-relaxed text-green-700">
+                    Use these details when processing guest payments through
+                    M-Pesa.
                   </p>
-                )}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-green-100">
+                  <CreditCard className="size-8 text-green-400" />
+                </div>
+
+                <p className="text-base font-semibold text-green-700">
+                  No payment details configured
+                </p>
+
+                <p className="mt-2 max-w-sm text-sm text-green-600">
+                  {isSuperAdmin
+                    ? "Use the form to add M-Pesa payment details."
+                    : "Please contact a super admin to set up payment details."}
+                </p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Upload Section - SuperAdmin Only */}
+        {/* Edit Form - SuperAdmin Only */}
         {isSuperAdmin && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Upload className="size-5 text-primary" />
-                Upload New Image
+                {settings ? "Update Payment Details" : "Add Payment Details"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Preview Section */}
-              {previewUrl ? (
-                <div className="space-y-4">
-                  <Label className="text-sm font-medium">Preview</Label>
-                  <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted">
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      className="w-full h-full object-contain"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 bg-background/80 hover:bg-background"
-                      onClick={handleCancelPreview}
-                    >
-                      <X className="size-4" />
-                    </Button>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="paybillNumber">Paybill Number</Label>
+                <Input
+                  id="paybillNumber"
+                  type="text"
+                  placeholder="e.g. 522522"
+                  maxLength={6}
+                  value={paybillNumber}
+                  onChange={(e) => setPaybillNumber(e.target.value)}
+                />
+              </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      <p className="font-medium truncate max-w-[200px]">
-                        {previewFile?.name}
-                      </p>
-                      <p>
-                        {previewFile &&
-                          `${(previewFile.size / 1024 / 1024).toFixed(2)} MB`}
-                      </p>
-                    </div>
+              <div className="space-y-2">
+                <Label htmlFor="accountNumber">Account Number</Label>
+                <Input
+                  id="accountNumber"
+                  type="text"
+                  placeholder="e.g. 1********9"
+                  maxLength={10}
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                />
+              </div>
 
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={handleCancelPreview}
-                        disabled={isUploading}
-                      >
-                        Cancel
-                      </Button>
-                      <Button onClick={handleUpload} disabled={isUploading}>
-                        {isUploading ? (
-                          <>
-                            <Loader2 className="size-4 mr-2 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="size-4 mr-2" />
-                            Upload
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  className={cn(
-                    "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors hover:border-primary/50",
-                    "border-muted-foreground/25",
-                  )}
-                  onClick={() =>
-                    document.getElementById("payment-image-input")?.click()
-                  }
-                >
-                  <Upload className="size-10 mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-sm font-medium">
-                    Click to upload payment details image
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    JPEG, PNG, WebP, or AVIF (max 10MB)
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    This image will be visible to all agents and admins.
-                  </p>
-                  <input
-                    id="payment-image-input"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/avif"
-                    className="hidden"
-                    onChange={handleFileSelect}
-                  />
-                </div>
-              )}
+              <Button
+                onClick={handleSave}
+                disabled={
+                  isSaving || !paybillNumber.trim() || !accountNumber.trim()
+                }
+                className="w-full"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="size-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="size-4 mr-2" />
+                    {settings ? "Update Details" : "Save Details"}
+                  </>
+                )}
+              </Button>
 
-              {/* Instructions */}
               <div className="p-4 rounded-lg bg-muted/50 border">
-                <h4 className="text-sm font-medium mb-2">
-                  Recommended Content
-                </h4>
-                <ul className="text-xs text-muted-foreground space-y-1">
-                  <li> Mpesa Paybill or Till Number</li>
-                  <li> Bank Account Details</li>
-                  <li> QR Code for mobile payments</li>
-                </ul>
+                <h4 className="text-sm font-medium mb-2">Note</h4>
+                <p className="text-xs text-muted-foreground">
+                  These payment details will be visible to all agents and admins
+                  for processing guest payments.
+                </p>
               </div>
             </CardContent>
           </Card>

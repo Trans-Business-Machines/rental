@@ -58,7 +58,6 @@ import {
   getStartOfDay,
   getEndOfDay,
   formatDateKE,
-  formatDateTimeLocal,
 } from "@/lib/utils";
 import {
   BookingRequestFormSchema,
@@ -77,6 +76,7 @@ import type {
   UnitTypePricing,
   GuestSearchResult,
 } from "@/lib/types/types";
+import { getPaymentSettings } from "@/lib/actions/app-settings";
 
 const STEPS = [
   { id: 1, title: "Select Guest", icon: Users },
@@ -130,8 +130,13 @@ export function BookingRequestForm() {
     queryFn: () => getBookingRequestFormData(),
   });
 
+  const { data: paymentSettings } = useQuery({
+    queryKey: ["payment-settings"],
+    queryFn: () => getPaymentSettings(),
+  });
+
   // Get current datetime for datetime-local input
-  const now = format(new Date(), "yyyy-MM-dd'T'HH:mm");
+  const now = format(new Date(), "yyyy-MM-dd");
 
   const {
     register,
@@ -1483,28 +1488,51 @@ export function BookingRequestForm() {
                 </div>
               )}
 
+              {isPricingSelected && formData.paymentMethod === "mpesa_till" && paymentSettings && (
+                <div className="flex items-center gap-4 p-3 rounded-lg border-green-200">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-green-600">
+                      Paybill Number
+                    </p>
+                    <p className="text-sm font-bold text-green-800">
+                      {paymentSettings.paybillNumber}
+                    </p>
+                  </div>
+                  <div className="w-px h-8 bg-green-200" />
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-green-600">
+                      Account Number
+                    </p>
+                    <p className="text-sm font-bold text-green-800">
+                      {paymentSettings.accountNumber}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Check-in & check-out Dates */}
               {isPricingSelected && (
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="checkInDate">
-                      Check-in Date & Time{" "}
-                      <span className="text-lipstick-red">*</span>
+                      Check-in Date <span className="text-lipstick-red">*</span>
                     </Label>
                     <Input
                       id="checkInDate"
-                      type="datetime-local"
+                      type="date"
                       min={
                         isCustomDuration && selectedPricing?.fromDate
-                          ? formatDateTimeLocal(
+                          ? format(
                               getStartOfDay(selectedPricing.fromDate),
+                              "yyyy-MM-dd",
                             )
                           : now
                       }
                       max={
                         isCustomDuration && selectedPricing?.toDate
-                          ? formatDateTimeLocal(
+                          ? format(
                               getEndOfDay(selectedPricing.toDate),
+                              "yyyy-MM-dd",
                             )
                           : undefined
                       }
@@ -1515,9 +1543,6 @@ export function BookingRequestForm() {
                       }}
                       value={formData.checkInDate || ""}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Check-in is allowed between 12:00 PM and 6:00 PM
-                    </p>
                     {isCustomDuration &&
                       selectedPricing?.fromDate &&
                       selectedPricing?.toDate && (
@@ -1622,7 +1647,7 @@ export function BookingRequestForm() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="mpesa_till">
-                              Mpesa Till No.
+                              Mpesa Paybill
                             </SelectItem>
                             <SelectItem value="credit_card">
                               Credit Card

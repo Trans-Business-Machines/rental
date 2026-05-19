@@ -51,6 +51,7 @@ import type {
   BookingRequestListItem,
   Role,
 } from "@/lib/types/types";
+import { maskPhone, maskEmail } from "@/lib/utils";
 
 export function BookingRequestsContent({ userRole }: { userRole: Role }) {
   const router = useRouter();
@@ -212,8 +213,8 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {request.existingGuest
-                                ? request.existingGuest.email
-                                : request.guestEmail}
+                                ? maskEmail(request.existingGuest.email, userRole)
+                                : maskEmail(request.guestEmail as string, userRole)}
                             </p>
                           </div>
                         </div>
@@ -236,8 +237,8 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
                       {/* Phone */}
                       <TableCell className="text-night">
                         {request.existingGuest
-                          ? request.existingGuest.phone
-                          : request.guestPhone}
+                          ? maskPhone(request.existingGuest.phone, userRole)
+                          : maskPhone(request.guestPhone as string, userRole)}
                       </TableCell>
 
                       {/* Check-in */}

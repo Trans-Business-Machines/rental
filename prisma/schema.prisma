@@ -400,7 +400,7 @@ model CheckoutItem {
   inventoryAssignment   InventoryAssignment @relation(fields: [inventoryAssignmentId], references: [id], onDelete: Cascade)
 
   condition  CheckoutItemStatus @default(good)
-  damageCost Int?                @default(0)
+  damageCost Int?               @default(0)
   notes      String?
   createdAt  DateTime           @default(now())
 
@@ -537,16 +537,12 @@ model BookingRequest {
   @@map("booking_requests")
 }
 
-model AppSettings {
-  id           String   @id @default(cuid())
-  imageType    String   @unique
-  imageName    String   @unique
-  originalName String
-  imageUrl     String
-  imageSize    Int
-  mimeType     String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+model PaymentSettings {
+  id            String   @id @default(cuid())
+  paybillNumber String   @unique
+  accountNumber String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  @@map("app_settings")
+  @@map("payment_settings")
 }

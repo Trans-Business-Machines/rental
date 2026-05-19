@@ -95,7 +95,7 @@ export function BookingEditDialog({
   const [selectedPricing, setSelectedPricing] =
     useState<UnitTypePricing | null>(null);
   const [formData, setFormData] = useState({
-    checkInDate: format(new Date(booking.checkInDate), "yyyy-MM-dd'T'HH:mm"),
+    checkInDate: format(new Date(booking.checkInDate), "yyyy-MM-dd"),
     checkOutDate:
       format(new Date(booking.checkOutDate), "yyyy-MM-dd") + "T10:00",
     numberOfGuests: booking.numberOfGuests,
@@ -207,17 +207,6 @@ export function BookingEditDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validate check-in time: 12:00 PM - 6:00 PM
-    const [, time] = formData.checkInDate.split("T");
-    if (time) {
-      const [hours, minutes] = time.split(":").map(Number);
-      const totalMinutes = hours * 60 + minutes;
-      if (totalMinutes < 720 || totalMinutes > 1080) {
-        toast.error("Check-in time must be between 12:00 PM and 6:00 PM");
-        return;
-      }
-    }
 
     if (booking.status === "reserved" && formData.status === "pending") {
       toast.error("You cannot move from reserved to pending!");
@@ -544,16 +533,14 @@ export function BookingEditDialog({
                 <Input
                   id="checkInDate"
                   name="checkInDate"
-                  type="datetime-local"
+                  type="date"
                   value={formData.checkInDate}
                   onChange={handleChange}
                   disabled={isCheckedIn || isCustomDuration}
                   className={cn(isCustomDuration && "bg-muted")}
                   required
                 />
-                <p className="text-xs text-muted-foreground">
-                  Check-in is allowed between 12:00 PM and 6:00 PM
-                </p>
+
                 {isCustomDuration && (
                   <p className="text-xs text-muted-foreground">
                     Fixed dates for custom pricing period

@@ -59,6 +59,9 @@ import {
   calculateTotalNights,
   formatDateInTimezone,
   calculateVAT,
+  maskPhone,
+  maskEmail,
+  maskIdNumber,
 } from "@/lib/utils";
 import { BookingRequestDetailsSkeleton } from "@/components/BookingRequestDetailsSkeleton";
 import type { PriceDuration, Role } from "@/lib/types/types";
@@ -151,6 +154,11 @@ export function BookingRequestDetails({
 
   const originalSubtotal = originalUnitPrice * bookingRequest.period;
   const discountAmount = originalSubtotal - subtotal;
+  const identifier =
+    bookingRequest.guestIdNumber || bookingRequest.guestPassportNumber;
+
+  const maskedID =
+    identifier === null ? "None" : maskIdNumber(identifier as string, userRole);
 
   return (
     <div className="container max-w-5xl py-6 space-y-6">
@@ -242,7 +250,9 @@ export function BookingRequestDetails({
                 <Mail className="size-4 text-muted-foreground mt-0.5" />
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{guestEmail}</p>
+                  <p className="font-medium">
+                    {maskEmail(guestEmail as string, userRole)}
+                  </p>
                 </div>
               </div>
 
@@ -250,7 +260,9 @@ export function BookingRequestDetails({
                 <Phone className="size-4 text-muted-foreground mt-0.5" />
                 <div>
                   <p className="text-sm text-muted-foreground">Phone</p>
-                  <p className="font-medium">{guestPhone}</p>
+                  <p className="font-medium">
+                    {maskPhone(guestPhone as string, userRole)}
+                  </p>
                 </div>
               </div>
 
@@ -296,11 +308,7 @@ export function BookingRequestDetails({
                           ? "National ID Number"
                           : "Passport Number"}
                       </p>
-                      <p className="font-medium">
-                        {bookingRequest.guestIdNumber ||
-                          bookingRequest.guestPassportNumber ||
-                          "-"}
-                      </p>
+                      <p className="font-medium">{maskedID}</p>
                     </div>
                   </div>
 
@@ -320,18 +328,20 @@ export function BookingRequestDetails({
               )}
 
               {/* Link to existing guest profile */}
-              {isExistingGuest && bookingRequest.existingGuestId && (
-                <>
-                  <Separator />
-                  <Link
-                    href={`/guests/${bookingRequest.existingGuestId}`}
-                    className="text-sm text-primary hover:underline flex items-center gap-2"
-                  >
-                    <UserCheck className="size-4" />
-                    View Full Guest Profile
-                  </Link>
-                </>
-              )}
+              {userRole !== "agent" &&
+                isExistingGuest &&
+                bookingRequest.existingGuestId && (
+                  <>
+                    <Separator />
+                    <Link
+                      href={`/guests/${bookingRequest.existingGuestId}`}
+                      className="text-sm text-primary hover:underline flex items-center gap-2"
+                    >
+                      <UserCheck className="size-4" />
+                      View Full Guest Profile
+                    </Link>
+                  </>
+                )}
             </div>
           </CardContent>
         </Card>
@@ -415,13 +425,17 @@ export function BookingRequestDetails({
                   <UserCheck className="size-8 text-primary" />
                 </div>
                 <p className="font-medium text-lg">{guestName}</p>
-                <p className="text-sm text-muted-foreground">{guestEmail}</p>
-                <p className="text-sm text-muted-foreground">{guestPhone}</p>
+                <p className="text-sm text-muted-foreground">
+                  {maskEmail(guestEmail as string, userRole)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {maskPhone(guestPhone as string, userRole)}
+                </p>
                 <p className="text-xs text-muted-foreground mt-4">
                   This guest is already registered in the system. Their ID
                   document is on file.
                 </p>
-                {bookingRequest.existingGuestId && (
+                {userRole !== "agent" && bookingRequest.existingGuestId && (
                   <Link
                     href={`/guests/${bookingRequest.existingGuestId}`}
                     className="mt-4"

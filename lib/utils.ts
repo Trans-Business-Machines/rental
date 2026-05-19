@@ -3,7 +3,7 @@ import { twMerge } from "tailwind-merge";
 import { addDays, differenceInDays } from "date-fns"
 import nationalities from 'i18n-nationality';
 import enLocale from 'i18n-nationality/langs/en.json';
-import type { BookingStatus, UnitStatus, Guest, InventoryItem, PriceDuration } from "@/lib/types/types";
+import type { BookingStatus, UnitStatus, Guest, InventoryItem, PriceDuration, Role } from "@/lib/types/types";
 
 // Constants
 export const LIMIT = 9;
@@ -279,3 +279,33 @@ export const formatFileSize = (bytes: number) => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
+
+
+// ================= MASKING UTILITIES =================
+
+export function maskPhone(phone: string, role: Role) {
+  if (role === "superAdmin") return phone;
+  if (phone.length <= 4) return "****";
+  const start = phone.slice(0, 4);
+  const end = phone.slice(-2);
+  const masked = "*".repeat(phone.length - 6);
+  return `${start}${masked}${end}`;
+}
+
+export function maskEmail(email: string, role: Role) {
+  if (role === "superAdmin") return email;
+  const [local, domain] = email.split("@");
+  if (!domain) return "****";
+  const visible = local.slice(0, 2);
+  const masked = "*".repeat(Math.max(local.length - 2, 3));
+  return `${visible}${masked}@${domain}`;
+}
+
+export function maskIdNumber(id: string, role: Role) {
+  if (role === "superAdmin") return id;
+  if (id.length <= 4) return "****";
+  const start = id.slice(0, 2);
+  const end = id.slice(-2);
+  const masked = "*".repeat(id.length - 4);
+  return `${start}${masked}${end}`;
+}

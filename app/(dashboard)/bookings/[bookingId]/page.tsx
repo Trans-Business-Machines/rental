@@ -1,5 +1,5 @@
 import { getBookingById } from "@/lib/actions/bookings";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -9,8 +9,6 @@ import {
   Building,
   Home,
   User,
-  Mail,
-  Phone,
   CreditCard,
   FileText,
   Banknote,
@@ -22,6 +20,8 @@ import {
   Clock,
   XCircle,
   Percent,
+  Mail,
+  Phone,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import Header from "./Header";
@@ -34,7 +34,14 @@ import {
   hasDiscount,
   getDurationLabel,
   calculateVAT,
+  maskPhone,
+  maskEmail,
+  maskIdNumber,
 } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { getServerSession } from "@/lib/check-permissions";
+import { Role } from "@/lib/types/types";
 
 const getStatusColor = (status: BookingStatus): string => {
   switch (status) {
@@ -58,6 +65,13 @@ interface BookingDetailsPros {
 }
 
 async function BookingDetails({ params }: BookingDetailsPros) {
+  const session = await getServerSession();
+  const user = session?.user;
+
+  if (!user) {
+    redirect("/login");
+  }
+
   const { bookingId } = await params;
 
   // convert the booking ID to a number if its a string
@@ -177,7 +191,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                       Email Address
                     </p>
                     <p className="text-sm text-foreground truncate">
-                      {booking.guest.email}
+                      {maskEmail(booking.guest.email, user.role as Role)}
                     </p>
                   </div>
                 </div>
@@ -191,7 +205,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                       Phone Number
                     </p>
                     <p className="text-sm text-foreground">
-                      {booking.guest.phone}
+                      {maskPhone(booking.guest.phone, user.role as Role)}
                     </p>
                   </div>
                 </div>
@@ -222,12 +236,29 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                         ID Number
                       </p>
                       <p className="text-sm text-foreground">
-                        {booking.guest.idNumber}
+                        {maskIdNumber(
+                          booking.guest.idNumber,
+                          user.role as Role,
+                        )}
                       </p>
                     </div>
                   </div>
                 )}
               </div>
+
+              {user.role !== "agent" && (
+                <>
+                  <Separator />
+                  <div className="flex justify-end">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/guests/${booking.guest.id}`}>
+                        <User className="size-4 mr-2" />
+                        View Guest Profile
+                      </Link>
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -401,17 +432,18 @@ async function BookingDetails({ params }: BookingDetailsPros) {
               </div>
 
               <Separator />
-
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-muted/60 text-center">
                   <p className="text-sm text-muted-foreground">Duration</p>
                   <p className="text-lg font-bold text-foreground">
-                    {getDurationLabel(booking.priceDuration)}
+                    {nights} {nights === 1 ? "Night" : "Nights"}
                   </p>
                 </div>
                 <div className="p-3 rounded-lg bg-muted/60 text-center">
-                  <p className="text-sm text-muted-foreground">Total Nights</p>
-                  <p className="text-lg font-bold text-foreground">{nights}</p>
+                  <p className="text-sm text-muted-foreground">Rate Type</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {getDurationLabel(booking.priceDuration)}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -430,7 +462,9 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Booking Source</span>
                   <span className="font-medium text-foreground capitalize">
-                    {booking.source}
+                    {booking.source === "agent_request"
+                      ? "Agent"
+                      : booking.source}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -445,7 +479,9 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                       Payment Method
                     </span>
                     <span className="font-medium text-foreground capitalize">
-                      {booking.paymentMethod.replace("_", " ")}
+                      {booking.paymentMethod === "mpesa_till"
+                        ? "Mpesa Paybill"
+                        : booking.paymentMethod.replace("_", " ")}
                     </span>
                   </div>
                 )}

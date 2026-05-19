@@ -29,6 +29,7 @@ import {
 import Link from "next/link";
 import { cn, shouldDisableDelete } from "@/lib/utils";
 import type { GuestsTableAndCardsProps } from "@/lib/types/types";
+import { maskPhone, maskEmail } from "@/lib/utils";
 
 function GuestsTable({
   guests,
@@ -36,6 +37,7 @@ function GuestsTable({
   handleClick,
   isArchivePending,
   setIsDialogOpen,
+  userRole,
 }: GuestsTableAndCardsProps) {
   return (
     <>
@@ -90,13 +92,13 @@ function GuestsTable({
                 <TableCell>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Mail className="size-4" />
-                    <span>{guest.email}</span>
+                    <span>{maskEmail(guest.email, userRole)}</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Phone className="size-4" />
-                    <span>{guest.phone}</span>
+                    <span>{maskPhone(guest.phone, userRole)}</span>
                   </div>
                 </TableCell>
                 <TableCell className=" lg:pl-8">{guest.totalStays}</TableCell>
