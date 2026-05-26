@@ -118,11 +118,9 @@ export function Step1InspectionDetails({
               id="checkoutDate"
               type="date"
               {...register("checkoutDate")}
+              readOnly
               className={cn(
-                "h-11 border-2",
-                errors.checkoutDate
-                  ? "border-red-500 focus-visible:ring-red-500"
-                  : "focus:border-chart-1",
+                "h-11 border-2  cursor-not-allowed focus:outline-none",
               )}
             />
             {errors.checkoutDate && (

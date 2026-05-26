@@ -25,7 +25,7 @@ import { getServerSession } from "@/lib/check-permissions";
 import { redirect } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { getPaymentSettings } from "@/lib/actions/app-settings";
+import { getPaymentSettings } from "@/lib/actions/payments";
 
 interface BookingsPageProps {
   searchParams: Promise<{

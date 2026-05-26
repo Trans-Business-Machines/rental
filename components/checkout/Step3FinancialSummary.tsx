@@ -22,6 +22,7 @@ import {
 import type { BookingsForCheckout } from "@/lib/types/types";
 import type { AggregatedAssignment } from "@/lib/actions/checkout";
 import { usePermissions } from "@/hooks/usePermissions";
+import { cn } from "@/lib/utils";
 
 interface Step3Props {
   selectedBooking: BookingsForCheckout[number] | null;
@@ -60,7 +61,6 @@ export function Step3FinancialSummary({
   const itemsWithIssues = checkoutItems.filter(
     (item) => item.damagedCount > 0 || item.missingCount > 0,
   );
-
 
   return (
     <div className="space-y-6 pb-12 md:pb-6">
@@ -192,7 +192,7 @@ export function Step3FinancialSummary({
                   className="flex justify-between items-start p-3 bg-gray-50 rounded"
                 >
                   <div>
-                    <p className="font-medium text-sm">{item.itemName}</p>
+                    <p className="font-medium text-sm capitalize">{item.itemName}</p>
                     <p className="text-xs text-muted-foreground">
                       {item.category} • {item.totalQuantity} total
                     </p>
@@ -226,16 +226,26 @@ export function Step3FinancialSummary({
         <CardContent className="space-y-4">
           <div className="space-y-3">
             <div className="space-y-2">
+              {/* Financial Details - damage cost label */}
               <Label htmlFor="overallDamageCost">
-                Total Damage / Replacement Cost (KES)
+                Total Damage / Replacement Cost (KES){" "}
+                {itemsWithIssues.length > 0 && (
+                  <span className="text-red-500">*</span>
+                )}
               </Label>
               <Input
                 id="overallDamageCost"
                 type="number"
-                placeholder="0"
+                placeholder="Enter the damage cost, e.g 500 or 0 when no items have been damaged."
                 min="0"
                 {...register("overallDamageCost", { valueAsNumber: true })}
-                className={errors.overallDamageCost ? "border-red-500" : ""}
+                className={cn("py-3",
+                  errors.overallDamageCost && "border-red-500",
+                  itemsWithIssues.length > 0 &&
+                    (!formData.overallDamageCost ||
+                      formData.overallDamageCost <= 0) &&
+                    "border-red-500",
+                )}
               />
               {errors.overallDamageCost && (
                 <p className="text-sm text-red-500 mt-1">
@@ -264,13 +274,25 @@ export function Step3FinancialSummary({
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes (Optional)</Label>
+            {/* Notes label */}
+            <Label htmlFor="notes">
+              Notes{" "}
+              {itemsWithIssues.length > 0 ? (
+                <span className="text-red-500">*</span>
+              ) : (
+                "(Optional)"
+              )}
+            </Label>
             <Textarea
               id="notes"
               placeholder="Any additional notes about the checkout, damages, or guest interactions..."
-              rows={4}
+              rows={6}
               {...register("notes")}
-              className="resize-none"
+              className={cn(
+                itemsWithIssues.length > 0 &&
+                  (!formData.notes || formData.notes.trim() === "") &&
+                  "border-red-500",
+              )}
             />
           </div>
         </CardContent>
@@ -280,7 +302,7 @@ export function Step3FinancialSummary({
       <Card className="border-blue-500 bg-blue-50">
         <CardContent>
           <p className="text-sm flex items-center gap-2 font-medium mb-2 text-blue-500">
-            <Info className="size-5 text-blue-500" />
+            <Info className="size-6 text-blue-500" />
             <span>Before completing ensure:</span>
           </p>
           <ul className="text-sm pl-5 md:pl-8 space-y-2 text-muted-foreground">

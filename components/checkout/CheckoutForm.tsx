@@ -55,8 +55,7 @@ export function CheckoutForm({
       checkoutDate: today,
       notes: "",
       checkoutItems: [],
-      depositDeduction: 0,
-      overallDamageCost: 0,
+      overallDamageCost: undefined as unknown as number,
     },
     mode: "onChange",
   });
@@ -123,6 +122,24 @@ export function CheckoutForm({
       return;
     }
 
+    // Check if any items have damage/missing
+    const hasIssues = data.checkoutItems.some(
+      (item) => item.damagedCount > 0 || item.missingCount > 0,
+    );
+
+    if (hasIssues) {
+      if (!data.overallDamageCost || data.overallDamageCost <= 0) {
+        toast.error("Please enter the total damage/replacement cost.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (!data.notes || data.notes.trim() === "") {
+        toast.error("Please provide notes describing the damages.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     try {
       // Fan out aggregated items back to individual assignments
       const checkoutItems = data.checkoutItems.flatMap((item) => {
@@ -167,7 +184,6 @@ export function CheckoutForm({
         checkoutDate: new Date(data.checkoutDate),
         inspector: currentUser?.name || "system",
         overallDamageCost: data.overallDamageCost,
-        depositDeduction: data.depositDeduction,
         notes: data.notes,
         checkoutItems,
       };
@@ -270,7 +286,7 @@ export function CheckoutForm({
                   type="button"
                   onClick={handleNext}
                   disabled={isSubmitting}
-                  className="min-w-[80px]"
+                  className="min-w-[80px] "
                 >
                   Continue
                 </Button>

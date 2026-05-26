@@ -230,6 +230,15 @@ export async function createBooking(booking: CreateBookingData) {
 			);
 		}
 
+		// Check for duplicate payment code
+		const existingPaymentCode = await prisma.booking.findFirst({
+			where: { paymentCode: booking.paymentCode },
+		});
+
+		if (existingPaymentCode) {
+			throw new Error("This payment code already exists!");
+		}
+
 		// Get the corresponding unit status based on booking status
 		const unitStatus = evaluateUnitStatus(booking.status);
 
@@ -314,16 +323,6 @@ export async function createBooking(booking: CreateBookingData) {
 	} catch (error: any) {
 		console.error("Error creating booking:", error);
 
-		const message = error?.message || "";
-
-		if (message.includes("Unique constraint failed on the fields: (`paymentCode`)")) {
-			throw new Error("This payment code already exists!");
-		}
-
-		if (message.includes("Unique constraint failed on the fields: (`guestEmail`)")) {
-			throw new Error("This email already exists!");
-		}
-
 		// Re-throw your own validation errors (thrown earlier in the function)
 		if (error instanceof Error) {
 			throw error;
@@ -368,8 +367,7 @@ export async function updateBooking(
 			...data,
 		};
 
-		// When transitioning to checked_in, 
-		// Enusre time is between 12PM and 6PM
+		// When transitioning to checked_in,
 		//update checkInDate and recalculate checkOutDate
 		if (isCheckingInNow) {
 			// Update checkInDate and recalculate checkOutDate

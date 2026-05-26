@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Loader2, CreditCard, Upload } from "lucide-react";
 import {
   getPaymentSettings,
   upsertPaymentSettings,
-} from "@/lib/actions/app-settings";
+} from "@/lib/actions/payments";
 import { toast } from "sonner";
 import type { Role } from "@/lib/types/types";
 
@@ -21,25 +22,31 @@ interface PaymentSettings {
   id: string;
   paybillNumber: string;
   accountNumber: string;
+  notes?: string | null;
 }
 
 export function PaymentsContent({ userRole }: PaymentsContentProps) {
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
   const [paybillNumber, setPaybillNumber] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
+  const [notes, setNotes] = useState<string | null>("");
 
   const isSuperAdmin = userRole === "superAdmin";
 
   const fetchSettings = useCallback(async () => {
     setIsLoading(true);
+
     try {
       const data = await getPaymentSettings();
       if (data) {
         setSettings(data);
         setPaybillNumber(data.paybillNumber);
         setAccountNumber(data.accountNumber);
+        setNotes(data?.notes);
       }
     } catch (error) {
       console.error("Error fetching payment settings:", error);
@@ -74,12 +81,14 @@ export function PaymentsContent({ userRole }: PaymentsContentProps) {
       const result = await upsertPaymentSettings({
         paybillNumber: paybillNumber.trim(),
         accountNumber: accountNumber.trim(),
+        notes: notes?.trim(),
       });
 
       if (result.success) {
         setSettings(result.settings);
         setPaybillNumber("");
         setAccountNumber("");
+        setNotes(null);
         toast.success("Payment settings saved successfully");
       }
     } catch (error) {
@@ -147,7 +156,7 @@ export function PaymentsContent({ userRole }: PaymentsContentProps) {
                   <div className="group relative overflow-hidden rounded-2xl border border-green-200 bg-white/80 p-5 shadow-sm transition-all hover:shadow-md">
                     <div className="absolute top-0 right-0 h-20 w-20 rounded-full bg-green-100 blur-2xl opacity-70" />
 
-                    <div className="relative">
+                    <article className="relative">
                       <p className="text-xs uppercase tracking-wider text-green-500 font-semibold">
                         Paybill Number
                       </p>
@@ -161,7 +170,7 @@ export function PaymentsContent({ userRole }: PaymentsContentProps) {
                           Business
                         </div>
                       </div>
-                    </div>
+                    </article>
                   </div>
 
                   <div className="group relative overflow-hidden rounded-2xl border border-green-200 bg-white/80 p-5 shadow-sm transition-all hover:shadow-md">
@@ -185,7 +194,13 @@ export function PaymentsContent({ userRole }: PaymentsContentProps) {
                   </div>
                 </div>
 
-                <div className="rounded-xl border  border-green-300 bg-green-50 px-4 py-3 text-center">
+                <div className="rounded-lg border  border-green-300 bg-green-50 px-4 py-3 text-center">
+                  {settings?.notes && (
+                    <p className="text-sm font-semibold leading-relaxed text-green-700">
+                      {settings.notes.charAt(0).toUpperCase() +
+                        settings.notes.substring(1)}
+                    </p>
+                  )}
                   <p className="text-xs leading-relaxed text-green-700">
                     Use these details when processing guest payments through
                     M-Pesa.
@@ -221,6 +236,7 @@ export function PaymentsContent({ userRole }: PaymentsContentProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Paybill Number */}
               <div className="space-y-2">
                 <Label htmlFor="paybillNumber">Paybill Number</Label>
                 <Input
@@ -233,6 +249,7 @@ export function PaymentsContent({ userRole }: PaymentsContentProps) {
                 />
               </div>
 
+              {/* Account Number */}
               <div className="space-y-2">
                 <Label htmlFor="accountNumber">Account Number</Label>
                 <Input
@@ -245,12 +262,31 @@ export function PaymentsContent({ userRole }: PaymentsContentProps) {
                 />
               </div>
 
+              {/* Additonal notes  */}
+              <div className="space-y-2">
+                <Label htmlFor="notes">Bank Details (optional)</Label>
+                <Textarea
+                  id="notes"
+                  rows={5}
+                  placeholder="Additional notes about the bank, for example KCB bank."
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+
+              <div className="p-1 rounded-lg">
+                <h4 className="text-sm font-semibold mb-2">Note</h4>
+                <p className="text-xs text-muted-foreground">
+                  These payment details will be visible to all agents and admins
+                  for processing guest payments.
+                </p>
+              </div>
+
               <Button
                 onClick={handleSave}
                 disabled={
                   isSaving || !paybillNumber.trim() || !accountNumber.trim()
                 }
-                className="w-full"
+                className="py-3 w-full cursor-pointer"
               >
                 {isSaving ? (
                   <>
@@ -264,14 +300,6 @@ export function PaymentsContent({ userRole }: PaymentsContentProps) {
                   </>
                 )}
               </Button>
-
-              <div className="p-4 rounded-lg bg-muted/50 border">
-                <h4 className="text-sm font-medium mb-2">Note</h4>
-                <p className="text-xs text-muted-foreground">
-                  These payment details will be visible to all agents and admins
-                  for processing guest payments.
-                </p>
-              </div>
             </CardContent>
           </Card>
         )}

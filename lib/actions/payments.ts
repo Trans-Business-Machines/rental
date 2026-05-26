@@ -8,6 +8,7 @@ import type { Role } from "@/lib/types/types";
 export interface PaymentSettingsData {
   paybillNumber: string;
   accountNumber: string;
+  notes?: string
 }
 
 /* Get payment settings */
@@ -48,6 +49,7 @@ export async function upsertPaymentSettings(data: PaymentSettingsData) {
         data: {
           paybillNumber: data.paybillNumber,
           accountNumber: data.accountNumber,
+          notes: data.notes
         },
       });
     } else {
@@ -55,6 +57,7 @@ export async function upsertPaymentSettings(data: PaymentSettingsData) {
         data: {
           paybillNumber: data.paybillNumber,
           accountNumber: data.accountNumber,
+          notes: data.notes
         },
       });
     }
