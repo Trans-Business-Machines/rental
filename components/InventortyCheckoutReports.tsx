@@ -6,12 +6,13 @@ import { Card, CardHeader, CardContent, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import {
   Package,
-  Download,
-  Eye,
   Bed,
   Search,
   File,
   Loader,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   Select,
@@ -29,6 +30,7 @@ import { SearchNotFound } from "./SearchNotFound";
 import { useRouter } from "next/navigation";
 import { Footer } from "@/components/Footer";
 import type { CheckoutReport, sortTypes } from "@/lib/types/types";
+import { cn } from "@/lib/utils";
 
 interface CheckoutReportFilters {
   search: string;
@@ -62,18 +64,28 @@ function InventortyCheckoutReports({
   const router = useRouter();
 
   const [filters, setFilters] = useState<CheckoutReportFilters>(initialFilters);
+  const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set());
 
-  // Check if there are any active filters in the URL
   const hasActiveFilters =
     initialFilters.search !== "" || initialFilters.sortOrder !== "none";
 
   const [isApplyPending, startApplyTransition] = useTransition();
   const [isClearPending, startClearTransition] = useTransition();
 
-  // Combined pending state for disabling inputs
   const isPending = isApplyPending || isClearPending;
 
-  // URL Handlers
+  const toggleNotes = (reportId: number) => {
+    setExpandedNotes((prev) => {
+      const next = new Set(prev);
+      if (next.has(reportId)) {
+        next.delete(reportId);
+      } else {
+        next.add(reportId);
+      }
+      return next;
+    });
+  };
+
   const applyFilters = () => {
     const params = new URLSearchParams();
     params.set("tab", "checkout");
@@ -90,13 +102,11 @@ function InventortyCheckoutReports({
   };
 
   const clearFilters = () => {
-    // Reset local state
     setFilters({
       search: "",
       sortOrder: "none",
     });
 
-    // Update URL
     startClearTransition(() => {
       router.push("/inventory?tab=checkout&page=1");
     });
@@ -114,10 +124,9 @@ function InventortyCheckoutReports({
 
   return (
     <section className="space-y-1">
-      {/*Search and  Filters */}
+      {/* Search and Filters */}
       <header className="flex flex-col gap-2 lg:gap-4 mb-4">
         <div className="flex flex-col md:flex-row gap-2 lg:pr-8">
-          {/* ItemName filter */}
           <div className="relative md:w-3/5">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -162,7 +171,7 @@ function InventortyCheckoutReports({
           >
             {isApplyPending ? (
               <span className="flex items-center gap-2">
-                <Loader className="size-4  animate-spin" />
+                <Loader className="size-4 animate-spin" />
                 Searching
               </span>
             ) : (
@@ -176,7 +185,7 @@ function InventortyCheckoutReports({
           >
             {isClearPending ? (
               <span className="flex items-center gap-2">
-                <Loader className="size-4  animate-spin" />
+                <Loader className="size-4 animate-spin" />
                 Clearing
               </span>
             ) : (
@@ -195,114 +204,127 @@ function InventortyCheckoutReports({
             icon={File}
           />
         ) : (
-          reports.map((report) => (
-            <Card key={report.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">
-                      {report.guest.firstName} {report.guest.lastName}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {report.guest.email}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={
-                      report.status === "completed" ? "default" : "secondary"
-                    }
-                  >
-                    {report.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Property Information */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Bed className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
-                      {report.booking.property.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      {report.booking.unit.name}
-                    </span>
-                  </div>
-                </div>
+          reports.map((report) => {
+            const isNotesExpanded = expandedNotes.has(report.id);
+            const hasNotes = !!report.notes && report.notes.trim() !== "";
 
-                {/* Checkout Date and Inspector */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="text-center p-2 bg-muted/50 rounded-lg">
-                    <p className="font-medium">Checkout Date</p>
-                    <p className="text-muted-foreground">
-                      {format(new Date(report.checkoutDate), "dd/MM/yyyy")}
-                    </p>
-                  </div>
-                  <div className="text-center p-2 bg-muted/50 rounded-lg">
-                    <p className="font-medium">Inspector</p>
-                    <p className="text-muted-foreground">{report.inspector}</p>
-                  </div>
-                </div>
-
-                {/* Financial Information */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Damage Cost
-                    </span>
-                    <span
-                      className={
-                        report.totalDamageCost > 0
-                          ? "text-red-600 font-medium"
-                          : "text-green-600 font-medium"
+            return (
+              <Card
+                key={report.id}
+                className="hover:shadow-lg transition-shadow"
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">
+                        {report.guest.firstName} {report.guest.lastName}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {report.guest.email}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={
+                        report.status === "completed" ? "default" : "secondary"
                       }
                     >
-                      {formatCurrency(report.totalDamageCost)}
-                    </span>
+                      {report.status}
+                    </Badge>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Deposit Deduction
-                    </span>
-                    <span
-                      className={
-                        report.depositDeduction > 0
-                          ? "text-red-600 font-medium"
-                          : "text-green-600 font-medium"
-                      }
-                    >
-                      {formatCurrency(report.depositDeduction)}
-                    </span>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Property Information */}
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2 text-sm">
+                      <Bed className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {report.booking.property.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        {report.booking.unit.name}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="flex space-x-2 pt-2">
-                  <Button
-                    size="sm"
-                    className="flex-1 gap-2 bg-chart-1 hover:bg-chart-1/90"
-                  >
-                    <Eye className="size-4 mr-2" />
-                    <span> View</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="flex-1 gap-2 bg-chart-3 hover:bg-chart-3/90"
-                  >
-                    <Download className="size-4 mr-2" />
-                    <span>Download</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                  {/* Checkout Date and Inspector */}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="text-center p-2 bg-muted/50 rounded-lg">
+                      <p className="font-medium">Checkout Date</p>
+                      <p className="text-muted-foreground">
+                        {format(new Date(report.checkoutDate), "dd/MM/yyyy")}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(report.checkoutDate), "hh:mm a")}
+                      </p>
+                    </div>
+                    <div className="text-center p-2 bg-muted/50 rounded-lg">
+                      <p className="font-medium">Inspector</p>
+                      <p className="text-muted-foreground">
+                        {report.inspector}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Financial Information */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Damage Cost
+                      </span>
+                      <span
+                        className={
+                          report.totalDamageCost > 0
+                            ? "text-red-600 font-medium"
+                            : "text-green-600 font-medium"
+                        }
+                      >
+                        {formatCurrency(report.totalDamageCost)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* View Notes Button */}
+                  <div className="pt-2">
+                    <Button
+                      size="sm"
+                      variant={hasNotes ? "default" : "ghost"}
+                      className={cn("w-full gap-2 cursor-pointer", hasNotes && "bg-azure text-white")}
+                      onClick={() => hasNotes && toggleNotes(report.id)}
+                      disabled={!hasNotes}
+                    >
+                      <MessageSquare className="size-4" />
+                      {!hasNotes
+                        ? "No notes"
+                        : isNotesExpanded
+                          ? "Hide Notes"
+                          : "View Notes"}
+                      {hasNotes &&
+                        (isNotesExpanded ? (
+                          <ChevronUp className="size-4 text-white" />
+                        ) : (
+                          <ChevronDown className="size-4 text-white" />
+                        ))}
+                    </Button>
+
+                    {isNotesExpanded && hasNotes && (
+                      <div className="mt-3 p-3 rounded-lg bg-muted/50 border">
+                        <p className="text-sm text-foreground leading-relaxed">
+                          {report.notes}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
 
-      {/*Footer and Pagination */}
+      {/* Footer and Pagination */}
       <Footer
         currentPage={currentPage}
         hasNext={hasNext}

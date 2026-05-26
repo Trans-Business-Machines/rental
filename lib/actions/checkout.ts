@@ -349,7 +349,6 @@ export async function createCheckoutReport(data: {
 	checkoutDate: Date;
 	inspector: string;
 	overallDamageCost: number;
-	depositDeduction: number;
 	notes?: string;
 	checkoutItems: {
 		assignmentId: number;
@@ -375,7 +374,6 @@ export async function createCheckoutReport(data: {
 						checkoutDate: actualCheckoutDate,
 						inspector: reportData.inspector,
 						totalDamageCost: reportData.overallDamageCost,
-						depositDeduction: reportData.depositDeduction,
 						notes: reportData.notes,
 						status: "completed",
 					},

@@ -210,7 +210,16 @@ export function UnitAvailabilityTable({
                     <TableCell className="font-medium">{unit.name}</TableCell>
                     <TableCell>{unit.property}</TableCell>
                     <TableCell className="capitalize">{unit.type}</TableCell>
-                    <TableCell>{getStatusBadge(unit.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(unit.status)}
+                        {unit.isOverstayed && (
+                          <Badge className="bg-red-500/10 border border-red-500 text-red-500 text-xs animate-pulse">
+                            Overstayed
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <UnitViewDialog unit={unit}>

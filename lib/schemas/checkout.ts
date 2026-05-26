@@ -16,9 +16,24 @@ const checkoutItemSchema = z.object({
 export const CheckoutFormSchema = z.object({
     checkoutDate: z.string().min(1, "Checkout date is required"),
     checkoutItems: z.array(checkoutItemSchema),
-    depositDeduction: z.number().min(0),
-    overallDamageCost: z.number().min(0),
+    overallDamageCost: z.number({
+        required_error: "Overall damage cost is required."
+    }).positive({
+        message: "Overall cost must be a postive number"
+    }).min(0),
     notes: z.string().optional(),
-});
+})
+    .refine(
+        (data) => {
+            if (data.overallDamageCost > 0) {
+                return !!data.notes && data.notes.trim() !== "";
+            }
+            return true;
+        },
+        {
+            message: "Notes are required when there are damaged or missing items",
+            path: ["notes"],
+        }
+    )
 
 export type CheckoutFormData = z.infer<typeof CheckoutFormSchema>;

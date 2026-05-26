@@ -76,7 +76,7 @@ import type {
   UnitTypePricing,
   GuestSearchResult,
 } from "@/lib/types/types";
-import { getPaymentSettings } from "@/lib/actions/app-settings";
+import { getPaymentSettings } from "@/lib/actions/payments";
 
 const STEPS = [
   { id: 1, title: "Select Guest", icon: Users },

@@ -100,7 +100,7 @@ export const useSoftDeleteBooking = () => {
 			toast.error(errMsg)
 		}
 	})
-}
+};
 
 // Create booking
 export const useCreateBooking = () => {

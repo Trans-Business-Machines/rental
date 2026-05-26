@@ -38,7 +38,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { BookingFormSchema, type BookingFormData } from "@/lib/schemas/booking";
 import { format } from "date-fns";
 import type { PriceDuration, UnitTypePricing } from "@/lib/types/types";
-import { getPaymentSettings } from "@/lib/actions/app-settings";
+import { getPaymentSettings } from "@/lib/actions/payments";
 
 interface BookingFormProps {
   onSuccess?: () => void;

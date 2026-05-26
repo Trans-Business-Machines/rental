@@ -8,7 +8,7 @@ import {
   QueryClient,
 } from "@tanstack/react-query";
 import type { Role } from "@/lib/types/types";
-import { getPaymentSettings } from "@/lib/actions/app-settings";
+import { getPaymentSettings } from "@/lib/actions/payments";
 
 export default async function NewRequest() {
   const session = await getServerSession();

@@ -371,19 +371,18 @@ model InventoryAssignment {
 }
 
 model CheckoutReport {
-  id               Int      @id @default(autoincrement())
-  bookingId        Int      @unique
-  booking          Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  guestId          Int
-  guest            Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  checkoutDate     DateTime
-  inspector        String
-  totalDamageCost  Int      @default(0)
-  depositDeduction Int      @default(0)
-  status           String   @default("completed") // completed, pending
-  notes            String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              Int      @id @default(autoincrement())
+  bookingId       Int      @unique
+  booking         Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  guestId         Int
+  guest           Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  checkoutDate    DateTime
+  inspector       String
+  totalDamageCost Int      @default(0)
+  status          String   @default("completed") // completed, pending
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   checkoutItems CheckoutItem[]
 
@@ -538,11 +537,13 @@ model BookingRequest {
 }
 
 model PaymentSettings {
-  id            String   @id @default(cuid())
-  paybillNumber String   @unique
-  accountNumber String   @unique
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id            String @id @default(cuid())
+  paybillNumber String @unique
+  accountNumber String @unique
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("payment_settings")
 }
