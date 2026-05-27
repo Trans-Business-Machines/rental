@@ -1,6 +1,6 @@
-// components/CancelRequestDialog.tsx
 "use client";
 
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +10,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Ban, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { UseMutationResult } from "@tanstack/react-query";
 
 interface CancelRequestDialogProps {
@@ -28,16 +32,36 @@ export function CancelRequestDialog({
   onOpenChange,
   mutation,
 }: CancelRequestDialogProps) {
+  const [reason, setReason] = useState("");
+  const [touched, setTouched] = useState(false);
+
+  const isReasonEmpty = reason.trim() === "";
+
   const handleCancel = async () => {
+    setTouched(true);
+
+    if (isReasonEmpty) {
+      toast.error("Please provide a reason for cancellation");
+      return;
+    }
+
     await mutation.mutateAsync({
       id: requestId,
       idDocumentFilename,
+      reason: reason.trim(),
     });
 
+    setReason("");
+    setTouched(false);
     onOpenChange(false);
   };
 
-  // Determine if there's a document to delete
+  const handleClose = () => {
+    setReason("");
+    setTouched(false);
+    onOpenChange(false);
+  };
+
   const hasDocument = !!idDocumentFilename;
 
   return (
@@ -66,11 +90,34 @@ export function CancelRequestDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
+        <div className="space-y-2 mt-2">
+          <Label htmlFor="cancel-reason">
+            Reason for cancellation <span className="text-destructive">*</span>
+          </Label>
+          <Textarea
+            id="cancel-reason"
+            placeholder="Please explain why you're cancelling this request..."
+            rows={3}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            onBlur={() => setTouched(true)}
+            className={cn(
+              "resize-none",
+              touched && isReasonEmpty && "border-destructive",
+            )}
+          />
+          {touched && isReasonEmpty && (
+            <p className="text-sm text-destructive">
+              A cancellation reason is required
+            </p>
+          )}
+        </div>
+
         <div className="mt-3 flex justify-end gap-2">
           <Button
             variant="outline"
             disabled={mutation.isPending}
-            onClick={() => onOpenChange(false)}
+            onClick={handleClose}
           >
             Keep Request
           </Button>
@@ -79,7 +126,7 @@ export function CancelRequestDialog({
               e.preventDefault();
               handleCancel();
             }}
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || isReasonEmpty}
             className="bg-destructive hover:bg-destructive/90"
           >
             {mutation.isPending ? (

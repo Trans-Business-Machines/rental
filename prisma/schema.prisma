@@ -481,6 +481,7 @@ model BookingRequest {
   // Request status
   status          BookingRequestStatus @default(pending)
   rejectionReason String?
+  cancelReason    String?
 
   // ============ Guest Selection ============
   // For existing guests - link directly
@@ -522,7 +523,7 @@ model BookingRequest {
   discountRate  Float?
   totalAmount   Int
 
-  paymentCode   String @unique
+  paymentCode   String
   paymentMethod String
 
   purpose         String?

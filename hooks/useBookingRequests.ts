@@ -65,7 +65,11 @@ export function useCreateBookingRequest() {
 
     return useMutation({
         mutationFn: createBookingRequest,
-        onSuccess: async () => {
+        onSuccess: async (data) => {
+
+            if (!data.success) {
+                throw new Error(data.message)
+            }
 
             await Promise.all([
                 queryClient.invalidateQueries({ queryKey: bookingRequestKeys.lists() }),
@@ -174,10 +178,17 @@ export function useApproveBookingRequest() {
 
             return result;
         },
-        onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: bookingRequestKeys.lists() });
-            queryClient.invalidateQueries({ queryKey: ["bookings"] });
-            queryClient.invalidateQueries({ queryKey: ["guests"] });
+        onSuccess: async (data) => {
+
+            if (!data.success) {
+                throw new Error(data.message || "Failed to approve booking request");
+            }
+
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: bookingRequestKeys.lists() }),
+                queryClient.invalidateQueries({ queryKey: ["bookings"] }),
+                queryClient.invalidateQueries({ queryKey: ["guests"] }),
+            ])
 
             if (data.isExistingGuest) {
                 toast.success("Booking request approved. Booking created for existing guest and email sent to agent.");
@@ -250,39 +261,38 @@ export function useCancelBookingRequest() {
         mutationFn: async ({
             id,
             idDocumentFilename,
+            reason,
         }: {
             id: number;
             idDocumentFilename?: string;
+            reason: string;
         }) => {
-            // 1. Delete the ID document file (only if it exists - new guests only)
             if (idDocumentFilename) {
-                const deleteResult = await deleteBookingRequestDocument(idDocumentFilename);
+                const deleteResult =
+                    await deleteBookingRequestDocument(idDocumentFilename);
 
                 if (!deleteResult.success) {
                     console.error("Failed to delete document:", deleteResult.error);
-                    // Continue anyway - cancellation is more important
                 }
             }
 
-            // 2. Cancel the request
-            const result = await cancelBookingRequest(id);
-
+            const result = await cancelBookingRequest(id, reason);
             return result;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: bookingRequestKeys.lists() });
+            queryClient.invalidateQueries({
+                queryKey: bookingRequestKeys.lists(),
+            });
             toast.success("Booking request cancelled");
         },
         onError: async (error: Error) => {
-            await Promise.all([queryClient.invalidateQueries({
-                queryKey: ["booking-form-data"]
-            }),
-            queryClient.invalidateQueries({
-                queryKey: ["booking-request-form-data"]
-            }),
-            queryClient.invalidateQueries({
-                queryKey: ["guests", "search"]
-            })])
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ["booking-form-data"] }),
+                queryClient.invalidateQueries({
+                    queryKey: ["booking-request-form-data"],
+                }),
+                queryClient.invalidateQueries({ queryKey: ["guests", "search"] }),
+            ]);
             toast.error(error.message || "Failed to cancel booking request");
         },
     });
