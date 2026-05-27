@@ -111,8 +111,13 @@ export const useCreateBooking = () => {
 			const booking = await createBooking(bookingData);
 			return booking;
 		},
-		onSuccess: async (newBooking) => {
-			toast.success("Booking created successfully");
+		onSuccess: async (data) => {
+			
+			if (!data.success || !data.result) {
+				throw new Error(data.message || "Failed to create booking");
+			}
+
+			const newBooking = data.result;
 
 			// Invalidate queries
 			await Promise.all([
@@ -141,6 +146,8 @@ export const useCreateBooking = () => {
 					return [newBooking];
 				}
 			);
+
+			toast.success("Booking created successfully");
 		},
 		onError: (error) => {
 			const errorMessage = error.message

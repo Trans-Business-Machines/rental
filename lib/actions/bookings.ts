@@ -190,65 +190,67 @@ export async function getBookingById(id: number) {
 
 export async function createBooking(booking: CreateBookingData) {
 	try {
-		// Confirm that the current session user has permission to create a booking
 		await requirePermission("booking", "create");
 
 		const session = await getServerSession();
 		const user = session?.user;
 
 		if (!user) {
-			throw new Error("Unauthorized: login required!")
+			return {
+				success: false,
+				message: "Unauthorized: login required!",
+			};
 		}
 
-		// Determine if user is an agent or admin/superAdmin
 		const isAgent = user.role === "agent";
 
-		// Prevent double booking: check if any booking exists for this property with checkInDate on the same day
+		// Prevent double booking
 		const checkInUTC = new Date(booking.checkInDate);
 		const startOfDay = new Date(checkInUTC);
-		startOfDay.setUTCHours(-3, 0, 0, 0); // 00:00 EAT === 21:00 UTC previous day
+		startOfDay.setUTCHours(-3, 0, 0, 0);
 		const endOfDay = new Date(checkInUTC);
-		endOfDay.setUTCHours(20, 59, 59, 999); // 23:59 EAT
+		endOfDay.setUTCHours(20, 59, 59, 999);
 
 		const existingBooking = await prisma.booking.findFirst({
 			where: {
 				propertyId: booking.propertyId,
 				unitId: booking.unitId,
-				status: {
-					in: ["pending", "reserved", "checked_in"],
-				},
-				checkInDate: {
-					gte: startOfDay,
-					lte: endOfDay,
-				},
+				status: { in: ["pending", "reserved", "checked_in"] },
+				checkInDate: { gte: startOfDay, lte: endOfDay },
 			},
 		});
 
 		if (existingBooking) {
-			throw new Error(
-				"A booking already exists for this property on the selected check-in date."
-			);
+			return {
+				success: false,
+				message: "A booking already exists for this property on the selected check-in date.",
+			};
 		}
 
-		// Check for duplicate payment code
+		// Check for duplicate payment code in both tables
 		const existingPaymentCode = await prisma.booking.findFirst({
 			where: { paymentCode: booking.paymentCode },
 		});
 
-		if (existingPaymentCode) {
-			throw new Error("This payment code already exists!");
+		const existingRequestCode = await prisma.bookingRequest.findFirst({
+			where: {
+				paymentCode: booking.paymentCode,
+				status: { in: ["pending", "approved"] },
+			},
+		});
+
+		if (existingPaymentCode || existingRequestCode) {
+			return {
+				success: false,
+				message: "This payment code already exists and can't be reused!",
+			};
 		}
 
-		// Get the corresponding unit status based on booking status
 		const unitStatus = evaluateUnitStatus(booking.status);
-
-		// Se the checkout time to 10am
 		const checkOutAt10amEAT = normalizeCheckOutTo10amEAT(booking.checkOutDate);
 
-		// use a prisma transaction to create booking and then update unit status
 		const result = await prisma.$transaction(
 			async (tx) => {
-				// create booking
 				const newBooking = await tx.booking.create({
 					data: {
 						guestId: booking.guestId,
@@ -269,15 +271,12 @@ export async function createBooking(booking: CreateBookingData) {
 						specialRequests: booking.specialRequests,
 						status: booking.status,
 						...(isAgent
-							? {
-								requestedById: user.id,
-							}
+							? { requestedById: user.id }
 							: {
-								requestedById: user.id,
-								approvedById: user.id,
-								approvedAt: new Date(),
-							}),
-
+									requestedById: user.id,
+									approvedById: user.id,
+									approvedAt: new Date(),
+								}),
 					},
 					include: {
 						unit: true,
@@ -285,50 +284,38 @@ export async function createBooking(booking: CreateBookingData) {
 					},
 				});
 
-				// update unit status
 				await tx.unit.update({
 					where: {
 						id: newBooking.unit.id,
 						propertyId: newBooking.propertyId,
 					},
-					data: {
-						status: unitStatus,
-					},
+					data: { status: unitStatus },
 				});
 
-				// increment property occupied count
 				if (["checked_in", "reserved"].includes(booking.status)) {
 					await tx.property.update({
-						where: {
-							id: booking.propertyId,
-						},
-						data: {
-							occupied: {
-								increment: 1,
-							},
-						},
+						where: { id: booking.propertyId },
+						data: { occupied: { increment: 1 } },
 					});
 				}
 
 				return newBooking;
 			},
-			{ timeout: 10000, maxWait: 3000, isolationLevel: "ReadCommitted" }
+			{ timeout: 10000, maxWait: 3000, isolationLevel: "ReadCommitted" },
 		);
 
 		revalidatePath("/bookings");
 		revalidatePath("/dashboard");
 		revalidatePath("/properties");
 
-		return result;
-	} catch (error: any) {
+		return { success: true, result };
+	} catch (error) {
 		console.error("Error creating booking:", error);
 
-		// Re-throw your own validation errors (thrown earlier in the function)
-		if (error instanceof Error) {
-			throw error;
-		}
+		const message =
+			error instanceof Error ? error.message : "Failed to create booking!";
 
-		throw new Error("Failed to create booking!");
+		return { success: false, message };
 	}
 }
 

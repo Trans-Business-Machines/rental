@@ -317,10 +317,7 @@ export function BookingRequestConfirmation({
                 <p className="text-xs text-muted-foreground">Check-in</p>
                 <p className="font-medium">
                   {formData.checkInDate
-                    ? format(
-                        new Date(formData.checkInDate),
-                        "EEE, MMM d, yyyy 'at' h:mm a",
-                      )
+                    ? format(new Date(formData.checkInDate), "EEE, MMM d, yyyy")
                     : "-"}
                 </p>
               </div>
@@ -435,7 +432,7 @@ export function BookingRequestConfirmation({
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Duration</span>
                 <span className="font-medium">
-                  × {totalNights} {totalNights === 1 ? "night" : "nights"}
+                  &times; {totalNights} {totalNights === 1 ? "night" : "nights"}
                 </span>
               </div>
 
@@ -466,16 +463,25 @@ export function BookingRequestConfirmation({
 
               <Separator />
 
-              <div className="flex justify-between items-center pt-2">
+              <div className="flex justify-between items-center pt-2 text-sm md:text-xl">
                 <span className="font-semibold">Total Amount (incl. VAT)</span>
-                <span className="text-2xl font-bold text-primary">
+                <span className="font-bold text-primary">
                   {formatPrice(formData.totalAmount || 0)}
                 </span>
               </div>
 
               <div className="flex justify-between items-center pt-2 text-base font-medium">
-                <span>Payment code</span>
+                <span>Payment Code</span>
                 <span className="text-primary">{paymentCode}</span>
+              </div>
+
+              <div className="flex justify-between items-center pt-2 text-base font-medium">
+                <span>Payment Method</span>
+                <span className="text-primary capitalize">
+                  {formData.paymentMethod === "mpesa_till"
+                    ? "Mpesa Paybill"
+                    : formData.paymentMethod.replace("_", " ")}
+                </span>
               </div>
             </div>
 

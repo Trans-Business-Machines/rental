@@ -473,18 +473,6 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                     {booking.purpose}
                   </span>
                 </div>
-                {booking.paymentMethod && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Payment Method
-                    </span>
-                    <span className="font-medium text-foreground capitalize">
-                      {booking.paymentMethod === "mpesa_till"
-                        ? "Mpesa Paybill"
-                        : booking.paymentMethod.replace("_", " ")}
-                    </span>
-                  </div>
-                )}
               </div>
 
               <Separator />
@@ -567,7 +555,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                     {formatPrice(booking.totalAmount)}
                   </span>
                 </div>
-                <div className="flex justify-between pt-2">
+                <div className="flex justify-between text-sm">
                   <span className="font-semibold text-foreground">
                     Payment code
                   </span>
@@ -575,6 +563,19 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                     {booking.paymentCode}
                   </span>
                 </div>
+
+                {booking.paymentMethod && (
+                  <div className="flex justify-between text-sm">
+                    <span className="font-semibold text-foreground">
+                      Payment Method
+                    </span>
+                    <span className="font-medium text-foreground capitalize">
+                      {booking.paymentMethod === "mpesa_till"
+                        ? "Mpesa Paybill"
+                        : booking.paymentMethod.replace("_", " ")}
+                    </span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

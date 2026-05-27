@@ -62,6 +62,7 @@ import {
   maskPhone,
   maskEmail,
   maskIdNumber,
+  formatDateKE,
 } from "@/lib/utils";
 import { BookingRequestDetailsSkeleton } from "@/components/BookingRequestDetailsSkeleton";
 import type { PriceDuration, Role } from "@/lib/types/types";
@@ -161,7 +162,7 @@ export function BookingRequestDetails({
     identifier === null ? "None" : maskIdNumber(identifier as string, userRole);
 
   return (
-    <div className="container max-w-5xl py-6 space-y-6">
+    <div className="container w-full py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -215,6 +216,23 @@ export function BookingRequestDetails({
             </CardContent>
           </Card>
         )}
+
+      {/* Cancellation Reason */}
+      {bookingRequest.status === "cancelled" && bookingRequest.cancelReason && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-destructive flex items-center gap-2">
+              <Ban className="size-5" />
+              Cancellation Reason
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-lipstick-red">
+              {bookingRequest.cancelReason}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Guest Information */}
@@ -494,7 +512,7 @@ export function BookingRequestDetails({
               <div>
                 <p className="text-sm text-muted-foreground">Check in</p>
                 <p className="font-medium">
-                  {formatDateInTimezone(new Date(bookingRequest.checkInDate))}
+                  {formatDateKE(new Date(bookingRequest.checkInDate))}
                 </p>
               </div>
             </div>
@@ -650,7 +668,7 @@ export function BookingRequestDetails({
 
               <Separator />
 
-              <div className="flex justify-between text-lg font-semibold">
+              <div className="flex justify-between text-sm md:text-lg font-semibold">
                 <span>Total (incl. VAT)</span>
                 <span className="text-primary">
                   {formatPrice(bookingRequest.totalAmount)}
@@ -658,9 +676,17 @@ export function BookingRequestDetails({
               </div>
 
               <div className="flex justify-between text-base font-medium">
-                <span>Payment code</span>
+                <span>Payment Code</span>
                 <span className="text-primary">
                   {bookingRequest.paymentCode}
+                </span>
+              </div>
+              <div className="flex justify-between text-base font-medium">
+                <span>Payment Method</span>
+                <span className="text-primary capitalize">
+                  {bookingRequest.paymentMethod === "mpesa_till"
+                    ? "Mpesa paybill"
+                    : bookingRequest.paymentMethod.replace("_", " ")}
                 </span>
               </div>
             </div>
@@ -792,7 +818,7 @@ export function BookingRequestDetails({
               <>
                 <Button
                   onClick={() => setApproveDialogOpen(true)}
-                  className="cursor-pointer w-4/12"
+                  className="cursor-pointer w-full md:w-4/12"
                 >
                   <CheckCircle2 className="size-5 mr-2" />
                   Approve Request
@@ -800,7 +826,7 @@ export function BookingRequestDetails({
                 <Button
                   variant="destructive"
                   onClick={() => setRejectDialogOpen(true)}
-                  className="cursor-pointer w-4/12"
+                  className="cursor-pointer w-full md:w-4/12"
                 >
                   <XCircle className="size-5 mr-2" />
                   Reject Request

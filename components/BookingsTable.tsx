@@ -193,7 +193,7 @@ function BookingsTable({
 
                       <DropdownMenuSeparator />
 
-                      <DropdownMenuItem
+                     {!isAgent && <DropdownMenuItem
                         onClick={() => handleClick(booking.id)}
                         disabled={
                           booking.status === "pending" ||
@@ -208,7 +208,7 @@ function BookingsTable({
                             Archive booking
                           </span>
                         </div>
-                      </DropdownMenuItem>
+                      </DropdownMenuItem>}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
