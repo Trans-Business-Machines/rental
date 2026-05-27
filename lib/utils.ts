@@ -252,7 +252,7 @@ export function getEndOfDay(date: Date | string): Date {
 export function formatDateKE(date: Date | string): string {
   return new Intl.DateTimeFormat("en-KE", {
     day: "numeric",
-    month: "short",
+    month: "long",
     year: "numeric",
     timeZone: "Africa/Nairobi",
   }).format(new Date(date));
