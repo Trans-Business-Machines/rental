@@ -78,7 +78,7 @@ export async function notifyAdminsOfNewBookingRequest({
         const emailPromises = admins.map((admin) => {
             return resend.emails.send({
                 from:
-                    process.env.EMAIL_FROM ||
+                    `RentalsManager <${process.env.EMAIL_FROM}>` ||
                     "Rentals Manager <noreply@rentalsmanager.app>",
                 to: admin.email,
                 subject: `New Booking Request - ${guestName} at ${propertyName}`,
@@ -138,7 +138,7 @@ export async function notifyAgentOfApproval({
 }: NotifyAgentApprovedParams) {
     try {
         const { error } = await resend.emails.send({
-            from: process.env.EMAIL_FROM || "Rentals Manager <noreply@rentalsmanager.app>",
+            from: `RentalsManager <${process.env.EMAIL_FROM}>` || "Rentals Manager <noreply@rentalsmanager.app>",
             to: agentEmail,
             subject: `Booking Approved - ${guestName} at ${propertyName}`,
             react: BookingRequestApprovedEmail({
@@ -181,7 +181,7 @@ export async function notifyAgentOfRejection({
 }: NotifyAgentRejectedParams) {
     try {
         const { error } = await resend.emails.send({
-            from: process.env.EMAIL_FROM || "Rentals Manager <noreply@rentalsmanager.app>",
+            from: `RentalsManager <${process.env.EMAIL_FROM}>` || "Rentals Manager <noreply@rentalsmanager.app>",
             to: agentEmail,
             subject: `Booking Request Rejected - ${guestName} at ${propertyName}`,
             react: BookingRequestRejectedEmail({
