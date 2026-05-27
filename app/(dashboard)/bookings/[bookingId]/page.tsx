@@ -31,6 +31,7 @@ import {
   getPeriodLabelSingular,
   formatPrice,
   formatDateInTimezone,
+  formatDateKE,
   hasDiscount,
   getDurationLabel,
   calculateVAT,
@@ -409,7 +410,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                       Check in date
                     </p>
                     <p className="text-sm font-normal text-foreground">
-                      {formatDateInTimezone(checkInDate)}
+                      {formatDateKE(checkInDate)}
                     </p>
                   </div>
                 </div>
