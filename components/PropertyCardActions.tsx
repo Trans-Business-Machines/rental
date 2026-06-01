@@ -22,9 +22,13 @@ interface Property {
 
 interface PropertyCardActionsProps {
   property: Property;
+  isAgentOrUser: boolean;
 }
 
-export function PropertyCardActions({ property }: PropertyCardActionsProps) {
+export function PropertyCardActions({
+  property,
+  isAgentOrUser,
+}: PropertyCardActionsProps) {
   return (
     <div className="flex space-x-2 mt-2">
       <Button
@@ -38,17 +42,20 @@ export function PropertyCardActions({ property }: PropertyCardActionsProps) {
           View
         </Link>
       </Button>
-      <Button
-        variant="default"
-        className="flex-1 gap-2 bg-chart-3 hover:bg-chart-3/90"
-        asChild
-        size="sm"
-      >
-        <Link href={`/properties/${property.id}/edit`}>
-          <Edit className="h-4 w-4 mr-2" />
-          Edit
-        </Link>
-      </Button>
+
+      {!isAgentOrUser && (
+        <Button
+          variant="default"
+          className="flex-1 gap-2 bg-chart-3 hover:bg-chart-3/90"
+          asChild
+          size="sm"
+        >
+          <Link href={`/properties/${property.id}/edit`}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Link>
+        </Button>
+      )}
     </div>
   );
 }

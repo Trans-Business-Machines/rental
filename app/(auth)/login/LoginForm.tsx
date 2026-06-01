@@ -63,7 +63,9 @@ export default function LoginForm() {
           <div className="mx-auto h-12 w-12 bg-primary rounded-lg flex items-center justify-center mb-4">
             <Building2 className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">RentManager</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            Rentals Manager
+          </h1>
           <p className="mt-2 text-muted-foreground">
             Property Management System
           </p>

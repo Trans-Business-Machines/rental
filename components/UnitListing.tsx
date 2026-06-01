@@ -36,11 +36,15 @@ import { Footer } from "./Footer";
 import { useQueryClient } from "@tanstack/react-query";
 import { prefetchUnitDetails } from "@/hooks/useUnitDetails";
 import Link from "next/link";
-import { getDurationLabel } from "@/lib/utils";
 import Image from "next/image";
 import type { Unit, UnitStatus } from "@/lib/types/types";
 import { usePermissions } from "@/hooks/usePermissions";
-import { cn } from "@/lib/utils";
+import {
+  getDurationLabel,
+  calculateTotalWithVAT,
+  formatPrice,
+  cn,
+} from "@/lib/utils";
 
 interface UnitFilters {
   search: string;
@@ -356,7 +360,10 @@ export function UnitListing({
                           className="text-muted-foreground text-sm"
                         >
                           <span>{getDurationLabel(opt.duration)} </span>-
-                          <span> Ksh {opt.price}</span>
+                          <span>
+                            {" "}
+                            {formatPrice(calculateTotalWithVAT(opt.price))}
+                          </span>
                         </div>
                       ))}
                     </div>

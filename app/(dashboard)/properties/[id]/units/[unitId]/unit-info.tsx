@@ -1,7 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bath, Users, Bed, Building, House } from "lucide-react";
-import { getDurationLabel } from "@/lib/utils";
+import {
+  getDurationLabel,
+  calculateTotalWithVAT,
+  formatPrice,
+} from "@/lib/utils";
 import type { UnitDetailsResponse, UnitStatus } from "@/lib/types/types";
 
 interface UnitInfoProps {
@@ -74,7 +78,7 @@ export default function UnitInfo({ unit }: UnitInfoProps) {
           {unit.pricingOptions.map((opt) => (
             <div key={opt.id} className="text-muted-foreground text-sm">
               <span>{getDurationLabel(opt.duration)} </span>-
-              <span> Ksh {opt.price}</span>
+              <span>{formatPrice(calculateTotalWithVAT(opt.price))}</span>
             </div>
           ))}
         </div>

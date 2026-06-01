@@ -5,6 +5,7 @@ import { PropertyListing } from "@/components/PropertyListing";
 import Link from "next/link";
 import { getServerSession } from "@/lib/check-permissions";
 import { redirect } from "next/navigation";
+import type { Role } from "@/lib/types/types";
 
 interface PropertiesPageParams {
   searchParams: Promise<{
@@ -27,6 +28,7 @@ export default async function PropertiesPage({
 
   const page = Number(params.page) || 1;
   const search = params.search || "";
+  const isAgentOrUser = user.role === "agent" || user.role === "user";
 
   const propertiesData = await getProperties({ page, search });
 
@@ -37,10 +39,14 @@ export default async function PropertiesPage({
           <h1 className="text-3xl font-bold tracking-normal text-foreground">
             Properties
           </h1>
-          <p className="text-muted-foreground">Manage your rental properties</p>
+          <p className="text-muted-foreground">
+            {isAgentOrUser
+              ? "View rental properties for bookings"
+              : "Manage your rental properties"}
+          </p>
         </div>
 
-        {user.role !== "marketer" && (
+        {["admin", "superAdmin"].includes(user.role as Role) && (
           <Link href="/properties/add">
             <Button>
               <Plus className="size-4 mr-1" />
@@ -57,6 +63,7 @@ export default async function PropertiesPage({
         totalPages={propertiesData.totalPages}
         currentPage={page}
         initialFilters={{ search }}
+        isAgentOrUser={isAgentOrUser}
       />
     </section>
   );
