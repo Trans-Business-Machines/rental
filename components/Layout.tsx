@@ -271,7 +271,7 @@ export function Layout({ children }: LayoutProps) {
             }}
             className={cn(
               "w-full flex items-center space-x-3 px-6 text-sidebar-primary-foreground py-2 transition-colors cursor-pointer",
-              userRole === "agent" && "hidden",
+              userRole !== "superAdmin" && "hidden",
               pathname.includes("settings")
                 ? "bg-sidebar-primary font-bold"
                 : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",

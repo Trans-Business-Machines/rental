@@ -2,12 +2,27 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { NewUnitForm } from "@/components/NewUnitForm";
 import Link from "next/link";
+import { getServerSession } from "@/lib/check-permissions";
+import { redirect } from "next/navigation";
+import { UnauthorizedUI } from "../../unauthorized-ui";
+import type { Role } from "@/lib/types/types";
 
 interface AddUnitPageParams {
   params: Promise<{ id: string }>;
 }
 
 async function AddUnitPage({ params }: AddUnitPageParams) {
+  const session = await getServerSession();
+  const user = session?.user;
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!["admin", "superAdmin"].includes(user.role as Role)) {
+    return <UnauthorizedUI />;
+  }
+
   const { id } = await params;
   const propertyId = Number(id);
 

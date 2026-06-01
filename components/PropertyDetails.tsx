@@ -23,6 +23,7 @@ import {
   formatDate,
   hasDiscount,
   calculateDiscountedPrice,
+  calculateTotalWithVAT,
 } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import type { UniqueProperty, PropertyPricings } from "@/lib/types/types";
@@ -118,17 +119,20 @@ function PropertyDetails({
           {showDiscount ? (
             <>
               <p className="text-xs text-muted-foreground line-through">
-                {formatPrice(pricing.price)}
+                {formatPrice(calculateTotalWithVAT(pricing.price))}
               </p>
               <p className={`text-lg font-bold ${colorClass}`}>
-                {formatPrice(discountedPrice)}
+                {formatPrice(calculateTotalWithVAT(discountedPrice))}
               </p>
             </>
           ) : (
             <p className={`text-lg font-bold ${colorClass}`}>
-              {formatPrice(pricing.price)}
+              {formatPrice(calculateTotalWithVAT(pricing.price))}
             </p>
           )}
+          <p className="text-xs text-muted-foreground font-semibold">
+            incl. VAT
+          </p>
         </div>
       </div>
     );
@@ -144,7 +148,11 @@ function PropertyDetails({
           <CardTitle className="text-xl lg:text-2xl font-bold text-foreground capitalize">
             {property.name}
           </CardTitle>
-          <Button variant="outline" className="gap-2 bg-transparent" asChild>
+          <Button
+            variant="outline"
+            className="gap-2 bg-transparent w-40 md:w-80 lg:w-100"
+            asChild
+          >
             <Link href={`/properties/${property.id}/units`}>
               <Eye className="size-4" />
               View units
@@ -232,10 +240,10 @@ function PropertyDetails({
               <Users className="h-5 w-5 text-medium-jungle" />
             </div>
             <div>
-              <p className="font-semibold text-foreground">
+              <p className="text-sm  font-semibold">Guest capacity per unit</p>
+              <p className="text-sm text-muted-foreground">
                 {maxGuests > 1 ? `1 - ${maxGuests}` : "1"}
               </p>
-              <p className="text-sm text-muted-foreground">Guests</p>
             </div>
           </div>
         </div>

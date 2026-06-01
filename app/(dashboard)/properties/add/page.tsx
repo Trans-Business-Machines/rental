@@ -1,9 +1,24 @@
 import { Button } from "@/components/ui/button";
 import { NewPropertyForm } from "./new-property-form";
 import { ArrowLeft } from "lucide-react";
+import { getServerSession } from "@/lib/check-permissions";
+import { redirect } from "next/navigation";
+import { UnauthorizedUI } from "../unauthorized-ui";
 import Link from "next/link";
+import type { Role } from "@/lib/types/types";
 
-export default function AddPropertyPage() {
+export default async function AddPropertyPage() {
+  const session = await getServerSession();
+  const user = session?.user;
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!["admin", "superAdmin"].includes(user.role as Role)) {
+    return <UnauthorizedUI />;
+  }
+
   return (
     <section className="space-y-6">
       <div className="flex flex-col gap-2">

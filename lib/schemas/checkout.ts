@@ -18,8 +18,6 @@ export const CheckoutFormSchema = z.object({
     checkoutItems: z.array(checkoutItemSchema),
     overallDamageCost: z.number({
         required_error: "Overall damage cost is required."
-    }).positive({
-        message: "Overall cost must be a postive number"
     }).min(0),
     notes: z.string().optional(),
 })

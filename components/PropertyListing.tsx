@@ -34,6 +34,7 @@ interface PropertyListingProps {
   hasPrev: boolean;
   currentPage: number;
   initialFilters: PropertyFilters;
+  isAgentOrUser: boolean;
 }
 
 const getStatusColor = (status: string) => {
@@ -56,6 +57,7 @@ function PropertyListing({
   totalPages,
   currentPage,
   initialFilters,
+  isAgentOrUser,
 }: PropertyListingProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -227,7 +229,10 @@ function PropertyListing({
                   />
                 </div>
 
-                <PropertyCardActions property={property} />
+                <PropertyCardActions
+                  property={property}
+                  isAgentOrUser={isAgentOrUser}
+                />
               </CardContent>
             </Card>
           ))

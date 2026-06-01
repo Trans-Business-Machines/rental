@@ -1,12 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, SquarePen, Plus } from "lucide-react";
 import { PropertyDetails } from "@/components/PropertyDetails";
-//import { PropertyAmenities } from "@/components/PropertyAmenities";
 import { PropertyGallery } from "@/components/PropertyGallery";
 import { getPropertyById } from "@/lib/actions/properties";
 import { notFound } from "next/navigation";
-//import { amenities } from "@/lib/data/properties";
 import Link from "next/link";
 import { getServerSession } from "@/lib/check-permissions";
 import { redirect } from "next/navigation";
@@ -50,14 +47,11 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
 
             <div className="flex gap-2">
               <p className="text-muted-foreground">{property.address}</p>
-              <Badge className="bg-chart-2/10 text-chart-2 capitalize border-chart-2">
-                {property.status}
-              </Badge>
             </div>
           </div>
         </div>
 
-        {user.role !== "marketer" && (
+        {user.role !== "agent" && (
           <div className="flex items-center gap-2 py-3 md:py-0">
             <Button asChild>
               <Link href={`/properties/${id}/edit`}>
