@@ -29,6 +29,7 @@ import {
   X,
   Moon,
   Calendar,
+  CalendarIcon,
   CalendarDays,
   CalendarRange,
   Minus,
@@ -77,6 +78,7 @@ import type {
   GuestSearchResult,
 } from "@/lib/types/types";
 import { getPaymentSettings } from "@/lib/actions/payments";
+import { DatePicker } from "@/components/DatePicker";
 
 const STEPS = [
   { id: 1, title: "Select Guest", icon: Users },
@@ -1488,60 +1490,47 @@ export function BookingRequestForm() {
                 </div>
               )}
 
-              {isPricingSelected && formData.paymentMethod === "mpesa_till" && paymentSettings && (
-                <div className="flex items-center gap-4 p-3 rounded-lg border-green-200">
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-green-600">
-                      Paybill Number
-                    </p>
-                    <p className="text-sm font-bold text-green-800">
-                      {paymentSettings.paybillNumber}
-                    </p>
+              {isPricingSelected &&
+                formData.paymentMethod === "mpesa_till" &&
+                paymentSettings && (
+                  <div className="flex items-center gap-4 p-3 rounded-lg border-green-200">
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-green-600">
+                        Paybill Number
+                      </p>
+                      <p className="text-sm font-bold text-green-800">
+                        {paymentSettings.paybillNumber}
+                      </p>
+                    </div>
+                    <div className="w-px h-8 bg-green-200" />
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-green-600">
+                        Account Number
+                      </p>
+                      <p className="text-sm font-bold text-green-800">
+                        {paymentSettings.accountNumber}
+                      </p>
+                    </div>
                   </div>
-                  <div className="w-px h-8 bg-green-200" />
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-green-600">
-                      Account Number
-                    </p>
-                    <p className="text-sm font-bold text-green-800">
-                      {paymentSettings.accountNumber}
-                    </p>
-                  </div>
-                </div>
-              )}
+                )}
 
               {/* Check-in & check-out Dates */}
               {isPricingSelected && (
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="checkInDate">
-                      Check-in Date <span className="text-lipstick-red">*</span>
-                    </Label>
-                    <Input
-                      id="checkInDate"
-                      type="date"
-                      min={
-                        isCustomDuration && selectedPricing?.fromDate
-                          ? format(
-                              getStartOfDay(selectedPricing.fromDate),
-                              "yyyy-MM-dd",
-                            )
-                          : now
-                      }
-                      max={
-                        isCustomDuration && selectedPricing?.toDate
-                          ? format(
-                              getEndOfDay(selectedPricing.toDate),
-                              "yyyy-MM-dd",
-                            )
-                          : undefined
-                      }
-                      className={cn(errors.checkInDate && "border-destructive")}
-                      onChange={(e) => {
-                        setValue("checkInDate", e.target.value);
-                        clearErrors("checkInDate");
-                      }}
-                      value={formData.checkInDate || ""}
+                    <Label htmlFor="checkInDate">Check-in Date</Label>
+                    <Controller
+                      name="checkInDate"
+                      control={control}
+                      render={({ field }) => (
+                        <DatePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Select check-in date"
+                          minDate={new Date()}
+                          error={!!errors.checkInDate}
+                        />
+                      )}
                     />
                     {isCustomDuration &&
                       selectedPricing?.fromDate &&
@@ -1553,32 +1542,35 @@ export function BookingRequestForm() {
                         </p>
                       )}
                     {errors.checkInDate && (
-                      <p className="text-sm text-destructive">
+                      <p className="text-sm text-red-400">
                         {errors.checkInDate.message}
                       </p>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="checkOutDate">Check-out Date</Label>
-                    <Input
-                      id="checkOutDate"
-                      type="datetime-local"
-                      disabled
-                      className="bg-muted"
-                      value={
-                        formData.checkOutDate
-                          ? format(
-                              new Date(formData.checkOutDate),
-                              "yyyy-MM-dd'T'HH:mm",
-                            )
-                          : ""
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Auto-calculated · Default check-out time is 10:00 AM
-                    </p>
-                  </div>
+              <Label htmlFor="checkOutDate">Check-out Date</Label>
+              <div className="flex items-center h-10 w-full rounded-md border bg-muted px-3 text-sm">
+                <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
+                <span
+                  className={
+                    formData.checkOutDate
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {formData.checkOutDate
+                    ? format(
+                        new Date(formData.checkOutDate),
+                        "EEEE, MMMM d, yyyy 'at' hh:mm a",
+                      )
+                    : "Awaiting check-in date"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Auto-calculated · Default check-out time is 10:00 AM
+              </p>
+            </div>
                 </div>
               )}
 
@@ -1774,7 +1766,7 @@ export function BookingRequestForm() {
             <Button
               type="button"
               onClick={handleNext}
-              className="cursor-pointer"
+              className="cursor-pointer md:w-36"
               disabled={isSubmitting}
             >
               {currentStep === 2 ? "Review" : "Next"}
@@ -1785,7 +1777,7 @@ export function BookingRequestForm() {
               type="button"
               onClick={() => onSubmit()}
               disabled={isSubmitting}
-              className="min-w-[140px] cursor-pointer"
+              className="min-w-[100px] cursor-pointer md:w-36"
             >
               {isSubmitting ? (
                 <>
