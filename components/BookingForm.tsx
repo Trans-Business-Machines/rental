@@ -20,8 +20,6 @@ import {
   calculateVAT,
   formatPrice,
   getPeriodLabel,
-  getStartOfDay,
-  getEndOfDay,
   formatDateKE,
 } from "@/lib/utils";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
@@ -33,12 +31,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Info, Loader, Minus, Plus } from "lucide-react";
+import { Info, Loader, Minus, Plus, CalendarIcon } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { BookingFormSchema, type BookingFormData } from "@/lib/schemas/booking";
 import { format } from "date-fns";
-import type { PriceDuration, UnitTypePricing } from "@/lib/types/types";
 import { getPaymentSettings } from "@/lib/actions/payments";
+import type { PriceDuration, UnitTypePricing } from "@/lib/types/types";
+import { DatePicker } from "@/components/DatePicker";
 
 interface BookingFormProps {
   onSuccess?: () => void;
@@ -605,25 +604,18 @@ export function BookingForm({
           <article className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="checkInDate">Check-in Date</Label>
-
-              <Input
-                id="checkInDate"
-                type="date"
-                min={
-                  isCustomDuration && selectedPricing?.fromDate
-                    ? format(
-                        getStartOfDay(selectedPricing.fromDate),
-                        "yyyy-MM-dd",
-                      )
-                    : format(new Date(), "yyyy-MM-dd")
-                }
-                max={
-                  isCustomDuration && selectedPricing?.toDate
-                    ? format(getEndOfDay(selectedPricing.toDate), "yyyy-MM-dd")
-                    : undefined
-                }
-                className={cn(errors.checkInDate && "border border-red-400")}
-                {...register("checkInDate")}
+              <Controller
+                name="checkInDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Select check-in date"
+                    minDate={new Date()}
+                    error={!!errors.checkInDate}
+                  />
+                )}
               />
               {isCustomDuration &&
                 selectedPricing?.fromDate &&
@@ -642,13 +634,23 @@ export function BookingForm({
 
             <div className="space-y-2">
               <Label htmlFor="checkOutDate">Check-out Date</Label>
-              <Input
-                id="checkOutDate"
-                type="datetime-local"
-                disabled
-                className="bg-muted"
-                {...register("checkOutDate")}
-              />
+              <div className="flex items-center h-10 w-full rounded-md border bg-muted px-3 text-sm">
+                <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
+                <span
+                  className={
+                    formData.checkOutDate
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {formData.checkOutDate
+                    ? format(
+                        new Date(formData.checkOutDate),
+                        "EEEE, MMMM d, yyyy 'at' hh:mm a",
+                      )
+                    : "Awaiting check-in date"}
+                </span>
+              </div>
               <p className="text-xs text-muted-foreground">
                 Auto-calculated · Default check-out time is 10:00 AM
               </p>
@@ -689,28 +691,30 @@ export function BookingForm({
           </article>
         )}
 
-        {isPricingSelected && formData.paymentMethod === "mpesa_till" && paymentSettings && (
-          <div className="flex items-center gap-4 p-3 rounded-lg border border-green-400">
-            <div className="flex-1">
-              <p className="text-xs font-medium text-green-600">
-                Paybill Number
-              </p>
-              <p className="text-sm font-bold text-green-800">
-                {paymentSettings.paybillNumber}
-              </p>
+        {isPricingSelected &&
+          formData.paymentMethod === "mpesa_till" &&
+          paymentSettings && (
+            <div className="flex items-center gap-4 p-3 rounded-lg border border-green-400">
+              <div className="flex-1">
+                <p className="text-xs font-medium text-green-600">
+                  Paybill Number
+                </p>
+                <p className="text-sm font-bold text-green-800">
+                  {paymentSettings.paybillNumber}
+                </p>
+              </div>
+              <div className="w-px h-8 bg-green-200" />
+              <div className="flex-1">
+                <p className="text-xs font-medium text-green-600">
+                  Account Number
+                </p>
+                <p className="text-sm font-bold text-green-800">
+                  {paymentSettings.accountNumber}
+                </p>
+              </div>
             </div>
-            <div className="w-px h-8 bg-green-200" />
-            <div className="flex-1">
-              <p className="text-xs font-medium text-green-600">
-                Account Number
-              </p>
-              <p className="text-sm font-bold text-green-800">
-                {paymentSettings.accountNumber}
-              </p>
-            </div>
-          </div>
-        )}
-        
+          )}
+
         {/* Payment Method */}
         {isPricingSelected && (
           <article className="space-y-4">
