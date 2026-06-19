@@ -102,7 +102,7 @@ export class ClientMediaService {
     static async compressImage(file: File): Promise<File> {
         try {
             // Skip compression for small images
-            if (file.size < 500 * 1024) {
+            if (file.size <= 1024 * 1024) {
                 console.log(`Skipping compression for ${file.name} (already small)`);
                 return file;
             }
