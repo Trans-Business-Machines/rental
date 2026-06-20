@@ -1,22 +1,31 @@
 "use client";
-
+import { useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselPrevious,
   CarouselNext,
+  CarouselPrevious,
 } from "@/components/ui/carousel";
+import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import type { UnitMedia } from "@/lib/types/types";
 
 function UnitGallery({ images }: { images: UnitMedia[] }) {
+  const autoplay = useRef(
+    Autoplay({
+      delay: 5000,
+      stopOnInteraction: false,
+    }),
+  );
+
   return (
-    <div className="grid gap-3 lg:grid-cols-4 mb-6">
+    <div className="grid gap-3 lg:grid-cols-4 mb-6 items-stretch">
       {/* Main Carousel */}
       <div className="lg:col-span-2">
         <Carousel
+          plugins={[autoplay.current]}
           opts={{ loop: true }}
           className="w-full group overflow-hidden rounded-l-xl"
         >
@@ -30,12 +39,11 @@ function UnitGallery({ images }: { images: UnitMedia[] }) {
                     fill
                     priority
                     sizes="(max-width: 1024px) 100vw, 50vw"
-                    className="object-cover overflow-hidden rounded-l-2xl"
+                    className="object-cover rounded-l-2xl"
                   />
 
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
 
-                  {/* Image counter */}
                   <div className="absolute bottom-4 right-4">
                     <Badge
                       variant="secondary"
@@ -49,17 +57,19 @@ function UnitGallery({ images }: { images: UnitMedia[] }) {
             ))}
           </CarouselContent>
 
-          <CarouselPrevious className="left-4  cursor-pointer opacity-0 group-hover:opacity-100 bg-background/80 backdrop-blur-sm" />
+          <CarouselPrevious className="left-4 cursor-pointer opacity-0 group-hover:opacity-100 bg-background/80 backdrop-blur-sm" />
           <CarouselNext className="right-4 cursor-pointer opacity-0 group-hover:opacity-100 bg-background/80 backdrop-blur-sm" />
         </Carousel>
       </div>
 
-      {/* Images highlight */}
-      <div className="hidden lg:grid gap-3 grid-cols-2 grid-rows-2 lg:col-span-2">
+      {/* Highlight Images */}
+      <div className="hidden lg:grid lg:col-span-2 gap-3 grid-cols-2 grid-rows-2">
         {images.slice(1, 5).map((image, index) => (
           <div
             key={index}
-            className={`w-full relative group ${index % 2 !== 0 && "overflow-hidden rounded-r-xl"} `}
+            className={`relative aspect-[4/3] group ${
+              index % 2 !== 0 ? "overflow-hidden rounded-r-xl" : ""
+            }`}
           >
             <Image
               src={image.filePath}
@@ -69,6 +79,7 @@ function UnitGallery({ images }: { images: UnitMedia[] }) {
               sizes="(max-width: 1024px) 0px, 25vw"
               className="object-cover transition-transform duration-200 group-hover:scale-105"
             />
+
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         ))}

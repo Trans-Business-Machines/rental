@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import {
@@ -10,6 +11,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import type { Media } from "@/lib/types/types";
+import Autoplay from "embla-carousel-autoplay";
 
 interface PropertyGalleryProps {
   propertyImages: Media[];
@@ -20,6 +22,13 @@ export function PropertyGallery({
   propertyImages,
   propertyImagesLength,
 }: PropertyGalleryProps) {
+  const autoplay = useRef(
+    Autoplay({
+      delay: 5000,
+      stopOnInteraction: false,
+    }),
+  );
+
   if (propertyImagesLength === 0) {
     return (
       <section className="p-6">
@@ -35,6 +44,7 @@ export function PropertyGallery({
       {/* Main Carousel */}
       <div className="lg:col-span-2">
         <Carousel
+          plugins={[autoplay.current]}
           opts={{ loop: true }}
           className="w-full group overflow-hidden rounded-l-xl"
         >
@@ -74,7 +84,7 @@ export function PropertyGallery({
 
       {/* Images highlight */}
       <div className="hidden lg:grid gap-3 grid-cols-2 grid-rows-2 lg:col-span-2">
-        {propertyImages.slice(1, 5).map((image, index) => (
+        {propertyImages.map((image, index) => (
           <div
             key={index}
             className={`w-full relative group ${index % 2 !== 0 && "overflow-hidden rounded-r-xl"} `}
@@ -84,7 +94,7 @@ export function PropertyGallery({
               alt={`Property image ${index + 1}`}
               fill
               priority
-              sizes="(max-width: 1024px) 0px, 25vw"
+              sizes="(max-width: 1024px) 0px, 30vw"
               className="object-cover transition-transform duration-200 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
