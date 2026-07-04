@@ -16,7 +16,6 @@ interface Property {
   image: string;
   createdAt: Date;
   updatedAt: Date;
-  tenants: any[];
   amenities: any[];
 }
 

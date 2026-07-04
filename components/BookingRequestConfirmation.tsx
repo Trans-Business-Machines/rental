@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { format } from "date-fns";
 import {
   User,
@@ -29,7 +28,6 @@ import {
   hasDiscount,
   getDurationLabel,
   calculateTotalNights,
-  formatFileSize,
   calculateVAT,
 } from "@/lib/utils";
 import type { BookingRequestFormData } from "@/lib/schemas/booking-requests";
@@ -43,8 +41,9 @@ interface BookingRequestConfirmationProps {
   guestType: "existing" | "new";
   selectedGuest: GuestSearchResult | null;
   formData: BookingRequestFormData;
-  idDocumentPreview: string | null;
-  idDocumentFile: File | null;
+  frontImagePreview: string | null;
+  backImagePreview: string | null;
+  passportImagePreview: string | null;
   selectedPricing: UnitTypePricing | null;
   period: number;
   propertyName: string;
@@ -57,8 +56,9 @@ export function BookingRequestConfirmation({
   guestType,
   selectedGuest,
   formData,
-  idDocumentPreview,
-  idDocumentFile,
+  frontImagePreview,
+  backImagePreview,
+  passportImagePreview,
   selectedPricing,
   period,
   propertyName,
@@ -68,8 +68,6 @@ export function BookingRequestConfirmation({
 }: BookingRequestConfirmationProps) {
   const isCustomDuration = selectedPricing?.duration === "custom";
 
-  // For custom pricing, period represents nights directly
-  // For other pricing types, calculate total nights from duration and period
   const totalNights = isCustomDuration
     ? period
     : calculateTotalNights(
@@ -79,7 +77,6 @@ export function BookingRequestConfirmation({
         selectedPricing?.toDate,
       );
 
-  // Get guest display info based on type
   const guestName =
     guestType === "existing" && selectedGuest
       ? `${selectedGuest.firstName} ${selectedGuest.lastName}`
@@ -94,6 +91,11 @@ export function BookingRequestConfirmation({
     guestType === "existing" && selectedGuest
       ? selectedGuest.phone
       : formData.guestPhone;
+
+  const isNationalId = formData.guestIdType === "national_id";
+  const hasImages = isNationalId
+    ? frontImagePreview && backImagePreview
+    : passportImagePreview;
 
   return (
     <div className="space-y-6">
@@ -145,7 +147,6 @@ export function BookingRequestConfirmation({
               </div>
             </div>
 
-            {/* Only show extended details for new guests */}
             {guestType === "new" && (
               <>
                 <Separator />
@@ -178,9 +179,7 @@ export function BookingRequestConfirmation({
                   <IdCard className="size-4 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="text-xs text-muted-foreground">
-                      {formData.guestIdType === "national_id"
-                        ? "National ID Number"
-                        : "Passport Number"}
+                      {isNationalId ? "National ID Number" : "Passport Number"}
                     </p>
                     <p className="font-medium">
                       {formData.guestIdNumber ||
@@ -207,49 +206,53 @@ export function BookingRequestConfirmation({
           </CardContent>
         </Card>
 
-        {/* ID Document - Only show for new guests */}
+        {/* ID Document / Existing Guest Card */}
         {guestType === "new" ? (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <FileText className="size-4 text-primary" />
-                ID Document
+                {isNationalId ? "National ID Images" : "Passport Image"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {idDocumentPreview ? (
-                <>
-                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted">
-                    <Image
-                      src={idDocumentPreview}
-                      alt="ID Document Preview"
-                      fill
-                      className="object-contain"
-                    />
-                  </div>
-                  {idDocumentFile && (
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">File Name</span>
-                        <span className="font-medium truncate max-w-[180px]">
-                          {idDocumentFile.name}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">File Size</span>
-                        <span className="font-medium">
-                          {formatFileSize(idDocumentFile.size)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Type</span>
-                        <span className="font-medium">
-                          {idDocumentFile.type.split("/")[1].toUpperCase()}
-                        </span>
+              {hasImages ? (
+                isNationalId ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Front
+                      </p>
+                      <div className="relative h-10/12  w-full overflow-hidden rounded-lg border bg-muted">
+                        <img
+                          src={frontImagePreview!}
+                          alt="National ID Front"
+                          className="w-full h-full object-contain"
+                        />
                       </div>
                     </div>
-                  )}
-                </>
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Back
+                      </p>
+                      <div className="relative h-10/12  w-full overflow-hidden rounded-lg border bg-muted">
+                        <img
+                          src={backImagePreview!}
+                          alt="National ID Back"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted">
+                    <img
+                      src={passportImagePreview!}
+                      alt="Passport"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                )
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                   <FileText className="size-12 mb-2 opacity-50" />
@@ -259,7 +262,6 @@ export function BookingRequestConfirmation({
             </CardContent>
           </Card>
         ) : (
-          // For existing guests, show a simplified card
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">

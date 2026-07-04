@@ -34,7 +34,7 @@ export default async function NewRequest() {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <BookingRequestForm />;
+      <BookingRequestForm agentId={user.id} />;
     </HydrationBoundary>
   );
 }

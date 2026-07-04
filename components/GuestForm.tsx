@@ -8,19 +8,18 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { NationalityCombobox } from "@/components/NationalityCombobox";
 import { useCreateGuest } from "@/hooks/useGuests";
-import {
-  ClientMediaService,
-  UploadResult,
-} from "@/lib/services/clientMediaService";
+import { ClientMediaService } from "@/lib/services/clientMediaService";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
-import { Loader, Upload, X } from "lucide-react";
+import { Loader } from "lucide-react";
+import { ImageUploadSlot } from "@/components/ImageUploadSlot";
 import {
   GuestSchema,
   type NewGuest,
   type GuestIdTypes,
 } from "@/lib/schemas/guests";
+import type { ImageSlot } from "@/lib/types/types";
 
 interface GuestFormProps {
   onSuccess: () => void;
@@ -28,17 +27,25 @@ interface GuestFormProps {
   userId: string;
 }
 
+const emptySlot: ImageSlot = { file: null, preview: null, uploadedUrl: null };
+
 export function GuestForm({
   onCancel,
   onSuccess: closeModal,
   userId,
 }: GuestFormProps) {
   const createGuestMutation = useCreateGuest();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // State for file upload
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [filePreview, setFilePreview] = useState<string | null>(null);
+  // Refs for file inputs
+  const frontInputRef = useRef<HTMLInputElement>(null);
+  const backInputRef = useRef<HTMLInputElement>(null);
+  const passportInputRef = useRef<HTMLInputElement>(null);
+
+  // Image state — one slot per document side
+  const [frontImage, setFrontImage] = useState<ImageSlot>(emptySlot);
+  const [backImage, setBackImage] = useState<ImageSlot>(emptySlot);
+  const [passportImage, setPassportImage] = useState<ImageSlot>(emptySlot);
+
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -60,90 +67,149 @@ export function GuestForm({
 
   const idType = watch("idType");
 
-  // Handle file selection
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ------------------------- File handlers -------------------------
+
+  const handleFileSelect = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: React.Dispatch<React.SetStateAction<ImageSlot>>,
+  ) => {
     const file = e.target.files?.[0];
     setUploadError(null);
 
     if (!file) return;
 
-    // Validate using ClientMediaService
-    const validation = ClientMediaService.validateDocument(file);
+    const validation = ClientMediaService.validateFile(file);
+
     if (!validation.valid) {
       setUploadError(validation.error || "Invalid file");
       return;
     }
 
-    setSelectedFile(file);
-
-    // Generate image preview
     const reader = new FileReader();
+
     reader.onloadend = () => {
-      setFilePreview(reader.result as string);
+      setter({
+        file,
+        preview: reader.result as string,
+        uploadedUrl: null,
+      });
     };
+
     reader.readAsDataURL(file);
   };
 
-  // Remove selected file
-  const removeFile = () => {
-    setSelectedFile(null);
-    setFilePreview(null);
+  const removeFile = (
+    setter: React.Dispatch<React.SetStateAction<ImageSlot>>,
+    inputRef: React.RefObject<HTMLInputElement | null>,
+  ) => {
+    setter(emptySlot);
     setUploadError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (inputRef.current) {
+      inputRef.current.value = "";
     }
   };
 
-  // Submit handler
+  // Clear all images when switching ID type
+  const handleIdTypeChange = (value: GuestIdTypes) => {
+    setValue("idType", value);
+    setFrontImage(emptySlot);
+    setBackImage(emptySlot);
+    setPassportImage(emptySlot);
+    setUploadError(null);
+
+    if (frontInputRef.current) frontInputRef.current.value = "";
+    if (backInputRef.current) backInputRef.current.value = "";
+    if (passportInputRef.current) passportInputRef.current.value = "";
+  };
+
+  // ------------------------- Submit -------------------------
   const onSubmit: SubmitHandler<NewGuest> = async (values) => {
-    let uploadedDocument: UploadResult | null = null;
-    let uploadedFilename: string | null = null;
+    if (idType === "national_id") {
+      if (!frontImage.file) {
+        setUploadError("Front ID image is required.");
+        return;
+      }
+      if (!backImage.file) {
+        setUploadError("Back ID image is required.");
+        return;
+      }
+    } else {
+      if (!passportImage.file) {
+        setUploadError("Passport image is required.");
+        return;
+      }
+    }
+
+    const uploadedUrls: string[] = [];
 
     try {
-      if (selectedFile) {
-        setIsUploading(true);
-        try {
-          const result =
-            await ClientMediaService.uploadGuestDocument(selectedFile);
-          uploadedDocument = result;
-          uploadedFilename = result.filename;
-        } catch (error) {
-          setUploadError(
-            error instanceof Error ? error.message : "Upload failed",
-          );
-          setIsUploading(false);
-          return;
-        }
-        setIsUploading(false);
+      setIsUploading(true);
+
+      let idFrontUrl: string | undefined;
+      let idBackUrl: string | undefined;
+      let passportUrl: string | undefined;
+
+      if (idType === "national_id") {
+        idFrontUrl = await ClientMediaService.uploadGuestIdImage(
+          frontImage.file!,
+          "front",
+        );
+        uploadedUrls.push(idFrontUrl);
+
+        idBackUrl = await ClientMediaService.uploadGuestIdImage(
+          backImage.file!,
+          "back",
+        );
+        uploadedUrls.push(idBackUrl);
+      } else {
+        passportUrl = await ClientMediaService.uploadGuestIdImage(
+          passportImage.file!,
+          "passport",
+        );
+        uploadedUrls.push(passportUrl);
       }
 
-      const guestData = {
-        ...values,
-        registeredById: userId,
-      };
+      setIsUploading(false);
 
-      await createGuestMutation.mutateAsync({
-        ...guestData,
-        idDocument: uploadedDocument
-          ? {
-              filename: uploadedDocument.filename,
-              originalName: uploadedDocument.originalName,
-              fileSize: uploadedDocument.fileSize,
-              mimeType: uploadedDocument.mimeType,
-              filePath: uploadedDocument.url,
-            }
-          : undefined,
-      });
+      if (values.idType === "national_id") {
+        if (!idFrontUrl || !idBackUrl) {
+          setUploadError("Failed to upload ID images.");
+          return;
+        }
+
+        await createGuestMutation.mutateAsync({
+          ...values,
+          registeredBy: userId,
+          idFrontUrl,
+          idBackUrl,
+        });
+      } else {
+        if (!passportUrl) {
+          setUploadError("Failed to upload passport image.");
+          return;
+        }
+
+        await createGuestMutation.mutateAsync({
+          ...values,
+          registeredBy: userId,
+          passportUrl,
+        });
+      }
 
       reset();
-      removeFile();
+      setFrontImage(emptySlot);
+      setBackImage(emptySlot);
+      setPassportImage(emptySlot);
       closeModal();
     } catch {
-      if (uploadedFilename) {
+      setIsUploading(false);
+
+      // Cleanup any successfully uploaded images on failure
+      for (const url of uploadedUrls) {
         try {
-          await ClientMediaService.deleteGuestDocument(uploadedFilename);
+          await ClientMediaService.deleteGuestIdImage(url);
         } catch (cleanupError) {
-          console.error("Failed to cleanup uploaded document:", cleanupError);
+          console.error("Failed to cleanup uploaded image:", cleanupError);
         }
       }
     }
@@ -185,7 +251,7 @@ export function GuestForm({
         </div>
       </article>
 
-      {/* Email and phone */}
+      {/* Email and Phone */}
       <article className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -214,13 +280,49 @@ export function GuestForm({
         </div>
       </article>
 
-      {/* ID type and identification */}
+      {/* Date of Birth and Nationality */}
+      <article className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="dateOfBirth">Date of Birth</Label>
+          <Input
+            id="dateOfBirth"
+            type="date"
+            className={cn(errors.dateOfBirth && "border border-red-400")}
+            {...register("dateOfBirth")}
+          />
+          {errors.dateOfBirth && (
+            <p className="text-sm mt-1 text-red-400">
+              {errors.dateOfBirth.message}
+            </p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="nationality">Nationality</Label>
+          <Controller
+            name="nationality"
+            control={control}
+            render={({ field }) => (
+              <NationalityCombobox
+                value={field.value}
+                onValueChange={field.onChange}
+              />
+            )}
+          />
+          {errors.nationality && (
+            <p className="text-sm mt-1 text-red-400">
+              {errors.nationality.message}
+            </p>
+          )}
+        </div>
+      </article>
+
+      {/* ID Type and Identification Number */}
       <article>
         <div className="space-y-2 mb-2">
           <Label>Choose ID type</Label>
           <RadioGroup
             value={idType}
-            onValueChange={(value: GuestIdTypes) => setValue("idType", value)}
+            onValueChange={(value: GuestIdTypes) => handleIdTypeChange(value)}
             className="flex"
           >
             <div className="flex items-center gap-2">
@@ -229,7 +331,6 @@ export function GuestForm({
                 National ID
               </Label>
             </div>
-
             <div className="flex items-center gap-2">
               <RadioGroupItem value="passport" id="passport_radio_btn" />
               <Label htmlFor="passport_radio_btn" className="cursor-pointer">
@@ -244,7 +345,7 @@ export function GuestForm({
             <Input
               id="national_id"
               type="text"
-              placeholder="National ID"
+              placeholder="National ID number"
               className={cn(errors.idNumber && "border border-red-400")}
               {...register("idNumber")}
             />
@@ -272,109 +373,57 @@ export function GuestForm({
         )}
       </article>
 
-      {/* ID Document Upload */}
-      <article className="space-y-2">
+      {/*  Guest Identification Images */}
+      <article className="space-y-3">
         <Label>
-          {idType === "national_id" ? "National ID" : "Passport"} Image
+          {idType === "national_id"
+            ? "National ID Images (Front & Back)"
+            : "Passport Image"}
         </Label>
 
-        {!filePreview ? (
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className={cn(
-              "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
-              "hover:border-primary/50",
-              !selectedFile && "border-muted-foreground/25",
-              uploadError && "border-red-400",
-            )}
-          >
-            <Upload className="mx-auto size-8 text-muted-foreground mb-2" />
-            <p className="text-sm font-medium">Click to upload ID document</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              JPEG, PNG, WebP, or AVIF (max 5MB)
-            </p>
+        {idType === "national_id" ? (
+          <div className="grid grid-cols-2 gap-4">
+            {/* Front Image */}
+            <ImageUploadSlot
+              label="Front"
+              image={frontImage}
+              inputRef={frontInputRef}
+              disabled={isSubmitting}
+              onSelect={(e) => handleFileSelect(e, setFrontImage)}
+              onRemove={() => removeFile(setFrontImage, frontInputRef)}
+            />
+
+            {/* Back Image */}
+            <ImageUploadSlot
+              label="Back"
+              image={backImage}
+              inputRef={backInputRef}
+              disabled={isSubmitting}
+              onSelect={(e) => handleFileSelect(e, setBackImage)}
+              onRemove={() => removeFile(setBackImage, backInputRef)}
+            />
           </div>
         ) : (
-          <div className="relative border rounded-lg p-4">
-            <div className="flex items-start gap-4">
-              <img
-                src={filePreview}
-                alt="ID Document Preview"
-                className="w-32 h-20 object-cover rounded"
-              />
-              <div className="flex-1">
-                <p className="text-sm font-medium truncate max-w-[200px]">
-                  {selectedFile?.name}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {selectedFile &&
-                    `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="text-destructive hover:text-destructive"
-                onClick={removeFile}
-                disabled={isSubmitting}
-              >
-                <X className="size-4" />
-              </Button>
-            </div>
+          <div className="max-w-sm">
+            <ImageUploadSlot
+              label="Passport"
+              image={passportImage}
+              inputRef={passportInputRef}
+              disabled={isSubmitting}
+              onSelect={(e) => handleFileSelect(e, setPassportImage)}
+              onRemove={() => removeFile(setPassportImage, passportInputRef)}
+            />
           </div>
         )}
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/avif"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
 
         {uploadError && <p className="text-sm text-red-400">{uploadError}</p>}
       </article>
 
-      {/* Date of Birth and nationality */}
-      <article className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="dateOfBirth">Date of Birth</Label>
-          <Input
-            id="dateOfBirth"
-            type="date"
-            className={cn(errors.dateOfBirth && "border border-red-400")}
-            {...register("dateOfBirth")}
-          />
-          {errors.dateOfBirth && (
-            <p className="text-sm mt-1 text-red-400">
-              {errors.dateOfBirth.message}
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="nationality">Nationality</Label>
-          <Controller
-            name="nationality"
-            control={control}
-            render={({ field }) => (
-              <NationalityCombobox
-                value={field.value}
-                onValueChange={field.onChange}
-                error={errors.nationality?.message}
-              />
-            )}
-          />
-        </div>
-      </article>
-
-      {/* Additional notes */}
+      {/* Notes */}
       <article className="space-y-2">
         <Label htmlFor="notes">Notes (optional)</Label>
         <Textarea
           id="notes"
-          rows={4}
           placeholder="Additional notes about the guest"
           className={cn(errors.notes && "border border-red-400")}
           {...register("notes")}
@@ -384,18 +433,18 @@ export function GuestForm({
         )}
       </article>
 
-      {/* Action buttons */}
-      <div className="flex justify-end space-x-2">
+      {/* Submit Buttons */}
+      <div className="flex gap-4 pt-2">
         <Button
           type="submit"
+          className="flex-1 cursor-pointer"
           disabled={isSubmitting}
-          className="bg-chart-1 w-2/3 hover:bg-chart-1/90 cursor-pointer"
         >
           {isSubmitting ? (
             <span className="flex items-center gap-2">
               <Loader className="animate-spin h-4 w-4" />
               <span>
-                {isUploading ? "Uploading image..." : "Creating guest..."}
+                {isUploading ? "Uploading images..." : "Creating guest..."}
               </span>
             </span>
           ) : (

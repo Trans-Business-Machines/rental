@@ -17,6 +17,41 @@ interface GetGuestsParams {
 	status?: string;
 }
 
+export async function getGuestStats() {
+	try {
+		const totalGuests = await prisma.guest.count({
+			where: {
+				deletedAt: null
+			}
+
+		});
+
+		const verifiedGuests = await prisma.guest.count({
+			where: { verificationStatus: "verified", deletedAt: null },
+		});
+		const pendingGuests = await prisma.guest.count({
+			where: { verificationStatus: "pending", deletedAt: null },
+		});
+		const rejectedGuests = await prisma.guest.count({
+			where: { verificationStatus: "rejected", deletedAt: null },
+		});
+
+		return {
+			total: totalGuests,
+			verified: verifiedGuests,
+			pending: pendingGuests,
+			rejected: rejectedGuests,
+		};
+	} catch {
+		return {
+			total: 0,
+			verified: 0,
+			pending: 0,
+			blacklisted: 0,
+		};
+	}
+}
+
 export async function getGuests({
 	page = 1,
 	search = "",
@@ -86,7 +121,6 @@ export async function getGuestById(id: number) {
 	return prisma.guest.findUnique({
 		where: { id, deletedAt: null },
 		include: {
-			media: true,
 			bookings: {
 				select: {
 					id: true,
@@ -121,201 +155,6 @@ export async function getSoftDeletedGuests() {
 		throw error
 	}
 
-}
-
-export async function createGuest(data: CreateNewGuest) {
-	try {
-		// Confirm that the current session user has permission to create a guest
-		await requirePermission("guest", "create");
-
-		const { idDocument, registeredBy, ...guestData } = data;
-
-
-		// Check that the guest does not exist
-		const existingGuest = await prisma.guest.findUnique({
-			where: {
-				email: guestData.email
-			}
-		})
-
-		if (existingGuest) {
-			throw new Error("A guest with this email already exists.")
-		}
-
-		// Check that the provided email is not already on booking requests
-		const pendingGuest = await prisma.bookingRequest.findUnique({
-			where: {
-				guestEmail: guestData.email
-			}
-		});
-
-		if (pendingGuest) {
-			throw new Error("An agent has already requested a guest with this email.")
-		}
-
-
-		const guest = await prisma.guest.create({
-			data: {
-				...guestData,
-				...(registeredBy && {
-					registeredBy: {
-						connect: { id: registeredBy },
-					},
-				}),
-				...(idDocument && {
-					media: {
-						create: {
-							filename: idDocument.filename,
-							originalName: idDocument.originalName,
-							fileSize: idDocument.fileSize,
-							mimeType: idDocument.mimeType,
-							filePath: idDocument.filePath,
-						},
-					},
-				}),
-			},
-			include: {
-				media: true,
-			},
-		});
-
-		revalidatePath("/guests");
-
-		return guest;
-
-	} catch (error) {
-		console.error("Error creating guest: ", error)
-
-		if (error instanceof Error) {
-			throw error
-		} else {
-			throw new Error("Failed to create guest.")
-		}
-	}
-}
-
-export async function updateGuest(id: number, data: GuestUpdateFormData) {
-	try {
-
-		await requirePermission("guest", "update")
-
-		const updatedGuest = await prisma.guest.update({ where: { id }, data });
-
-		// check if the updatedGuest has been verified
-		if (updatedGuest.verificationStatus === "verified") {
-			revalidateTag("booking-form-data")
-		}
-
-		// revalidate the guests page
-		revalidatePath("/guests");
-		return updatedGuest;
-	} catch (error) {
-		console.error("Failed to update guest: ", error)
-		throw new Error("Failed to update guest")
-	}
-}
-
-export async function softDeleteGuest(id: number) {
-	try {
-
-		// confirm that the current session user can soft delete booking
-		await requirePermission("guest", "update")
-
-		await prisma.guest.update({
-			where: {
-				id
-			},
-			data: {
-				deletedAt: new Date()
-			}
-		})
-
-		revalidateTag("booking-form-data");
-		revalidatePath("/guests");
-
-
-		return {
-			success: true,
-		}
-
-
-	} catch (error) {
-		console.error("Error soft deleting guest:", error);
-		throw error
-	}
-
-}
-
-export async function deleteGuest(id: number) {
-	try {
-		await requirePermission("guest", "delete")
-
-		await prisma.guest.delete({ where: { id } });
-
-		revalidateTag("booking-form-data");
-		revalidatePath("/guests");
-
-	} catch (error) {
-		console.error("Failed to delete guest:", error);
-		throw error
-	}
-}
-
-export async function restoreGuest(id: number) {
-	try {
-		await requirePermission("guest", "restore")
-
-		await prisma.guest.update({
-			where: {
-				id
-			},
-			data: {
-				deletedAt: null
-			}
-		})
-
-		revalidateTag("booking-form-data");
-		revalidatePath("/guests");
-
-	} catch (error) {
-		console.error("Error restoring guest: ", error)
-		throw error
-	}
-}
-
-export async function getGuestStats() {
-	try {
-		const totalGuests = await prisma.guest.count({
-			where: {
-				deletedAt: null
-			}
-
-		});
-
-		const verifiedGuests = await prisma.guest.count({
-			where: { verificationStatus: "verified", deletedAt: null },
-		});
-		const pendingGuests = await prisma.guest.count({
-			where: { verificationStatus: "pending", deletedAt: null },
-		});
-		const rejectedGuests = await prisma.guest.count({
-			where: { verificationStatus: "rejected", deletedAt: null },
-		});
-
-		return {
-			total: totalGuests,
-			verified: verifiedGuests,
-			pending: pendingGuests,
-			rejected: rejectedGuests,
-		};
-	} catch {
-		return {
-			total: 0,
-			verified: 0,
-			pending: 0,
-			blacklisted: 0,
-		};
-	}
 }
 
 export async function searchGuestsForBooking(
@@ -431,3 +270,138 @@ export async function searchGuestsForBooking(
 		};
 	});
 }
+
+export async function createGuest(data: CreateNewGuest) {
+	try {
+		// Confirm that the current session user has permission to create a guest
+		await requirePermission("guest", "create");
+
+		const { registeredBy, ...guestData } = data;
+
+
+		// Check that the guest does not exist
+		const existingGuest = await prisma.guest.findUnique({
+			where: {
+				email: guestData.email
+			}
+		})
+
+		if (existingGuest) {
+			throw new Error("A guest with this email already exists.")
+		}
+
+		const guest = await prisma.guest.create({
+			data: {
+				...guestData,
+				...(registeredBy && {
+					registeredBy: {
+						connect: { id: registeredBy },
+					},
+				})
+			},
+		});
+
+		revalidatePath("/guests");
+
+		return guest;
+
+	} catch (error) {
+		console.error("Error creating guest: ", error)
+
+		if (error instanceof Error) {
+			throw error
+		} else {
+			throw new Error("Failed to create guest.")
+		}
+	}
+}
+
+export async function updateGuest(id: number, data: GuestUpdateFormData) {
+	try {
+
+		await requirePermission("guest", "update")
+
+		const updatedGuest = await prisma.guest.update({ where: { id }, data });
+
+		// check if the updatedGuest has been verified
+		if (updatedGuest.verificationStatus === "verified") {
+			revalidateTag("booking-form-data")
+		}
+
+		// revalidate the guests page
+		revalidatePath("/guests");
+		return updatedGuest;
+	} catch (error) {
+		console.error("Failed to update guest: ", error)
+		throw new Error("Failed to update guest")
+	}
+}
+
+export async function softDeleteGuest(id: number) {
+	try {
+
+		// confirm that the current session user can soft delete booking
+		await requirePermission("guest", "update")
+
+		await prisma.guest.update({
+			where: {
+				id
+			},
+			data: {
+				deletedAt: new Date()
+			}
+		})
+
+		revalidateTag("booking-form-data");
+		revalidatePath("/guests");
+
+
+		return {
+			success: true,
+		}
+
+
+	} catch (error) {
+		console.error("Error soft deleting guest:", error);
+		throw error
+	}
+
+}
+
+export async function deleteGuest(id: number) {
+	try {
+		await requirePermission("guest", "delete")
+
+		await prisma.guest.delete({ where: { id } });
+
+		revalidateTag("booking-form-data");
+		revalidatePath("/guests");
+
+	} catch (error) {
+		console.error("Failed to delete guest:", error);
+		throw error
+	}
+}
+
+export async function restoreGuest(id: number) {
+	try {
+		await requirePermission("guest", "restore")
+
+		await prisma.guest.update({
+			where: {
+				id
+			},
+			data: {
+				deletedAt: null
+			}
+		})
+
+		revalidateTag("booking-form-data");
+		revalidatePath("/guests");
+
+	} catch (error) {
+		console.error("Error restoring guest: ", error)
+		throw error
+	}
+}
+

@@ -1,6 +1,10 @@
 import { getBookingById, } from "@/lib/actions/bookings";
 import { getInventoryItems, getInventoryAssignments } from "@/lib/actions/inventory"
-import { getCheckoutReportById, getBookingsForCheckout, getInventoryAssignmentsForUnit } from "@/lib/actions/checkout";
+import {
+    getCheckoutReportById,
+    getBookingsForCheckout,
+    getInventoryAssignmentsForUnit
+} from "@/lib/actions/checkout";
 import { getProperties, getPropertyNames, getPropertyById } from "@/lib/actions/properties";
 import { getGuests, } from "@/lib/actions/guests";
 import { getUnitPricingOptions } from "@/lib/actions/pricing"
@@ -40,42 +44,35 @@ export type BadgeVariant = "dashboard" | "listing" | "details";
 export type Role = "user" | "admin" | "superAdmin" | "agent"
 export type VerificationStatus = "pending" | "verified" | "rejected"
 
-
-interface IdDocumentData {
-    filename: string;
-    originalName: string;
-    fileSize: number;
-    mimeType: string;
-    filePath: string;
-}
-
-export type CreateNewGuest = {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    dateOfBirth: string;
-    idNumber: string;
-    nationality: string;
-    idType: "national_id";
-    passportNumber?: string | undefined;
-    notes?: string | undefined;
-    idDocument?: IdDocumentData;
-    registeredBy?: string;
-} | {
-    idType: "passport";
+type NewGuestBaseFileds = {
     firstName: string;
     lastName: string;
     email: string;
     phone: string;
     dateOfBirth: string;
     nationality: string;
-    passportNumber: string;
-    idNumber?: string | undefined;
-    notes?: string | undefined;
-    idDocument?: IdDocumentData;
+    notes?: string;
     registeredBy?: string;
 }
+
+export type CreateNewGuest = NewGuestBaseFileds & (
+    | {
+        idType: "national_id";
+        idNumber: string;
+        passportNumber?: string;
+        idFrontUrl: string;
+        idBackUrl: string;
+        passportUrl?: string;
+    }
+    | {
+        idType: "passport";
+        passportNumber: string;
+        idNumber?: string;
+        passportUrl: string;
+        idFrontUrl?: string;
+        idBackUrl?: string;
+    }
+);
 
 export type GroupedAssigments = {
     inventoryItemId: number;
@@ -104,7 +101,7 @@ export interface BookingsTableAndCardsProps {
 export interface GuestsTableAndCardsProps {
     guests: Guest[];
     isArchivePending: boolean,
-    userRole:Role,
+    userRole: Role,
     setIsDialogOpen: (open: boolean) => void;
     setEditGuest: (guest: Guest) => void;
     handleClick: (guestId: number) => void
@@ -335,26 +332,6 @@ export interface GetBookingRequestsParams {
 
 export interface UpdateBookingRequestParams {
     id: number;
-
-    // Guest Details (all optional for partial updates)
-    guestFirstName?: string;
-    guestLastName?: string;
-    guestEmail?: string;
-    guestPhone?: string;
-    guestDateOfBirth?: string;
-    guestNationality?: string;
-    guestIdType?: IdType;
-    guestIdNumber?: string | null;
-    guestPassportNumber?: string | null;
-    guestNotes?: string | null;
-
-    // ID Document (optional - only if replacing)
-    idDocumentFilename?: string;
-    idDocumentOriginalName?: string;
-    idDocumentMimeType?: string;
-    idDocumentFileSize?: number;
-
-    // Booking Details
     propertyId?: number;
     unitId?: number;
     checkInDate?: Date;
@@ -370,30 +347,9 @@ export interface UpdateBookingRequestParams {
 }
 
 export interface CreateBookingRequestParams {
-    // Guest type
-    guestType: "existing" | "new";
+    guestId: number;
 
-    // For existing guest
-    existingGuestId?: number;
-
-    // For new guest (optional when guestType is "existing")
-    guestFirstName?: string;
-    guestLastName?: string;
-    guestEmail?: string;
-    guestPhone?: string;
-    guestDateOfBirth?: string; // Changed from Date to string
-    guestNationality?: string;
-    guestIdType?: "national_id" | "passport";
-    guestIdNumber?: string | null;
-    guestPassportNumber?: string | null;
-    guestNotes?: string | null;
-    idDocumentFilename?: string;
-    idDocumentOriginalName?: string;
-    idDocumentMimeType?: string;
-    idDocumentFileSize?: number;
-    idDocumentUrl?: string;
-
-    // Booking details (always required)
+    // Booking details
     propertyId: number;
     unitId: number;
     checkInDate: Date;
@@ -408,14 +364,6 @@ export interface CreateBookingRequestParams {
     paymentCode: string;
     purpose?: string | null;
     specialRequests?: string | null;
-}
-
-export interface ApproveMediaData {
-    mediaUrl: string;
-    mediaFilename: string;
-    mediaOriginalName: string;
-    mediaMimeType: string;
-    mediaSize: number;
 }
 
 export interface NotifyAgentApprovedParams {
@@ -446,31 +394,19 @@ export type BookingRequestStatus = "pending" | "approved" | "rejected" | "cancel
 
 export interface BookingRequestListItem {
     id: number;
-    // For existing guests
-    existingGuestId: number | null;
-    existingGuest: {
+    guestId: number;
+    guest: {
         id: number;
         firstName: string;
         lastName: string;
         email: string;
         phone: string;
-    } | null;
-    // For new guests (optional when existingGuestId is set)
-    guestFirstName: string | null;
-    guestLastName: string | null;
-    guestEmail: string | null;
-    guestPhone: string | null;
+    };
     status: BookingRequestStatus;
     checkInDate: Date;
     checkOutDate: Date;
     totalAmount: number;
     createdAt: Date;
-    // ID document fields (optional - only for new guests)
-    idDocumentFilename: string | null;
-    idDocumentOriginalName: string | null;
-    idDocumentMimeType: string | null;
-    idDocumentFileSize: number | null;
-    idDocumentUrl: string | null;
     property: {
         id: number;
         name: string;
@@ -509,4 +445,10 @@ export interface GuestSearchResult {
     phone: string;
     activeBookingStatus: "pending" | "reserved" | "checked_in" | null;
     activeBookingUnit: string | null;
+}
+
+export interface ImageSlot {
+    file: File | null;
+    preview: string | null;
+    uploadedUrl: string | null;
 }

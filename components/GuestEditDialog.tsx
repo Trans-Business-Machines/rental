@@ -426,18 +426,18 @@ export function GuestEditDialog({
           {/* Actions */}
           <article className="flex justify-end gap-3 pt-4">
             <Button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="bg-chart-5  px-10 hover:bg-chart-5/90 cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
               type="submit"
               disabled={isPending}
-              className="bg-chart-1 hover:bg-chart-1/90 cursor-pointer"
+              className="w-9/12 bg-chart-1 hover:bg-chart-1/90 cursor-pointer"
             >
               {isPending ? "Saving..." : " Save Changes"}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="w-3/12 bg-chart-5  px-10 hover:bg-chart-5/90 cursor-pointer"
+            >
+              Cancel
             </Button>
           </article>
         </form>

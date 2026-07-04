@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("NEW_DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 /**
@@ -158,7 +158,6 @@ model Property {
   maxBedrooms  Int?
   maxBathrooms Int?
 
-  tenants         Tenant[]
   amenities       Amenity[]
   bookings        Booking[]
   units           Unit[]
@@ -193,25 +192,6 @@ model Unit {
   @@map("units")
 }
 
-model Tenant {
-  id         Int      @id @default(autoincrement())
-  name       String
-  email      String
-  phone      String
-  unitNumber String
-  leaseStart String
-  leaseEnd   String
-  rent       Int
-  status     String   @default("active")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  propertyId Int
-  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-
-  @@map("tenants")
-}
-
 model Amenity {
   id          Int      @id @default(autoincrement())
   name        String
@@ -226,40 +206,49 @@ model Amenity {
 }
 
 model Guest {
-  id                       Int                 @id @default(autoincrement())
-  firstName                String
-  lastName                 String
-  email                    String              @unique
-  phone                    String
-  dateOfBirth              String
-  nationality              String
-  idType                   IdType              @default(national_id)
-  idNumber                 String?
-  passportNumber           String?
-  notes                    String?
-  address                  String?
-  city                     String?
-  country                  String?
-  occupation               String?
-  employer                 String?
+  id          Int    @id @default(autoincrement())
+  firstName   String
+  lastName    String
+  email       String @unique
+  phone       String
+  dateOfBirth String
+  nationality String
+
+  idType         IdType  @default(national_id)
+  idNumber       String?
+  passportNumber String?
+  idFrontUrl     String?
+  idBackUrl      String?
+  passportUrl    String?
+
+  notes      String?
+  address    String?
+  city       String?
+  country    String?
+  occupation String?
+  employer   String?
+
   emergencyContactName     String?
   emergencyContactPhone    String?
   emergencyContactRelation String?
-  registrationDate         DateTime?           @default(now())
-  lastStay                 DateTime?
-  totalStays               Int?                @default(0)
-  totalNights              Int?                @default(0)
-  totalSpent               Int?                @default(0)
-  rating                   Float?
-  blacklisted              Boolean?            @default(false)
-  verificationStatus       Guest_Verification? @default(pending)
-  createdAt                DateTime?           @default(now())
-  updatedAt                DateTime?           @updatedAt
-  deletedAt                DateTime?
-  registeredById           String?
-  registeredBy             User?               @relation(fields: [registeredById], references: [id])
+  registrationDate         DateTime? @default(now())
 
-  media           Media?
+  lastStay    DateTime?
+  totalStays  Int?      @default(0)
+  totalNights Int?      @default(0)
+  totalSpent  Int?      @default(0)
+
+  rating             Float?
+  blacklisted        Boolean?            @default(false)
+  verificationStatus Guest_Verification? @default(pending)
+
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
+  deletedAt DateTime?
+
+  registeredById String?
+  registeredBy   User?   @relation(fields: [registeredById], references: [id])
+
   bookings        Booking[]
   checkoutReports CheckoutReport[]
   bookingRequests BookingRequest[]
@@ -433,8 +422,6 @@ model Media {
   unitId       Int?
   unit         Unit?     @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
-  guestId    Int?     @unique
-  guest      Guest?   @relation(fields: [guestId], references: [id], onDelete: Cascade)
   filePath   String
   uploadedAt DateTime @default(now())
   createdAt  DateTime @default(now())
@@ -473,7 +460,7 @@ model BookingRequest {
   requestedById String
   requestedBy   User   @relation("RequestedBy", fields: [requestedById], references: [id])
 
-  // User who approved/rejected (null while pending)
+  // Admin or SuperAdmin who approved/rejected (null while pending)
   reviewedById String?
   reviewedBy   User?     @relation("ReviewedBy", fields: [reviewedById], references: [id])
   reviewedAt   DateTime?
@@ -483,31 +470,11 @@ model BookingRequest {
   rejectionReason String?
   cancelReason    String?
 
-  // ============ Guest Selection ============
-  // For existing guests - link directly
-  existingGuestId Int?
-  existingGuest   Guest? @relation(fields: [existingGuestId], references: [id])
+  // Guest (always a real Guest record)
+  guestId Int
+  guest   Guest @relation(fields: [guestId], references: [id])
 
-  // ============ Guest Details (embedded - only for NEW guests) ============
-  guestFirstName      String?
-  guestLastName       String?
-  guestEmail          String? @unique
-  guestPhone          String?
-  guestDateOfBirth    String?
-  guestNationality    String?
-  guestIdType         IdType?
-  guestIdNumber       String?
-  guestPassportNumber String?
-  guestNotes          String?
-
-  // ID Document (only for NEW guests)
-  idDocumentFilename     String?
-  idDocumentOriginalName String?
-  idDocumentMimeType     String?
-  idDocumentFileSize     Int?
-  idDocumentUrl          String?
-
-  // ============ Booking Details ============
+  // Booking Details
   propertyId Int
   property   Property @relation(fields: [propertyId], references: [id])
   unitId     Int
@@ -529,11 +496,9 @@ model BookingRequest {
   purpose         String?
   specialRequests String?
 
-  // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([existingGuestId])
   @@map("booking_requests")
 }
 

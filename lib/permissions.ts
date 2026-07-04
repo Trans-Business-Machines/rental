@@ -32,7 +32,7 @@ export const user = ac.newRole({
 export const agent = ac.newRole({
     user: ["set-password"],
     booking: ["create", "read", "update"],
-    guest: ["read"],
+    guest: ["create", "read"],
     property: ["read"],
     unit: ["read"],
 })
