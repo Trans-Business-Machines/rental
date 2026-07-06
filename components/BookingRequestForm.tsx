@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,15 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import {
   Users,
   Building,
   ChevronLeft,
   ChevronRight,
   Loader2,
-  Upload,
-  X,
   Moon,
   Calendar,
   CalendarIcon,
@@ -41,7 +38,6 @@ import {
   UserPlus,
   UserCheck,
 } from "lucide-react";
-
 import {
   cn,
   formatPrice,
@@ -64,18 +60,21 @@ import {
   BookingRequestFormSchema,
   type BookingRequestFormData,
 } from "@/lib/schemas/booking-requests";
-import { uploadBookingRequestDocument } from "@/lib/services/clientMediaService";
+import { ClientMediaService } from "@/lib/services/clientMediaService";
+import { createGuest } from "@/lib/actions/guests";
 import { useCreateBookingRequest } from "@/hooks/useBookingRequests";
 import { getBookingRequestFormData } from "@/lib/actions/booking-requests";
 import { NationalityCombobox } from "@/components/NationalityCombobox";
 import { GuestCombobox } from "@/components/AgentGuestCombobox";
 import { BookingRequestConfirmation } from "@/components/BookingRequestConfirmation";
+import { ImageUploadSlot } from "./ImageUploadSlot";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import type {
   PriceDuration,
   UnitTypePricing,
   GuestSearchResult,
+  ImageSlot,
 } from "@/lib/types/types";
 import { getPaymentSettings } from "@/lib/actions/payments";
 import { DatePicker } from "@/components/DatePicker";
@@ -103,14 +102,23 @@ const getUnitTypeLabel = (type: string) => {
   return typeLabels[type] || type.replace("_", " ");
 };
 
-export function BookingRequestForm() {
+const emptySlot: ImageSlot = { file: null, preview: null, uploadedUrl: null };
+
+export function BookingRequestForm({ agentId }: { agentId: string }) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
-  const [idDocumentFile, setIdDocumentFile] = useState<File | null>(null);
-  const [idDocumentPreview, setIdDocumentPreview] = useState<string | null>(
-    null,
-  );
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Image upload state
+  const [frontImage, setFrontImage] = useState<ImageSlot>(emptySlot);
+  const [backImage, setBackImage] = useState<ImageSlot>(emptySlot);
+  const [passportImage, setPassportImage] = useState<ImageSlot>(emptySlot);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Image input refs
+  const frontInputRef = useRef<HTMLInputElement>(null);
+  const backInputRef = useRef<HTMLInputElement>(null);
+  const passportInputRef = useRef<HTMLInputElement>(null);
 
   // Guest type state
   const [guestType, setGuestType] = useState<"existing" | "new">("existing");
@@ -153,21 +161,8 @@ export function BookingRequestForm() {
     resolver: zodResolver(BookingRequestFormSchema),
     defaultValues: {
       guestType: "existing",
-      existingGuestId: 0,
-      guestFirstName: "",
-      guestLastName: "",
-      guestEmail: "",
-      guestPhone: "",
-      guestDateOfBirth: "",
-      guestNationality: "",
       guestIdType: "national_id",
-      guestIdNumber: "",
-      guestPassportNumber: "",
-      guestNotes: "",
-      idDocumentFilename: "",
-      idDocumentOriginalName: "",
-      idDocumentMimeType: "",
-      idDocumentFileSize: 0,
+      existingGuestId: 0,
       priceDuration: "one_night",
       period: 1,
       numberOfGuests: 1,
@@ -177,6 +172,7 @@ export function BookingRequestForm() {
       totalAmount: 0,
       propertyId: 0,
       unitId: 0,
+
       checkInDate: now,
     },
   });
@@ -256,7 +252,6 @@ export function BookingRequestForm() {
       let checkOut: Date;
 
       if (isCustomDuration) {
-        // For custom: add customNights to check-in date
         checkOut = new Date(checkIn);
         checkOut.setDate(checkOut.getDate() + customNights);
       } else {
@@ -295,7 +290,57 @@ export function BookingRequestForm() {
     setValue,
   ]);
 
-  // Step field mapping — only trigger relevant fields
+  // ------------------ Image handlers ------------------
+
+  const handleFileSelect = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: React.Dispatch<React.SetStateAction<ImageSlot>>,
+  ) => {
+    const file = e.target.files?.[0];
+    setUploadError(null);
+
+    if (!file) return;
+
+    const validation = ClientMediaService.validateFile(file);
+    if (!validation.valid) {
+      setUploadError(validation.error || "Invalid file");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setter({
+        file,
+        preview: reader.result as string,
+        uploadedUrl: null,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeFile = (
+    setter: React.Dispatch<React.SetStateAction<ImageSlot>>,
+    inputRef: React.RefObject<HTMLInputElement | null>,
+  ) => {
+    setter(emptySlot);
+    setUploadError(null);
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  };
+
+  const clearAllImages = () => {
+    setFrontImage(emptySlot);
+    setBackImage(emptySlot);
+    setPassportImage(emptySlot);
+    setUploadError(null);
+    if (frontInputRef.current) frontInputRef.current.value = "";
+    if (backInputRef.current) backInputRef.current.value = "";
+    if (passportInputRef.current) passportInputRef.current.value = "";
+  };
+
+  // ------------------ Step field mapping ------------------
+
   const getStepFields = (step: number): (keyof BookingRequestFormData)[] => {
     if (step === 1) {
       if (guestType === "existing") {
@@ -334,7 +379,7 @@ export function BookingRequestForm() {
     return [];
   };
 
-  // Validate current step (Zod + manual for external state)
+  // Validate current step
   const validateStep = async (step: number): Promise<boolean> => {
     clearErrors();
 
@@ -346,16 +391,25 @@ export function BookingRequestForm() {
       return false;
     }
 
-    // Manual checks for state that lives outside React Hook Form
     if (step === 1) {
       if (guestType === "existing" && !selectedGuest) {
         toast.error("Please select a guest.");
         return false;
       }
 
-      if (guestType === "new" && !idDocumentFile) {
-        toast.error("Please upload an ID document.");
-        return false;
+      if (guestType === "new") {
+        const idType = watch("guestIdType");
+        if (idType === "national_id") {
+          if (!frontImage.file || !backImage.file) {
+            toast.error("Please upload both front and back ID images.");
+            return false;
+          }
+        } else {
+          if (!passportImage.file) {
+            toast.error("Please upload a passport image.");
+            return false;
+          }
+        }
       }
     }
 
@@ -365,7 +419,6 @@ export function BookingRequestForm() {
         return false;
       }
 
-      // Validate check-in date for custom pricing
       if (
         isCustomDuration &&
         selectedPricing?.fromDate &&
@@ -388,7 +441,7 @@ export function BookingRequestForm() {
     return true;
   };
 
-  // Handle guest type change
+  // ------------------ Guest handlers ------------------
   const handleGuestTypeChange = (type: "existing" | "new") => {
     setGuestType(type);
     setValue("guestType", type);
@@ -405,15 +458,13 @@ export function BookingRequestForm() {
       setValue("guestIdNumber", "");
       setValue("guestPassportNumber", "");
       setValue("guestNotes", "");
-      setIdDocumentFile(null);
-      setIdDocumentPreview(null);
+      clearAllImages();
     } else {
       setSelectedGuest(null);
       setValue("existingGuestId", 0);
     }
   };
 
-  // Handle guest selection
   const handleGuestSelect = (guest: GuestSearchResult | null) => {
     setSelectedGuest(guest);
     if (guest) {
@@ -423,25 +474,7 @@ export function BookingRequestForm() {
     }
   };
 
-  // Handle ID document selection
-  const handleIdDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setIdDocumentFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setIdDocumentPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeIdDocument = () => {
-    setIdDocumentFile(null);
-    setIdDocumentPreview(null);
-  };
-
-  // Handle pricing selection
+  // ------------------ Pricing handlers ------------------
   const handlePricingSelect = (pricing: UnitTypePricing) => {
     setSelectedPricing(pricing);
     setValue("priceDuration", pricing.duration as PriceDuration);
@@ -453,27 +486,23 @@ export function BookingRequestForm() {
     setValue("unitPrice", discounted);
     setValue("discountRate", pricing.discountRate || null);
 
-    // Reset period and custom nights when pricing changes
     setPeriod(1);
     setCustomNights(1);
     setValue("period", 1);
   };
 
-  // Handle period change (for non-custom pricing)
   const handlePeriodChange = (newPeriod: number) => {
     if (newPeriod < 1) return;
     setPeriod(newPeriod);
     setValue("period", newPeriod);
   };
 
-  // Handle custom nights change
   const handleCustomNightsChange = (nights: number) => {
     if (nights < 1) return;
     setCustomNights(nights);
     setValue("period", nights);
   };
 
-  // Handle property change
   const handlePropertyChange = (value: string) => {
     setValue("propertyId", Number(value));
     setValue("unitId", 0);
@@ -494,7 +523,6 @@ export function BookingRequestForm() {
     setCustomNights(1);
   };
 
-  // Handle unit change
   const handleUnitChange = (value: string) => {
     setValue("unitId", Number(value));
     setValue("numberOfGuests", 1);
@@ -530,7 +558,7 @@ export function BookingRequestForm() {
     }
   };
 
-  // Handle next button
+  // ------------------ Navigation ------------------
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
     if (!isValid) return;
@@ -539,21 +567,15 @@ export function BookingRequestForm() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Handle back button
   const handleBack = () => {
     setCurrentStep((prev) => prev - 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Form submission
+  // ------------------ Form submission ------------------
   const onSubmit = async () => {
     if (!selectedPricing) {
       toast.error("Please select a pricing option.");
-      return;
-    }
-
-    if (guestType === "new" && !idDocumentFile) {
-      toast.error("Please upload an ID document.");
       return;
     }
 
@@ -563,6 +585,7 @@ export function BookingRequestForm() {
     }
 
     setIsSubmitting(true);
+    const uploadedUrls: string[] = [];
 
     try {
       const discounted = calculateDiscountedPrice(
@@ -570,16 +593,72 @@ export function BookingRequestForm() {
         selectedPricing.discountRate,
       );
 
-      const finalPeriod = isCustomDuration ? customNights : period;
-      const finalSubtotal = isCustomDuration
+      const isCustom = selectedPricing.duration === "custom";
+      const finalPeriod = isCustom ? customNights : period;
+      const finalSubtotal = isCustom
         ? discounted * customNights
         : calculateTotalAmount(discounted, period);
       const finalTotalAmount = calculateTotalWithVAT(finalSubtotal);
 
-      const requestData: Parameters<
-        typeof createBookingRequest.mutateAsync
-      >[0] = {
-        guestType,
+      let guestId: number;
+
+      if (guestType === "existing") {
+        guestId = selectedGuest!.id;
+      } else {
+        const idType = formData.guestIdType;
+
+        let idFrontUrl: string | undefined;
+        let idBackUrl: string | undefined;
+        let passportUrl: string | undefined;
+
+        if (idType === "national_id") {
+          idFrontUrl = await ClientMediaService.uploadGuestIdImage(
+            frontImage.file!,
+            "front",
+          );
+          uploadedUrls.push(idFrontUrl);
+
+          idBackUrl = await ClientMediaService.uploadGuestIdImage(
+            backImage.file!,
+            "back",
+          );
+          uploadedUrls.push(idBackUrl);
+        } else {
+          passportUrl = await ClientMediaService.uploadGuestIdImage(
+            passportImage.file!,
+            "passport",
+          );
+          uploadedUrls.push(passportUrl);
+        }
+
+        const newGuest = await createGuest({
+          firstName: formData.guestFirstName,
+          lastName: formData.guestLastName,
+          email: formData.guestEmail,
+          phone: formData.guestPhone,
+          dateOfBirth: formData.guestDateOfBirth,
+          nationality: formData.guestNationality,
+          notes: formData.guestNotes || undefined,
+          registeredBy: agentId,
+          ...(idType === "national_id"
+            ? {
+                idType: "national_id" as const,
+                idNumber: formData.guestIdNumber!,
+                idFrontUrl: idFrontUrl!,
+                idBackUrl: idBackUrl!,
+              }
+            : {
+                idType: "passport" as const,
+                passportNumber: formData.guestPassportNumber!,
+                passportUrl: passportUrl!,
+              }),
+        });
+
+        guestId = newGuest.id;
+      }
+
+      await createBookingRequest.mutateAsync({
+        guestId,
         propertyId: Number(formData.propertyId),
         unitId: Number(formData.unitId),
         checkInDate: new Date(formData.checkInDate),
@@ -594,40 +673,19 @@ export function BookingRequestForm() {
         paymentCode: formData.paymentCode,
         purpose: formData.purpose || null,
         specialRequests: formData.specialRequests || null,
-      };
+      });
 
-      if (guestType === "existing") {
-        requestData.existingGuestId = selectedGuest!.id;
-      } else {
-        const uploadResult = await uploadBookingRequestDocument(
-          idDocumentFile!,
-        );
-
-        if (!uploadResult.success || !uploadResult.filename) {
-          throw new Error(uploadResult.error || "Failed to upload ID document");
-        }
-
-        requestData.guestFirstName = formData.guestFirstName;
-        requestData.guestLastName = formData.guestLastName;
-        requestData.guestEmail = formData.guestEmail;
-        requestData.guestPhone = formData.guestPhone;
-        requestData.guestDateOfBirth = formData.guestDateOfBirth;
-        requestData.guestNationality = formData.guestNationality;
-        requestData.guestIdType = formData.guestIdType;
-        requestData.guestIdNumber = formData.guestIdNumber || null;
-        requestData.guestPassportNumber = formData.guestPassportNumber || null;
-        requestData.guestNotes = formData.guestNotes || null;
-        requestData.idDocumentFilename = uploadResult.filename;
-        requestData.idDocumentOriginalName = uploadResult.originalName!;
-        requestData.idDocumentMimeType = uploadResult.mimeType!;
-        requestData.idDocumentFileSize = uploadResult.fileSize!;
-        requestData.idDocumentUrl = uploadResult.publicUrl;
-      }
-
-      await createBookingRequest.mutateAsync(requestData);
       router.push("/booking-requests");
     } catch (error) {
       console.error("Error submitting booking request:", error);
+
+      for (const url of uploadedUrls) {
+        try {
+          await ClientMediaService.deleteGuestIdImage(url);
+        } catch (cleanupError) {
+          console.error("Failed to cleanup uploaded image:", cleanupError);
+        }
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -713,7 +771,7 @@ export function BookingRequestForm() {
 
       {/* Form */}
       <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
-        {/* Step 1: Select Guest                   */}
+        {/* ------------------ Step 1: Select Guest ------------------ */}
         {currentStep === 1 && (
           <Card>
             <CardHeader>
@@ -948,7 +1006,10 @@ export function BookingRequestForm() {
                       render={({ field }) => (
                         <RadioGroup
                           value={field.value}
-                          onValueChange={field.onChange}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            clearAllImages();
+                          }}
                           className="flex gap-4"
                         >
                           <div className="flex items-center space-x-2">
@@ -1018,72 +1079,58 @@ export function BookingRequestForm() {
                     </div>
                   )}
 
-                  {/* ID Document Upload */}
+                  {/* ID Document Images */}
                   <div className="space-y-3">
                     <Label>
                       {formData.guestIdType === "national_id"
-                        ? "National ID  image"
-                        : "Passport image"}{" "}
+                        ? "National ID Images (Front & Back)"
+                        : "Passport Image"}{" "}
                       *
                     </Label>
-                    {!idDocumentPreview ? (
-                      <div
-                        className={cn(
-                          "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-primary/50",
-                          !idDocumentFile && "border-muted-foreground/25",
-                        )}
-                        onClick={() =>
-                          document.getElementById("idDocument")?.click()
-                        }
-                      >
-                        <Upload className="size-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm font-medium">
-                          Click to upload ID document
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          JPEG, PNG, WebP, or AVIF (max 5MB)
-                        </p>
-                        <input
-                          id="idDocument"
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,image/avif"
-                          className="hidden"
-                          onChange={handleIdDocumentChange}
+
+                    {formData.guestIdType === "national_id" ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Front Image */}
+                        <ImageUploadSlot
+                          label="Front"
+                          image={frontImage}
+                          inputRef={frontInputRef}
+                          disabled={isSubmitting}
+                          onSelect={(e) => handleFileSelect(e, setFrontImage)}
+                          onRemove={() =>
+                            removeFile(setFrontImage, frontInputRef)
+                          }
+                        />
+                        <ImageUploadSlot
+                          label="Back"
+                          image={backImage}
+                          inputRef={backInputRef}
+                          disabled={isSubmitting}
+                          onSelect={(e) => handleFileSelect(e, setBackImage)}
+                          onRemove={() =>
+                            removeFile(setBackImage, backInputRef)
+                          }
                         />
                       </div>
                     ) : (
-                      <div className="relative border rounded-lg p-4">
-                        <div className="flex items-start gap-4">
-                          <img
-                            src={idDocumentPreview}
-                            alt="ID Document Preview"
-                            className="w-32 h-20 object-cover rounded"
-                          />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium truncate">
-                              {idDocumentFile?.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {idDocumentFile &&
-                                `${(idDocumentFile.size / 1024 / 1024).toFixed(2)} MB`}
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive"
-                            onClick={removeIdDocument}
-                          >
-                            <X className="size-4" />
-                          </Button>
-                        </div>
+                      <div className="max-w-sm">
+                        <ImageUploadSlot
+                          label="Passport"
+                          image={passportImage}
+                          inputRef={passportInputRef}
+                          disabled={isSubmitting}
+                          onSelect={(e) =>
+                            handleFileSelect(e, setPassportImage)
+                          }
+                          onRemove={() =>
+                            removeFile(setPassportImage, passportInputRef)
+                          }
+                        />
                       </div>
                     )}
-                    {!idDocumentFile && (
-                      <p className="text-sm text-destructive">
-                        ID document is required
-                      </p>
+
+                    {uploadError && (
+                      <p className="text-sm text-destructive">{uploadError}</p>
                     )}
                   </div>
 
@@ -1103,7 +1150,7 @@ export function BookingRequestForm() {
           </Card>
         )}
 
-        {/* Step 2: Booking Details                */}
+        {/* ------------------ Step 2: Booking Details ------------------ */}
         {currentStep === 2 && (
           <Card>
             <CardHeader>
@@ -1549,28 +1596,28 @@ export function BookingRequestForm() {
                   </div>
 
                   <div className="space-y-2">
-              <Label htmlFor="checkOutDate">Check-out Date</Label>
-              <div className="flex items-center h-10 w-full rounded-md border bg-muted px-3 text-sm">
-                <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
-                <span
-                  className={
-                    formData.checkOutDate
-                      ? "text-foreground"
-                      : "text-muted-foreground"
-                  }
-                >
-                  {formData.checkOutDate
-                    ? format(
-                        new Date(formData.checkOutDate),
-                        "EEEE, MMMM d, yyyy 'at' hh:mm a",
-                      )
-                    : "Awaiting check-in date"}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Auto-calculated · Default check-out time is 10:00 AM
-              </p>
-            </div>
+                    <Label htmlFor="checkOutDate">Check-out Date</Label>
+                    <div className="flex items-center h-10 w-full rounded-md border bg-muted px-3 text-sm">
+                      <CalendarIcon className="mr-2 size-4 text-muted-foreground" />
+                      <span
+                        className={
+                          formData.checkOutDate
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {formData.checkOutDate
+                          ? format(
+                              new Date(formData.checkOutDate),
+                              "EEEE, MMMM d, yyyy 'at' hh:mm a",
+                            )
+                          : "Awaiting check-in date"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Auto-calculated · Default check-out time is 10:00 AM
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -1726,14 +1773,15 @@ export function BookingRequestForm() {
           </Card>
         )}
 
-        {/* Step 3: Confirmation                   */}
+        {/* ═══════════════ Step 3: Confirmation ═══════════════ */}
         {currentStep === 3 && (
           <BookingRequestConfirmation
             guestType={guestType}
             selectedGuest={selectedGuest}
             formData={formData}
-            idDocumentPreview={idDocumentPreview}
-            idDocumentFile={idDocumentFile}
+            frontImagePreview={frontImage.preview}
+            backImagePreview={backImage.preview}
+            passportImagePreview={passportImage.preview}
             selectedPricing={selectedPricing}
             period={isCustomDuration ? customNights : period}
             propertyName={selectedProperty?.name || ""}
@@ -1777,7 +1825,7 @@ export function BookingRequestForm() {
               type="button"
               onClick={() => onSubmit()}
               disabled={isSubmitting}
-              className="min-w-[100px] cursor-pointer md:w-36"
+              className="min-w-[100px] cursor-pointer"
             >
               {isSubmitting ? (
                 <>

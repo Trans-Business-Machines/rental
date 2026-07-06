@@ -86,7 +86,7 @@ async function sendInviteEmail({
 	);
 
 	await resend.emails.send({
-		from: `RentalsManager <${process.env.EMAIL_FROM}>`,
+		from: `Rentals Manager <${process.env.EMAIL_FROM}>`,
 		to: email,
 		subject: reminder ? "Reminder- You're invited to join Rentals Manager" : "You're invited to join Rentals Manager",
 		html: emailHtml,

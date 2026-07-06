@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { userInvitationSchema } from "@/lib/schemas/invitations"
 import { getServerSession } from "@/lib/check-permissions"
 import type { Role } from "@/lib/types/types"
+import { PrismaClientKnownRequestError } from "@/prisma/generated/client/runtime/library";
 import z from "zod"
 
 export async function POST(req: NextRequest) {
@@ -22,9 +23,6 @@ export async function POST(req: NextRequest) {
 
 		return NextResponse.json({ success: true, invitation });
 	} catch (error: any) {
-
-		console.error("Error inviting user: ", error)
-
 		if (error instanceof z.ZodError) {
 			const fieldErrors = error.errors.map((err) => ({
 				field: err.path.join("."),
@@ -42,9 +40,18 @@ export async function POST(req: NextRequest) {
 
 		}
 
+		if (error instanceof PrismaClientKnownRequestError) {
+			if (error.code === "P2002") {
+				return NextResponse.json(
+					{ success: false, error: "A user with this email already exists." },
+					{ status: 409 }
+				);
+			}
+		}
+
 		return NextResponse.json(
-			{ success: false, error: error.message },
-			{ status: 400 }
+			{ success: false, error: "Failed to invite user" },
+			{ status: 500 }
 		);
 	}
 }
@@ -58,7 +65,7 @@ export async function PUT(req: NextRequest) {
 		console.error(error);
 		return NextResponse.json(
 			{ success: false, error: "Failed to resend invitation" },
-			{ status: 400 }
+			{ status: 500 }
 		);
 	}
 }

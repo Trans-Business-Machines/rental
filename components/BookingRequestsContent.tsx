@@ -44,14 +44,13 @@ import {
   useBookingRequests,
   useCancelBookingRequest,
 } from "@/hooks/useBookingRequests";
-import { formatPrice, cn } from "@/lib/utils";
+import { formatPrice, cn, maskPhone, maskEmail } from "@/lib/utils";
 import { format } from "date-fns";
 import type {
   BookingRequestStatus,
   BookingRequestListItem,
   Role,
 } from "@/lib/types/types";
-import { maskPhone, maskEmail } from "@/lib/utils";
 
 export function BookingRequestsContent({ userRole }: { userRole: Role }) {
   const router = useRouter();
@@ -59,17 +58,13 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
   const [status, setStatus] = useState<BookingRequestStatus | "all">("all");
   const [search, setSearch] = useState("");
 
-  // Dialog states
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-
-  // Store full request data for dialogs
   const [selectedRequest, setSelectedRequest] =
     useState<BookingRequestListItem | null>(null);
 
   const isAgent = userRole === "agent";
   const canApproveReject = ["user", "admin", "superAdmin"].includes(userRole);
 
-  // Cancel Request Mutations - needed to check isPending for dialog control
   const cancelMutation = useCancelBookingRequest();
 
   const { data, isLoading, error, refetch } = useBookingRequests({
@@ -199,6 +194,7 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
                 {requests.map((request) => {
                   const status = request.status;
                   const isPending = request.status === "pending";
+                  const guest = request.guest;
 
                   return (
                     <TableRow key={request.id}>
@@ -207,14 +203,10 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
                         <div className="flex items-center gap-2">
                           <div>
                             <p className="font-medium">
-                              {request.existingGuest
-                                ? `${request.existingGuest.firstName} ${request.existingGuest.lastName}`
-                                : `${request.guestFirstName} ${request.guestLastName}`}
+                              {guest.firstName} {guest.lastName}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {request.existingGuest
-                                ? maskEmail(request.existingGuest.email, userRole)
-                                : maskEmail(request.guestEmail as string, userRole)}
+                              {maskEmail(guest.email, userRole)}
                             </p>
                           </div>
                         </div>
@@ -236,9 +228,7 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
 
                       {/* Phone */}
                       <TableCell className="text-night">
-                        {request.existingGuest
-                          ? maskPhone(request.existingGuest.phone, userRole)
-                          : maskPhone(request.guestPhone as string, userRole)}
+                        {maskPhone(guest.phone, userRole)}
                       </TableCell>
 
                       {/* Check-in */}
@@ -361,11 +351,10 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
         </>
       )}
 
-      {/* Dialogs - Only render when selectedRequest exists */}
+      {/* Cancel Dialog */}
       {selectedRequest && (
         <CancelRequestDialog
           requestId={selectedRequest.id}
-          idDocumentFilename={selectedRequest.idDocumentFilename ?? undefined}
           open={cancelDialogOpen}
           onOpenChange={(open) => {
             if (!cancelMutation.isPending) {

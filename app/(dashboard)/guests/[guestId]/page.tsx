@@ -32,7 +32,7 @@ import {
   Image as ImageIcon,
   XCircle,
 } from "lucide-react";
-import Image from "next/image";
+//import Image from "next/image";
 import Header from "./Header";
 import type { Role } from "@/lib/types/types";
 
@@ -64,7 +64,6 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
     notFound();
   }
 
-  const isDocumentImage = guest.media?.mimeType?.startsWith("image/");
   const isRejected = guest.verificationStatus === "rejected";
 
   return (
@@ -315,44 +314,53 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
           </Card>
 
           {/* ID Document */}
-          <Card>
+          <Card className="gap-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <IdCard className="size-5 text-chart-1" />
                 {guest.idType === "passport"
                   ? "Passport Image"
-                  : "National ID image"}
+                  : "National ID Images"}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {guest.media ? (
-                <div className="space-y-4">
-                  {isDocumentImage && (
-                    <div className="relative w-full max-w-md aspect-[3/2] rounded-lg overflow-hidden border border-border">
-                      <Image
-                        src={guest.media.filePath}
-                        alt={`${guest.firstName} ${guest.lastName}'s ID Document`}
-                        fill
-                        className="object-contain bg-muted"
-                        sizes="(max-width: 768px) 100vw, 400px"
+              {guest.idType === "national_id" &&
+              guest.idFrontUrl &&
+              guest.idBackUrl ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Front
+                    </p>
+                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted">
+                      <img
+                        src={guest.idFrontUrl}
+                        alt="National ID Front"
+                        className="w-full h-full object-contain"
                       />
                     </div>
-                  )}
-
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
-                    <div className="text-sm text-muted-foreground">
-                      <p>
-                        <span className="font-medium">Size:</span>{" "}
-                        {(guest.media.fileSize / 1024).toFixed(1)} KB
-                      </p>
-                      <p>
-                        <span className="font-medium">Uploaded:</span>{" "}
-                        {format(
-                          new Date(guest.media.uploadedAt),
-                          "dd MMMM yyyy",
-                        )}
-                      </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Back
+                    </p>
+                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted">
+                      <img
+                        src={guest.idBackUrl}
+                        alt="National ID Back"
+                        className="w-full h-full object-contain"
+                      />
                     </div>
+                  </div>
+                </div>
+              ) : guest.idType === "passport" && guest.passportUrl ? (
+                <div className="max-w-sm">
+                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted">
+                    <img
+                      src={guest.passportUrl}
+                      alt="Passport"
+                      className="w-full h-full object-contain"
+                    />
                   </div>
                 </div>
               ) : (

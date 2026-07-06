@@ -28,6 +28,7 @@ import {
 } from "@/lib/schemas/invitations";
 import { authClient } from "@/lib/auth-client";
 import type { Role } from "@/lib/types/types";
+//import { PrismaClientKnownRequestError } from "@/prisma/generated/client/runtime/library";
 
 interface InviteUserDialogProps {
   children: React.ReactNode;
@@ -94,29 +95,19 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
         body: JSON.stringify(values),
       });
 
-      if (!response.ok) {
-        throw new Error("Invite failed!");
-      }
-
       const result = await response.json();
 
-      if (!result.success) {
-        throw new Error("Invite failed, try again!");
+      if (!response.ok || !result.success) {
+        throw new Error(result?.error || "Failed to invite user.");
       }
 
       // Reset from and show toast upon successfull invitation
       reset();
       setInviteDialogOpen(false);
-      toast.success("Invite sent successfully.");
+      toast.success(`Invite sent successfully to ${values.email}.`);
     } catch (error: any) {
-      let errMsg = "Failed to invite user.";
-
-      if (
-        error instanceof Error &&
-        error.message === "An admin can only invite regular users."
-      )
-        errMsg = "An admin can only invite regular users.";
-
+      const errMsg =
+        error instanceof Error ? error.message : "Failed to invite user.";
       toast.error(errMsg);
     }
   };
@@ -147,7 +138,7 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
                 type="text"
                 placeholder="e.g, John Doe"
                 className={cn(
-                  "w-full border rounded",
+                  "w-full border rounded-sm",
                   errors.name && "border-red-400",
                 )}
                 {...register("name")}
@@ -172,7 +163,7 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
                 type="email"
                 placeholder="e.g., john@gmail.com"
                 className={cn(
-                  "w-full border rounded",
+                  "w-full border rounded-sm",
                   errors.email && "border-red-400",
                 )}
                 {...register("email")}
@@ -192,6 +183,7 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
               >
                 Role
               </Label>
+
               <Select
                 value={selectedRole}
                 onValueChange={(value: Role) =>
@@ -232,25 +224,25 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
             </div>
 
             {/* Action buttons */}
-            <div className="flex justify-end space-x-2 pt-3">
+            <div className="flex  w-full  gap-2 pt-3">
+              <Button
+                type="submit"
+                variant="default"
+                disabled={isSubmitting}
+                className="w-9/12 bg-chart-1 hover:bg-chart-1/90 px-5 cursor-pointer"
+              >
+                {isSubmitting ? "Inviting user..." : " Invite User"}
+              </Button>
               <Button
                 type="button"
                 variant="default"
-                className="bg-chart-5 hover:bg-chart-5/90 px-3 cursor-pointer"
+                className="w-3/12 bg-chart-5 hover:bg-chart-5/90 px-3 cursor-pointer"
                 onClick={() => {
                   reset();
                   setInviteDialogOpen(false);
                 }}
               >
                 Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="default"
-                disabled={isSubmitting}
-                className="bg-chart-1 hover:bg-chart-1/90 px-5 cursor-pointer"
-              >
-                {isSubmitting ? "Inviting user..." : " Invite User"}
               </Button>
             </div>
           </form>

@@ -265,8 +265,8 @@ function UsersPageContent() {
           </p>
         </div>
         <InviteUserDialog>
-          <Button>
-            <UserPlus className="size-4 mr-1" />
+          <Button className="cursor-pointer px-4">
+            <UserPlus className="size-4 mr-1 text-white" />
             <span>Invite User</span>
           </Button>
         </InviteUserDialog>

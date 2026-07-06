@@ -29,7 +29,7 @@ import {
   Settings,
   User,
   Users,
-  UserPlus,
+  NotebookPen,
   X,
   CreditCard,
 } from "lucide-react";
@@ -56,7 +56,7 @@ interface NavItem {
 const navigationConfig: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: ChartColumnBig },
   { id: "bookings", label: "Bookings", icon: CalendarDays },
-  { id: "booking-requests", label: "Onboarding", icon: UserPlus },
+  { id: "booking-requests", label: "Requests", icon: NotebookPen },
   { id: "guests", label: "Guests", icon: Users },
   { id: "inventory", label: "Inventory", icon: Box },
   { id: "properties", label: "Properties", icon: Building2 },
@@ -244,8 +244,8 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex items-center justify-between px-5 h-16 border-b border-sidebar-border">
           <div className="flex items-center space-x-2">
             <Home className="size-6 text-sidebar-primary-foreground" />
-            <span className="font-semibold text-sidebar-primary-foreground">
-              RentManager
+            <span className="font-medium text-sm md:text-base text-sidebar-primary-foreground">
+              Rentals Manager
             </span>
           </div>
           <Button

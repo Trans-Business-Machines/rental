@@ -35,7 +35,6 @@ export async function getProperties({
 			prisma.property.findMany({
 				where,
 				include: {
-					tenants: true,
 					amenities: true,
 					media: true,
 				},
@@ -76,7 +75,6 @@ export const getPropertyById = async (propertyId: number) => {
 	const property = await prisma.property.findUnique({
 		where: { id: propertyId, deletedAt: null, },
 		include: {
-			tenants: true,
 			amenities: true,
 			media: true,
 			_count: {

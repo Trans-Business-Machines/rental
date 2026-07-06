@@ -33,8 +33,9 @@ function Header({ guest }: { guest: Guest }) {
   };
 
   return (
-    <header className="flex items-center justify-between py-2">
-      <div className="flex gap-2">
+    <header className="flex flex-col md:flex-row md:justify-between gap-3  py-2">
+
+      <div className="flex gap-0">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/guests">
             <ArrowLeft className="size-5" />
@@ -42,7 +43,7 @@ function Header({ guest }: { guest: Guest }) {
         </Button>
 
         <div>
-          <h2 className="text-lg capitalize md:text-2xl font-bold tracking-tight text-foreground">
+          <h2 className="text-lg capitalize md:text-2xl font-bold tracking-normal text-foreground">
             Guest profile
           </h2>
           <p className="text-muted-foreground text-sm">
@@ -58,6 +59,7 @@ function Header({ guest }: { guest: Guest }) {
             <span>Edit Guest</span>
           </Button>
         </GuestEditDialog>
+
         <Button
           size="default"
           variant="destructive"

@@ -1,6 +1,6 @@
-import imageCompression from "browser-image-compression";
 import { createClient } from "@supabase/supabase-js";
 import { BUCKET } from "@/lib/utils"
+import imageCompression from "browser-image-compression";
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,7 +22,6 @@ const COMPRESSION_OPTIONS = {
     useWebWorker: true,
     initialQuality: 0.8,
 };
-
 const ALLOWED_IMAGE_MIMETYPES = [
     "image/jpeg",
     "image/jpg",
@@ -30,18 +29,18 @@ const ALLOWED_IMAGE_MIMETYPES = [
     "image/webp",
     "image/avif",
 ];
-
-const ALLOWED_DOCUMENT_MIMETYPES = ALLOWED_IMAGE_MIMETYPES.slice(0)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const MAX_DOCUMENT_SIZE = 5 * 1024 * 1024;
 
 type EntityType = "property" | "unit" | "guest";
+type ImageLabel = "front" | "back" | "passport"
 
 export class ClientMediaService {
     /* Generate a unique filename using prefix, timestamp, and random hash */
     static generateUniqueFilename(
         originalFilename: string,
-        entityType: EntityType
+        entityType: EntityType,
+        label?: ImageLabel
+
     ): string {
         const timestamp = Date.now();
         const randomStr = Math.random().toString(36).substring(2, 10);
@@ -55,7 +54,11 @@ export class ClientMediaService {
         const prefix = prefixMap[entityType];
         const ext = originalFilename.split(".").pop()?.toLowerCase() || "webp";
 
-        return `${prefix}_${timestamp}_${randomStr}.${ext}`;
+        if (prefix === "guest_id") {
+            return `${prefix}_${label}_${timestamp}_${randomStr}.${ext}`
+        }
+
+        return `${prefix}_${timestamp}_${randomStr}.${ext}`
     }
 
     /* Validate file type before processing */
@@ -72,26 +75,6 @@ export class ClientMediaService {
             return {
                 valid: false,
                 error: "File is too large. Maximum is 10MB.",
-            };
-        }
-
-        return { valid: true };
-    }
-
-    /* Validate document file (ID documents - images) */
-    static validateDocument(file: File): { valid: boolean; error?: string } {
-        if (!ALLOWED_DOCUMENT_MIMETYPES.includes(file.type)) {
-            return {
-                valid: false,
-                error:
-                    "Invalid file type. Only JPEG, PNG, WebP, and AVIF are allowed for ID documents.",
-            };
-        }
-
-        if (file.size > MAX_DOCUMENT_SIZE) {
-            return {
-                valid: false,
-                error: "File is too large. Maximum is 5MB for ID documents.",
             };
         }
 
@@ -146,7 +129,7 @@ export class ClientMediaService {
         return urlData.publicUrl;
     }
 
-    /* Main method: compress and upload multiple images */
+    /* Compress and upload multiple images */
     static async processAndUploadImages(
         files: File[],
         entityType: "property" | "unit"
@@ -154,6 +137,7 @@ export class ClientMediaService {
         const results: UploadResult[] = [];
 
         for (const file of files) {
+
             // Step 1: Validate the file
             const validation = this.validateFile(file);
             if (!validation.valid) {
@@ -183,18 +167,22 @@ export class ClientMediaService {
     }
 
     /* Upload guest ID document (single file) */
-    static async uploadGuestDocument(file: File): Promise<UploadResult> {
+    static async uploadGuestIdImage(
+        file: File,
+        label: ImageLabel
+    ): Promise<string> {
+
         // Step 1: Validate the document
-        const validation = this.validateDocument(file);
+        const validation = this.validateFile(file);
         if (!validation.valid) {
             throw new Error(validation.error);
         }
 
-        // Step 2: Compress if it's an image (skip PDFs)
+        // Step 2: Compress the image
         const processedFile = await this.compressImage(file);
 
-        // Step 3: Generate unique filename
-        const filename = this.generateUniqueFilename(file.name, "guest");
+        // Step 3: Generate unique filename with label
+        const filename = this.generateUniqueFilename(file.name, "guest", label)
 
         // Step 4: Upload to Supabase in guest-documents folder
         const url = await this.uploadToSupabase(
@@ -203,17 +191,10 @@ export class ClientMediaService {
             "guest-documents"
         );
 
-        // Step 5: Return metadata
-        return {
-            url,
-            filename,
-            originalName: file.name,
-            fileSize: processedFile.size,
-            mimeType: processedFile.type,
-        };
+        return url;
     }
 
-    /* Delete files from Supabase Storage (for cleanup on error or deletion) */
+    /* Delete multiple files from Supabase Storage (for cleanup on error or deletion) */
     static async deleteFromSupabase(filenames: string[]): Promise<void> {
         if (filenames.length === 0) return;
 
@@ -225,166 +206,19 @@ export class ClientMediaService {
     }
 
     /* Delete guest document from Supabase */
-    static async deleteGuestDocument(filename: string): Promise<void> {
+    static async deleteGuestIdImage(url: string): Promise<void> {
+        const parts = url.split("/guest-documents/");
+        if (parts.length < 2) {
+            console.error("Could not extract filename from URL:", url);
+            return;
+        }
+        const filename = parts[1];
         const filePath = `guest-documents/${filename}`;
 
         const { error } = await supabase.storage.from(BUCKET).remove([filePath]);
 
         if (error) {
-            console.error("Failed to delete guest document:", error);
+            console.error("Supabase delete error:", error);
         }
     }
 }
-
-// ---------------------- METHODS TO HANDLE BOOKING REQUESTS IMAGES ----------------------
-export async function uploadBookingRequestDocument(file: File) {
-    try {
-        // Step 1: Validate the document
-        const validation = ClientMediaService.validateDocument(file);
-        if (!validation.valid) {
-            return { success: false, error: validation.error };
-        }
-
-        // Step 2: Compress if it's an image
-        const processedFile = await ClientMediaService.compressImage(file);
-
-        // Step 3: Generate unique filename
-        const fileExtension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-        const filename = `request-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
-        const filePath = `booking-requests/${filename}`;
-
-        // Step 4: Upload to Supabase in booking-requests folder 
-        const { error: uploadError, } = await supabase.storage
-            .from(BUCKET)
-            .upload(filePath, processedFile, {
-                contentType: processedFile.type,
-                cacheControl: "3600",
-                upsert: false,
-            });
-
-        if (uploadError) {
-            console.error("Error uploading document:", uploadError);
-            return { success: false, error: uploadError.message };
-        }
-
-        // Step 5. Get the public URL
-        const { data: urlData } = supabase.storage
-            .from(BUCKET)
-            .getPublicUrl(filePath);
-
-        return {
-            success: true,
-            filename,
-            originalName: file.name,
-            mimeType: processedFile.type,
-            fileSize: processedFile.size,
-            publicUrl: urlData.publicUrl,
-        };
-    } catch (error) {
-        console.error("Error uploading booking request document:", error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error",
-        };
-    }
-}
-
-/* Move document from booking-requests to guest-documents folder */
-export async function moveBookingRequestDocument(
-    oldFilename: string,
-    guestId: number
-) {
-    try {
-        const oldPath = `booking-requests/${oldFilename}`;
-
-        // Generate new filename
-        const timestamp = Date.now();
-        const randomString = Math.random().toString(36).substring(2, 8);
-        const extension = oldFilename.split(".").pop() || "jpg";
-        const newFilename = `guest-${guestId}-${timestamp}-${randomString}.${extension}`;
-        const newPath = `guest-documents/${newFilename}`;
-
-        // Download the file
-        const { data: fileData, error: downloadError } = await supabase.storage
-            .from(BUCKET)
-            .download(oldPath);
-
-        if (downloadError || !fileData) {
-            console.error("Download error:", downloadError);
-            return {
-                success: false,
-                error: downloadError?.message || "Failed to download file",
-            };
-        }
-
-        // Upload to new location
-        const { error: uploadError } = await supabase.storage
-            .from(BUCKET)
-            .upload(newPath, fileData, {
-                cacheControl: "3600",
-                upsert: false,
-            });
-
-        if (uploadError) {
-            console.error("Upload error:", uploadError);
-            return {
-                success: false,
-                error: uploadError.message,
-            };
-        }
-
-        // Delete old file
-        const { error: deleteError } = await supabase.storage
-            .from(BUCKET)
-            .remove([oldPath]);
-
-        if (deleteError) {
-            console.error("Delete error (non-fatal):", deleteError);
-        }
-
-        // Get new public URL
-        const { data: urlData } = supabase.storage
-            .from(BUCKET)
-            .getPublicUrl(newPath);
-
-        return {
-            success: true,
-            newUrl: urlData.publicUrl,
-            newFilename,
-        };
-    } catch (error) {
-        console.error("Error moving booking request document:", error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : "Move failed",
-        };
-    }
-}
-
-/* Delete document from booking-requests folder */
-export async function deleteBookingRequestDocument(filename: string) {
-    try {
-        const filePath = `booking-requests/${filename}`;
-
-        const { error } = await supabase.storage
-            .from(BUCKET)
-            .remove([filePath]);
-
-        if (error) {
-            console.error("Delete error:", error);
-            return {
-                success: false,
-                error: error.message,
-            };
-        }
-
-        return { success: true };
-    } catch (error) {
-        console.error("Error deleting booking request document:", error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : "Delete failed",
-        };
-    }
-}
-

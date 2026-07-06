@@ -3,11 +3,25 @@
 export const dynamic = "force-dynamic";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
-import { Building2, Eye, EyeOff, CircleCheckBig } from "lucide-react";
+import {
+  Building2,
+  Eye,
+  EyeOff,
+  CircleCheckBig,
+  User,
+  Mail,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -38,7 +52,7 @@ function AcceptInvitePage() {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [invite, setInvite] = useState<{ name: string; email: string } | null>(
-    null
+    null,
   );
   const [inviteStatus, setInviteStatus] = useState<
     "pending" | "accepted" | "invalid" | null
@@ -47,7 +61,10 @@ function AcceptInvitePage() {
   const [name, setName] = useState("");
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setInviteStatus("invalid");
+      return;
+    }
     fetch(`/api/invitations/token/${token}`)
       .then((res) => res.json())
       .then((data) => {
@@ -56,6 +73,7 @@ function AcceptInvitePage() {
         } else if (data.invitation.acceptedAt) {
           setInviteStatus("accepted");
         } else {
+          setName(data.invitation.name);
           setInvite({
             name: data.invitation.name,
             email: data.invitation.email,
@@ -68,7 +86,7 @@ function AcceptInvitePage() {
   const validatePassword = (password: string) => {
     // At least 8 characters, one uppercase, one lowercase, one number, one special character
     return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(
-      password
+      password,
     );
   };
 
@@ -81,7 +99,7 @@ function AcceptInvitePage() {
     }
     if (!validatePassword(password)) {
       setError(
-        "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character."
+        "Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.",
       );
       return;
     }
@@ -106,7 +124,7 @@ function AcceptInvitePage() {
         });
         if (loginResult?.error) {
           toast.error(
-            "Account created, but automatic login failed. Please log in manually."
+            "Account created, but automatic login failed. Please log in manually.",
           );
           setSuccess(true);
           setTimeout(() => router.push("/login"), 2000);
@@ -117,7 +135,7 @@ function AcceptInvitePage() {
         }
       } catch {
         toast.error(
-          "Account created, but automatic login failed. Please log in manually."
+          "Account created, but automatic login failed. Please log in manually.",
         );
         setSuccess(true);
         setTimeout(() => router.push("/login"), 2000);
@@ -131,24 +149,45 @@ function AcceptInvitePage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-md lg:max-w-lg space-y-8">
         {/* Logo and Brand */}
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-primary rounded-lg flex items-center justify-center mb-4">
             <Building2 className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">RentManager</h1>
-          <p className="mt-2 text-muted-foreground">
-            Property Management System
-          </p>
+          <h1 className="text-3xl font-bold text-foreground">
+            Rentals Manager
+          </h1>
+          <p className="text-muted-foreground">Property Management System</p>
         </div>
         <Card className="shadow-xl border-0">
           <CardHeader>
             <CardTitle className="text-2xl text-center font-semibold">
               Accept Invitation
             </CardTitle>
+            <CardDescription className="text-center">
+              Add a password to create your account.
+            </CardDescription>
           </CardHeader>
           <CardContent>
+            {inviteStatus === null && (
+              <div className="space-y-4">
+                <Skeleton className="h-14 w-full rounded-sm" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-11 w-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-11 w-full" />
+                </div>
+                <Skeleton className="h-10 w-full" />
+              </div>
+            )}
             {inviteStatus === "invalid" && (
               <div className="text-center text-red-600 font-medium">
                 Invalid or expired invitation link.
@@ -161,9 +200,19 @@ function AcceptInvitePage() {
             )}
             {inviteStatus === "pending" && invite && !success && (
               <>
-                <div className="mb-4 text-center">
-                  <div className="font-medium text-lg">{invite.email}</div>
-                </div>
+                <article className="mb-4 p-4 flex items-center justify-between rounded-sm text-center bg-muted">
+                  <div className="flex items-center gap-2">
+                    <User className="size-5 text-azure/80" />
+                    <p className="font-medium text-sm capitalize">
+                      {invite.name}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Mail className="size-5 text-azure/80" />
+                    <p className="font-medium text-sm">{invite.email}</p>
+                  </div>
+                </article>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
@@ -254,7 +303,11 @@ function AcceptInvitePage() {
                     </div>
                   )}
 
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button
+                    type="submit"
+                    className="w-full cursor-pointer"
+                    disabled={loading}
+                  >
                     {loading ? "Accepting..." : "Accept Invitation"}
                   </Button>
                 </form>
@@ -262,8 +315,8 @@ function AcceptInvitePage() {
             )}
             {success && (
               <div className="text-center text-green-600 font-medium space-y-4">
-                <div className="p-6 bg-green-50 rounded-full flex items-center justify-center">
-                  <CircleCheckBig className="text-green-600 size-6 md:size-8 lg:size-12" />
+                <div className="p-6 bg-green-50 rounded-md flex items-center justify-center">
+                  <CircleCheckBig className="text-green-600 size-10 md:size-18 " />
                 </div>
                 <p>Invitation accepted! Redirecting...</p>
               </div>

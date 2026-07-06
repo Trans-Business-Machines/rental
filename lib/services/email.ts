@@ -27,7 +27,7 @@ export async function sendPasswordResetEmail(
 
     try {
         const result = await resend.emails.send({
-            from: `RentalsManager <${process.env.EMAIL_FROM}>`,
+            from: `Rentals Manager <${process.env.EMAIL_FROM}>`,
             to: email,
             subject: "Reset Your Password - Rentals Manager",
             html: emailHtml,

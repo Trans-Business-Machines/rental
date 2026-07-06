@@ -34,8 +34,8 @@ export function GuestDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild className={cn(isAgent && "hidden")}>
-        <Button className="rounded-md">
-          <Plus className="size-4 mr-1" />
+        <Button className="rounded-md cursor-pointer">
+          <Plus className="size-4 mr-1 text-white" />
           <span>Add Guest</span>
         </Button>
       </DialogTrigger>
