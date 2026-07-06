@@ -179,11 +179,14 @@ export interface GuestUpdateFormData {
     lastName: string;
     email: string;
     phone: string;
-    dateOfBirth: string,
+    dateOfBirth: string;
     nationality: string;
-    idType: IdType,
+    idType: IdType;
     idNumber: string | null;
     passportNumber: string | null;
+    idFrontUrl?: string | null;
+    idBackUrl?: string | null;
+    passportUrl?: string | null;
     notes?: string;
     address?: string;
     city?: string;

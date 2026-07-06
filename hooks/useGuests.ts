@@ -96,7 +96,7 @@ export const useCreateGuest = () => {
 		},
 		onError: (error) => {
 			const errorMessage = error.message
-			console.error("Hook error:",errorMessage)
+			console.error("Hook error:", errorMessage)
 			toast.error(errorMessage, {
 				duration: 6000
 			})
@@ -226,6 +226,10 @@ export const useDeleteGuest = () => {
 					queryKey: guestKeys.stats()
 				})
 			])
+
+			// TODO: delete guest images from supabase after deleting a guest
+
+
 
 			toast.success("Guest deleted successfully.")
 

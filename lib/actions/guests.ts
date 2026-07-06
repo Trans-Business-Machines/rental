@@ -372,10 +372,12 @@ export async function deleteGuest(id: number) {
 	try {
 		await requirePermission("guest", "delete")
 
-		await prisma.guest.delete({ where: { id } });
+		const deletedGuest = await prisma.guest.delete({ where: { id } });
 
 		revalidateTag("booking-form-data");
 		revalidatePath("/guests");
+
+		return deletedGuest
 
 	} catch (error) {
 		console.error("Failed to delete guest:", error);

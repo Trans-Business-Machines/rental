@@ -46,7 +46,7 @@ export function ImageUploadSlot({
           <img
             src={image.preview}
             alt={`${label} ID preview`}
-            className="w-full aspect-[4/2] object-fill rounded"
+            className="w-full aspect-[3/2] object-fill rounded"
           />
           <div className="mt-1.5 flex items-center justify-between">
             <Button

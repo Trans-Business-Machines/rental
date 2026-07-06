@@ -41,7 +41,7 @@ export function GuestForm({
   const backInputRef = useRef<HTMLInputElement>(null);
   const passportInputRef = useRef<HTMLInputElement>(null);
 
-  // Image state — one slot per document side
+  // Image state one slot per document side
   const [frontImage, setFrontImage] = useState<ImageSlot>(emptySlot);
   const [backImage, setBackImage] = useState<ImageSlot>(emptySlot);
   const [passportImage, setPassportImage] = useState<ImageSlot>(emptySlot);

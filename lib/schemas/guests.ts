@@ -48,7 +48,6 @@ const baseGuestFields = {
 };
 
 export const GuestSchema = z.discriminatedUnion("idType", [
-    // National ID branch — requires front and back images
     z.object({
         ...baseGuestFields,
         idType: z.literal("national_id"),
@@ -61,7 +60,6 @@ export const GuestSchema = z.discriminatedUnion("idType", [
         idBackUrl: z.string().optional(),
         passportUrl: z.string().optional(),
     }),
-    // Passport branch — requires passport image
     z.object({
         ...baseGuestFields,
         idType: z.literal("passport"),
@@ -75,6 +73,56 @@ export const GuestSchema = z.discriminatedUnion("idType", [
         idBackUrl: z.string().optional(),
     }),
 ]);
+
+
+export const GuestEditSchema = z
+  .object({
+    // Personal information
+    firstName: z.string(),
+    lastName: z.string(),
+    email: z.string().email(),
+    phone: z.string(),
+    dateOfBirth: z.string(),
+    nationality: z.string(),
+    idType: z.enum(["national_id", "passport"]),
+    idNumber: z.string().optional().or(z.literal("")),
+    passportNumber: z.string().optional().or(z.literal("")),
+
+    // Image URLs (set programmatically after upload)
+    idFrontUrl: z.string().optional().nullable(),
+    idBackUrl: z.string().optional().nullable(),
+    passportUrl: z.string().optional().nullable(),
+
+    // Editable fields
+    address: z.string().max(200, "At most 200 characters.").optional().or(z.literal("")),
+    city: z.string().max(100, "At most 100 characters.").optional().or(z.literal("")),
+    country: z.string().max(100, "At most 100 characters.").optional().or(z.literal("")),
+    occupation: z.string().max(100, "At most 100 characters.").optional().or(z.literal("")),
+    employer: z.string().max(100, "At most 100 characters.").optional().or(z.literal("")),
+    emergencyContactName: z.string().max(100).optional().or(z.literal("")),
+    emergencyContactPhone: z
+      .string()
+      .regex(phoneRegex, "Enter a valid phone number.")
+      .optional()
+      .or(z.literal("")),
+    emergencyContactRelation: z.string().max(100).optional().or(z.literal("")),
+    verificationStatus: z.enum(["pending", "verified", "rejected"]),
+    notes: z.string().max(1000, "At most 1000 characters.").optional().or(z.literal("")),
+  })
+  .refine(
+    (data) => {
+      if (data.verificationStatus === "rejected") {
+        return data.notes && data.notes.trim().length > 0;
+      }
+      return true;
+    },
+    {
+      message: "Rejection reason is required.",
+      path: ["notes"],
+    },
+  );
+
+export type GuestEditFormData = z.infer<typeof GuestEditSchema>;
 
 export type NewGuest = z.infer<typeof GuestSchema>;
 

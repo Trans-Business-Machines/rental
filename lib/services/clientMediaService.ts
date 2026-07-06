@@ -207,20 +207,18 @@ export class ClientMediaService {
 
     /* Delete guest document from Supabase */
     static async deleteGuestIdImage(url: string): Promise<void> {
-        // Extract the filename from the Supabase URL
         const parts = url.split("/guest-documents/");
         if (parts.length < 2) {
             console.error("Could not extract filename from URL:", url);
             return;
         }
-
         const filename = parts[1];
         const filePath = `guest-documents/${filename}`;
 
         const { error } = await supabase.storage.from(BUCKET).remove([filePath]);
 
         if (error) {
-            console.error("Failed to delete guest ID image:", error);
+            console.error("Supabase delete error:", error);
         }
     }
 }
