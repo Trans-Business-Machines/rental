@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { NationalityCombobox } from "@/components/NationalityCombobox";
 import { useCreateGuest } from "@/hooks/useGuests";
+import { deleteGuestImages } from "@/lib/actions/guests";
 import { ClientMediaService } from "@/lib/services/clientMediaService";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -201,17 +202,13 @@ export function GuestForm({
       setBackImage(emptySlot);
       setPassportImage(emptySlot);
       closeModal();
-    } catch {
+    } catch (error) {
       setIsUploading(false);
 
-      // Cleanup any successfully uploaded images on failure
-      for (const url of uploadedUrls) {
-        try {
-          await ClientMediaService.deleteGuestIdImage(url);
-        } catch (cleanupError) {
-          console.error("Failed to cleanup uploaded image:", cleanupError);
-        }
-      }
+      console.error("Error creating guest: ", error);
+
+      const result = await deleteGuestImages(uploadedUrls);
+      console.log("Image delete message: ", result.message);
     }
   };
 
@@ -382,7 +379,7 @@ export function GuestForm({
         </Label>
 
         {idType === "national_id" ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-4">
             {/* Front Image */}
             <ImageUploadSlot
               label="Front"

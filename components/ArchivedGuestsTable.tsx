@@ -35,19 +35,7 @@ import {
   useRestoreGuest,
 } from "@/hooks/useGuests";
 import { AlertDialog } from "@/components/AlertDialog";
-
-const getVerificationColor = (status: string) => {
-  switch (status) {
-    case "verified":
-      return "default";
-    case "pending":
-      return "outline";
-    case "rejected":
-      return "destructive";
-    default:
-      return "secondary";
-  }
-};
+import { cn } from "@/lib/utils";
 
 interface DialogState {
   open: boolean;
@@ -166,7 +154,7 @@ function ArchivedGuestsTable() {
                 last stay
               </TableHead>
               <TableHead className="font-semibold text-foreground">
-                action
+                actions
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -174,19 +162,23 @@ function ArchivedGuestsTable() {
             {(guests ?? []).map((guest) => (
               <TableRow
                 key={guest.id}
-                className="font-medium capitalize bg-red-100 hover:bg-red-100"
+                className="font-medium  bg-red-100 hover:bg-red-100"
               >
-                <TableCell>
+                <TableCell className="capitalize">
                   {guest.firstName} {guest.lastName}
                 </TableCell>
 
                 <TableCell>
                   <Badge
-                    variant={
-                      getVerificationColor(
-                        guest.verificationStatus || "pending"
-                      ) as "default" | "secondary" | "destructive" | "outline"
-                    }
+                    className={cn(
+                      "py-1 px-3 rounded-lg capitalize border text-white",
+                      guest.verificationStatus === "pending" &&
+                        "border-princeton-orange bg-princeton-orange",
+                      guest.verificationStatus === "verified" &&
+                        "border-medium-jungle bg-medium-jungle",
+                      guest.verificationStatus === "rejected" &&
+                        "border-lipstick-red bg-lipstick-red",
+                    )}
                   >
                     {guest.verificationStatus || "pending"}
                   </Badge>
@@ -203,7 +195,9 @@ function ArchivedGuestsTable() {
                     <span>{guest.phone}</span>
                   </div>
                 </TableCell>
-                <TableCell className="grid place-content-center">{guest.totalStays}</TableCell>
+                <TableCell className="pl-4 md:pl-8">
+                  {guest.totalStays}
+                </TableCell>
                 <TableCell>
                   {guest.lastStay
                     ? format(new Date(guest.lastStay), "dd/MM/yyyy")
@@ -218,7 +212,7 @@ function ArchivedGuestsTable() {
                         variant="ghost"
                         className="size-8 cursor-pointer p-0"
                       >
-                        <MoreHorizontal className="size-4" />
+                        <MoreHorizontal className="size-4 rotate-90" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>

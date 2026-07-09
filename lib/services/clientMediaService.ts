@@ -108,15 +108,18 @@ export class ClientMediaService {
     static async uploadToSupabase(
         file: File,
         filename: string,
-        folder?: string
+        folder?: string,
+        upsert: boolean = false
     ): Promise<string> {
         const filePath = folder ? `${folder}/${filename}` : filename;
 
-        const { error } = await supabase.storage.from(BUCKET).upload(filePath, file, {
-            contentType: file.type,
-            cacheControl: "3600",
-            upsert: false,
-        });
+        const { error } = await supabase.storage
+            .from(BUCKET)
+            .upload(filePath, file, {
+                contentType: file.type,
+                cacheControl: "3600",
+                upsert,
+            });
 
         if (error) {
             throw new Error(`Upload failed: ${error.message}`);
@@ -169,7 +172,8 @@ export class ClientMediaService {
     /* Upload guest ID document (single file) */
     static async uploadGuestIdImage(
         file: File,
-        label: ImageLabel
+        label: ImageLabel,
+        existingUrl?: string,
     ): Promise<string> {
 
         // Step 1: Validate the document
@@ -178,20 +182,36 @@ export class ClientMediaService {
             throw new Error(validation.error);
         }
 
-        // Step 2: Compress the image
-        const processedFile = await this.compressImage(file);
+        let filename: string;
+        let upsert = false;
 
-        // Step 3: Generate unique filename with label
-        const filename = this.generateUniqueFilename(file.name, "guest", label)
+        if (existingUrl) {
+            const parts = existingUrl.split("/guest-documents/");
+            console.log("Existing URL: ", existingUrl)
+            console.log("Existing URL parts: ", parts)
 
-        // Step 4: Upload to Supabase in guest-documents folder
+            if (parts.length >= 2) {
+                filename = parts[1].split("?")[0];
+                upsert = true
+
+            } else {
+                filename = this.generateUniqueFilename(file.name, "guest", label)
+            }
+
+        } else {
+            filename = this.generateUniqueFilename(file.name, "guest", label)
+        }
+
         const url = await this.uploadToSupabase(
-            processedFile,
+            file,
             filename,
-            "guest-documents"
+            "guest-documents",
+            upsert,
         );
 
-        return url;
+        return upsert ? `${url}?v=${Date.now()}` : url;
+
+
     }
 
     /* Delete multiple files from Supabase Storage (for cleanup on error or deletion) */
@@ -205,20 +225,4 @@ export class ClientMediaService {
         }
     }
 
-    /* Delete guest document from Supabase */
-    static async deleteGuestIdImage(url: string): Promise<void> {
-        const parts = url.split("/guest-documents/");
-        if (parts.length < 2) {
-            console.error("Could not extract filename from URL:", url);
-            return;
-        }
-        const filename = parts[1];
-        const filePath = `guest-documents/${filename}`;
-
-        const { error } = await supabase.storage.from(BUCKET).remove([filePath]);
-
-        if (error) {
-            console.error("Supabase delete error:", error);
-        }
-    }
 }

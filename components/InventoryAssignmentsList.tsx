@@ -15,10 +15,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowRight, MapPin, Package } from "lucide-react";
+import { ArrowRight, Loader, MapPin, Package } from "lucide-react";
 import { useState } from "react";
 import { SearchNotFound } from "./SearchNotFound";
-import { ReturnNoteDialog } from "./ReturnNoteDialog";
+import { returnInventoryAssignment } from "@/lib/actions/inventory";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import type { Assignment } from "@/lib/types/types";
 
@@ -34,7 +35,27 @@ export function InventoryAssignmentsList({
   totalAssignments,
 }: InventoryAssignmentsListProps) {
   // state to handle the dialog open state
-  const [open, setOpen] = useState(false);
+  const [isReturning, setIsReturning] = useState(false);
+  const [returnID, setReturnID] = useState<number | null>(null);
+
+  const handleReturn = async (assignmentId: number) => {
+    try {
+      setIsReturning(true);
+      setReturnID(assignmentId);
+      await returnInventoryAssignment(assignmentId);
+
+      toast.success("Item returned successfully");
+    } catch (error) {
+      console.error("Error returning assignment:", error);
+
+      const errorMessage = "Failed to return item, try again.";
+
+      toast.error(errorMessage);
+    } finally {
+      setIsReturning(false);
+      setReturnID(null);
+    }
+  };
 
   return (
     <div className="space-y-2">
@@ -63,9 +84,8 @@ export function InventoryAssignmentsList({
                 <TableRow>
                   <TableHead>Item</TableHead>
                   <TableHead>Location</TableHead>
-                  <TableHead>Serial Number</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Assigned</TableHead>
+                  <TableHead>Assign Period</TableHead>
                   {showReturnButton && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -100,15 +120,6 @@ export function InventoryAssignmentsList({
                       </div>
                     </TableCell>
                     <TableCell>
-                      {assignment.serialNumber ? (
-                        <Badge variant="outline">
-                          {assignment.serialNumber}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
                       <Badge
                         variant={assignment.isActive ? "default" : "secondary"}
                       >
@@ -124,7 +135,7 @@ export function InventoryAssignmentsList({
                           <ArrowRight className="size-4 mx-1" />
                           {format(
                             new Date(assignment.returnedAt),
-                            "dd/MM/yyyy"
+                            "dd/MM/yyyy",
                           )}
                         </div>
                       )}
@@ -133,15 +144,22 @@ export function InventoryAssignmentsList({
                     {showReturnButton && (
                       <TableCell>
                         {assignment.isActive ? (
-                          <ReturnNoteDialog
-                            assignmentId={assignment.id}
-                            open={open}
-                            setOpen={setOpen}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleReturn(assignment.id)}
+                            className="cursor-pointer"
+                            disabled={isReturning && assignment.id === returnID}
                           >
-                            <Button variant="outline" size="sm">
-                              Return
-                            </Button>
-                          </ReturnNoteDialog>
+                            {isReturning && assignment.id === returnID ? (
+                              <span className="inline-flex gap-1 items-center">
+                                <Loader className="animate-spin" />
+                                <span>Returning</span>
+                              </span>
+                            ) : (
+                              " Return"
+                            )}
+                          </Button>
                         ) : (
                           <span className="text-muted-foreground text-sm">
                             —

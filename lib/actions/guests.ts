@@ -3,18 +3,34 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { requirePermission, getServerSession } from "@/lib/check-permissions"
-import { LIMIT } from "@/lib/utils"
+import { LIMIT, BUCKET } from "@/lib/utils"
 import type {
 	GuestUpdateFormData,
 	CreateNewGuest,
 	Role,
 	VerificationStatus
 } from "@/lib/types/types"
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+	process.env.NEXT_PUBLIC_SUPABASE_URL!,
+	process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 interface GetGuestsParams {
 	page?: number;
 	search?: string;
 	status?: string;
+}
+
+function extractFilePath(url: string): string {
+	const parts = url.split("/guest-documents/");
+	if (parts.length < 2) {
+		throw new Error(`Could not extract file path from URL: ${url}`);
+	}
+
+	const filename = parts[1].split("?")[0];
+	return `guest-documents/${filename}`;
 }
 
 export async function getGuestStats() {
@@ -370,19 +386,89 @@ export async function softDeleteGuest(id: number) {
 
 export async function deleteGuest(id: number) {
 	try {
-		await requirePermission("guest", "delete")
+		await requirePermission("guest", "delete");
+
+		const guest = await prisma.guest.findUnique({
+			where: {
+				id,
+			},
+			select: {
+				idType: true,
+				idFrontUrl: true,
+				idBackUrl: true,
+				passportUrl: true,
+			}
+		})
+
+		if (!guest) {
+			return {
+				success: false,
+				message: "Guest not found"
+			}
+		}
+
+		const filePaths: string[] = []
+
+		if (guest.idType === "national_id") {
+			if (guest.idFrontUrl) filePaths.push(guest.idFrontUrl);
+			if (guest.idBackUrl) filePaths.push(guest.idBackUrl);
+		} else if (guest.idType === "passport") {
+			if (guest.passportUrl) filePaths.push(guest.passportUrl);
+		}
+
+		// Delete images from the bucket.
+		const result = await deleteGuestImages(filePaths);
+
+		if (!result.success) {
+			return result
+		}
 
 		const deletedGuest = await prisma.guest.delete({ where: { id } });
 
 		revalidateTag("booking-form-data");
 		revalidatePath("/guests");
 
-		return deletedGuest
+		return {
+			success: true,
+			message: `${deletedGuest.firstName + " " + deletedGuest.lastName} has successfully been deleted`
+		}
 
 	} catch (error) {
 		console.error("Failed to delete guest:", error);
 		throw error
 	}
+}
+
+export async function deleteGuestImages(urls: string[]) {
+
+	const filePaths = urls.map(url => extractFilePath(url))
+
+	if (filePaths.length > 0) {
+		const { error } = await supabase.storage
+			.from(BUCKET)
+			.remove(filePaths);
+
+		if (error) {
+			console.error("Failed to delete guest images from storage:", error);
+
+			return {
+				success: false,
+				message: "Failed to delete images"
+			}
+		}
+
+		return {
+			success: true,
+			message: "Images deleted successfully."
+		}
+	}
+
+
+	return {
+		success: false,
+		message: "Failed to delete images"
+	}
+
 }
 
 export async function restoreGuest(id: number) {

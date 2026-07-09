@@ -207,9 +207,14 @@ export const useDeleteGuest = () => {
 
 	return useMutation({
 		mutationFn: async (guestId: number) => {
-			await deleteGuest(guestId)
+			const result = await deleteGuest(guestId)
+			return result
 		},
-		onSuccess: async () => {
+		onSuccess: async (data) => {
+
+			if (!data.success) {
+				throw new Error(data.message)
+			}
 
 			// invalidate the necessary cached queries
 			await Promise.all([
@@ -227,11 +232,7 @@ export const useDeleteGuest = () => {
 				})
 			])
 
-			// TODO: delete guest images from supabase after deleting a guest
-
-
-
-			toast.success("Guest deleted successfully.")
+			toast.success(data.message)
 
 		},
 		onError: (error) => {

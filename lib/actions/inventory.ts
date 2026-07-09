@@ -477,6 +477,7 @@ export async function returnInventoryAssignment(
 
 		// Use transaction to ensure atomicity
 		const result = await prisma.$transaction(async (tx) => {
+
 			// 1. Get assignment details
 			const assignment = await tx.inventoryAssignment.findUnique({
 				where: { id: assignmentId },
@@ -498,7 +499,7 @@ export async function returnInventoryAssignment(
 					isActive: false,
 					returnedAt: new Date(),
 					notes: notes
-						? `${assignment.notes || ""}\n\nReturn: ${notes}`.trim()
+						? `${assignment.notes || ""}\nReturn: ${notes}`.trim()
 						: assignment.notes,
 				},
 				include: {
@@ -535,9 +536,16 @@ export async function returnInventoryAssignment(
 		}, { timeout: 30000, maxWait: 5000, isolationLevel: "ReadCommitted" });
 
 		revalidatePath("/inventory");
-		revalidatePath("/assignments");
 		revalidatePath("/dashboard");
-		return result;
+
+		if (result){
+			return {
+				success:true,
+				message: `${result.inventoryItem.itemName} returned su`
+			}
+		}
+
+		
 	} catch (error) {
 		console.error("Error returning inventory assignment:", error);
 		throw new Error(

@@ -28,6 +28,7 @@ import { ClientMediaService } from "@/lib/services/clientMediaService";
 import { ImageUploadSlot } from "@/components/ImageUploadSlot";
 import { cn } from "@/lib/utils";
 import { Loader } from "lucide-react";
+import { toast } from "sonner";
 import { GuestEditSchema, type GuestEditFormData } from "@/lib/schemas/guests";
 import type { Guest, GuestUpdateFormData, ImageSlot } from "@/lib/types/types";
 
@@ -82,7 +83,7 @@ export function GuestEditDialog({
   const backInputRef = useRef<HTMLInputElement>(null);
   const passportInputRef = useRef<HTMLInputElement>(null);
 
-  const { mutate, isPending } = useUpdateGuest({ setOpen });
+  const { mutate: updateGuestDetails, isPending } = useUpdateGuest({ setOpen });
 
   const {
     register,
@@ -164,7 +165,6 @@ export function GuestEditDialog({
   // -------------------- Submit --------------------
   const onSubmit = async (values: GuestEditFormData) => {
     const uploadedUrls: string[] = [];
-    const oldUrlsToDelete: string[] = [];
 
     try {
       setIsUploading(true);
@@ -179,9 +179,9 @@ export function GuestEditDialog({
           const newUrl = await ClientMediaService.uploadGuestIdImage(
             frontImage.file,
             "front",
+            guest.idFrontUrl || undefined,
           );
           uploadedUrls.push(newUrl);
-          if (guest.idFrontUrl) oldUrlsToDelete.push(guest.idFrontUrl);
           idFrontUrl = newUrl;
         }
 
@@ -189,9 +189,9 @@ export function GuestEditDialog({
           const newUrl = await ClientMediaService.uploadGuestIdImage(
             backImage.file,
             "back",
+            guest.idBackUrl || undefined,
           );
           uploadedUrls.push(newUrl);
-          if (guest.idBackUrl) oldUrlsToDelete.push(guest.idBackUrl);
           idBackUrl = newUrl;
         }
       } else {
@@ -199,9 +199,9 @@ export function GuestEditDialog({
           const newUrl = await ClientMediaService.uploadGuestIdImage(
             passportImage.file,
             "passport",
+            guest.passportUrl || undefined,
           );
           uploadedUrls.push(newUrl);
-          if (guest.passportUrl) oldUrlsToDelete.push(guest.passportUrl);
           passportUrl = newUrl;
         }
       }
@@ -221,28 +221,11 @@ export function GuestEditDialog({
         }),
       };
 
-      mutate(
-        { guestId: guest.id, values: updatePayload },
-        {
-          onSuccess: () => {
-            for (const url of oldUrlsToDelete) {
-              ClientMediaService.deleteGuestIdImage(url).catch((err) => {
-                console.error("Failed to delete old image:", err);
-              });
-            }
-          },
-        },
-      );
-    } catch {
+      updateGuestDetails({ guestId: guest.id, values: updatePayload });
+    } catch (error) {
       setIsUploading(false);
-
-      for (const url of uploadedUrls) {
-        try {
-          await ClientMediaService.deleteGuestIdImage(url);
-        } catch (cleanupError) {
-          console.error("Failed to cleanup uploaded image:", cleanupError);
-        }
-      }
+      console.error("Error updating guest: ", error);
+      toast.error("Failed to update guest details");
     }
   };
 
@@ -337,7 +320,7 @@ export function GuestEditDialog({
               </p>
 
               {idType === "national_id" ? (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-2 gap-4">
                   <ImageUploadSlot
                     label="Front"
                     image={frontImage}
