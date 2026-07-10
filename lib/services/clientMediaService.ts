@@ -138,6 +138,7 @@ export class ClientMediaService {
         entityType: "property" | "unit"
     ): Promise<UploadResult[]> {
         const results: UploadResult[] = [];
+        const folder = entityType === "property" ? "property_images" : "unit_images"
 
         for (const file of files) {
 
@@ -154,7 +155,7 @@ export class ClientMediaService {
             const filename = this.generateUniqueFilename(file.name, entityType);
 
             // Step 4: Upload to Supabase
-            const url = await this.uploadToSupabase(compressedFile, filename);
+            const url = await this.uploadToSupabase(compressedFile, filename, folder);
 
             // Step 5: Push image metadata to results array
             results.push({
@@ -187,8 +188,6 @@ export class ClientMediaService {
 
         if (existingUrl) {
             const parts = existingUrl.split("/guest-documents/");
-            console.log("Existing URL: ", existingUrl)
-            console.log("Existing URL parts: ", parts)
 
             if (parts.length >= 2) {
                 filename = parts[1].split("?")[0];
@@ -210,19 +209,82 @@ export class ClientMediaService {
         );
 
         return upsert ? `${url}?v=${Date.now()}` : url;
-
-
     }
 
-    /* Delete multiple files from Supabase Storage (for cleanup on error or deletion) */
-    static async deleteFromSupabase(filenames: string[]): Promise<void> {
-        if (filenames.length === 0) return;
+    // Updating property images
+    static async uploadPropertyImage(
+        file: File,
+        existingUrl?: string,
+    ): Promise<UploadResult> {
+        const processedFile = file
 
-        const { error } = await supabase.storage.from(BUCKET).remove(filenames);
+        let filename: string;
+        let upsert = false;
 
-        if (error) {
-            console.error("Failed to delete files from Supabase:", error);
+        if (existingUrl) {
+            const parts = existingUrl.split("/property_images/");
+            if (parts.length >= 2) {
+                filename = parts[1].split("?")[0];
+                upsert = true;
+            } else {
+                filename = this.generateUniqueFilename(file.name, "property");
+            }
+        } else {
+            filename = this.generateUniqueFilename(file.name, "property");
         }
+
+        const url = await this.uploadToSupabase(
+            processedFile,
+            filename,
+            "property_images",
+            upsert,
+        );
+
+        return {
+            url: upsert ? `${url}?v=${Date.now()}` : url,
+            filename,
+            originalName: file.name,
+            fileSize: processedFile.size,
+            mimeType: processedFile.type,
+        };
+    }
+
+    // Update unit images
+    static async uploadUnitImage(
+        file: File,
+        existingUrl?: string,
+    ): Promise<UploadResult> {
+        const processedFile = await this.compressImage(file);
+
+        let filename: string;
+        let upsert = false;
+
+        if (existingUrl) {
+            const parts = existingUrl.split("/unit_images/");
+            if (parts.length >= 2) {
+                filename = parts[1].split("?")[0];
+                upsert = true;
+            } else {
+                filename = this.generateUniqueFilename(file.name, "unit");
+            }
+        } else {
+            filename = this.generateUniqueFilename(file.name, "unit");
+        }
+
+        const url = await this.uploadToSupabase(
+            processedFile,
+            filename,
+            "unit_images",
+            upsert,
+        );
+
+        return {
+            url: upsert ? `${url}?v=${Date.now()}` : url,
+            filename,
+            originalName: file.name,
+            fileSize: processedFile.size,
+            mimeType: processedFile.type,
+        };
     }
 
 }

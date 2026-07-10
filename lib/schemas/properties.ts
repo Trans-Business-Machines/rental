@@ -1,7 +1,7 @@
 import z from "zod";
 
 //  Define validation constants
-const MAX_FILE_SIZE = 5 * 1024 * 1024
+const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ACCEPTED_IMAGE_TYPES = [
     "image/jpeg",
     "image/jpg",
@@ -12,7 +12,7 @@ const ACCEPTED_IMAGE_TYPES = [
 
 export const FileSchema = z
     .instanceof(File)
-    .refine(file => file.size <= MAX_FILE_SIZE, "Max file size is 5MB.")
+    .refine(file => file.size <= MAX_FILE_SIZE, "Max file size is 10MB.")
     .refine(
         (file) => ACCEPTED_IMAGE_TYPES.includes(file.type),
         "Only .jpg, .jpeg, .png, .webp and .avif formats are supported."
@@ -22,24 +22,24 @@ export const FileSchema = z
 export const NewPropertySchema = z.object({
     name: z.string().min(1, "Property name is required"),
     address: z.string().min(5, "At least 5 characters are required"),
-    type: z.string().min(1, "property type is required."),
+    type: z.string().min(1, "Property type is required."),
     maxBedrooms: z
         .number({
-            invalid_type_error: "max bedrooms must be number"
+            invalid_type_error: "Max bedrooms must be number"
         })
-        .positive("max bedrooms must a positve integer.")
-        .min(1, "Minimum is 1"),
+        .min(1, "Minimum number of bedrooms is 1"),
     maxBathrooms: z.number({
-        invalid_type_error: "max bathrooms must be number"
-    }).positive("max bedrooms must a positve integer.").min(0),
+        invalid_type_error: "Max bathrooms must be number"
+    }).min(1, "Minimum number of bathroms is 1"),
     description: z
         .string()
-        .min(1, "description is required.")
+        .min(1, "Description is required.")
         .max(1000, "At most 1000 characters allowed.")
 
 })
 
 export type NewPropertyFormData = z.infer<typeof NewPropertySchema>;
+
 export const EditPropertySchema = NewPropertySchema;
 export type EditPropertyFormData = z.infer<typeof EditPropertySchema>;
 
@@ -65,6 +65,7 @@ export const NewUnitSchema = z.object({
 })
 
 export type NewUnitFormData = z.infer<typeof NewUnitSchema>;
+
 export const EditUnitSchema = NewUnitSchema;
 export type EditUnitFormData = z.infer<typeof EditUnitSchema>;
 

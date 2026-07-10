@@ -17,7 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X, Loader } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { unitKeys } from "@/hooks/useUnitDetails";
 import Image from "next/image";
@@ -31,6 +31,7 @@ import {
   EditUnitSchema,
 } from "@/lib/schemas/properties";
 import { usePermissions } from "@/hooks/usePermissions";
+import { deleteUnitImages } from "@/lib/actions/units";
 import type { Unit } from "@/lib/types/types";
 
 interface ExistingImage {
@@ -170,10 +171,10 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
       console.error("Error updating unit: ", error);
 
       if (uploadedImages.length > 0) {
-        console.log("Cleaning up uploaded images...");
-        await ClientMediaService.deleteFromSupabase(
-          uploadedImages.map((img) => img.filename),
-        );
+        const urlsToCleanup = uploadedImages.map((img) => img.url);
+        await deleteUnitImages(urlsToCleanup).catch((err) => {
+          console.error("Failed to cleanup uploaded images:", err);
+        });
       }
 
       const errMsg =
@@ -231,7 +232,7 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
     }
 
     if (validFiles.length > 0) {
-      setNewImages((prev) => [...prev, ...validFiles]);
+      setNewImages((prev) => [...validFiles, ...prev]);
       setImageError(null);
     }
   };
@@ -277,10 +278,9 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
     const totalImages = getTotalImageCount();
 
     if (!canUpdateUnit) {
-      toast.error("Unauthorized, Insufficent permissions!", {
+      toast.error("Unauthorized, Insufficient permissions!", {
         duration: 5000,
       });
-
       return;
     }
 
@@ -298,32 +298,38 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
     let uploadedImages: UploadResult[] = [];
 
     try {
-      // Evaluate images marked for deletion
-      const imagesToDeleteFromStorage = existingImages
-        .filter((img) => img.markedForDelete)
-        .map((img) => img.filename);
+      // 1. Delete marked images via server action
+      const markedForDeletion = existingImages.filter(
+        (img) => img.markedForDelete,
+      );
 
-      // Delete the images from supabase
-      if (imagesToDeleteFromStorage.length > 0) {
+      if (markedForDeletion.length > 0) {
         toast.info("Removing deleted images...", { duration: 3000 });
-        await ClientMediaService.deleteFromSupabase(imagesToDeleteFromStorage);
+
+        const urlsToDelete = markedForDeletion.map((img) => img.filePath);
+        const deleteResult = await deleteUnitImages(urlsToDelete);
+
+        if (!deleteResult.success) {
+          console.error("Storage delete failed:", deleteResult.message);
+          return toast.error("Failed to delete some images from storage.");
+        }
       }
 
-      // If there are new images add them to supabase
+      // 2. Upload new images
       if (newImages.length > 0) {
         toast.info("Uploading new images...", { duration: 5000 });
-        uploadedImages = await ClientMediaService.processAndUploadImages(
-          newImages,
-          "unit",
+
+        const uploadPromises = newImages.map((file) =>
+          ClientMediaService.uploadUnitImage(file),
         );
+        uploadedImages = await Promise.all(uploadPromises);
       }
 
+       setIsUploading(false);
       toast.info("Updating unit...", { duration: 5000 });
 
-      // Evaluate the ID of the deleted images
-      const imagesToDelete = existingImages
-        .filter((img) => img.markedForDelete)
-        .map((img) => img.id);
+      // 3. Media record IDs to delete from DB
+      const imagesToDelete = markedForDeletion.map((img) => img.id);
 
       await updateMutation.mutateAsync({
         data,
@@ -617,21 +623,29 @@ function EditUnitForm({ unitId, propertyId, initialUnit }: EditUnitFormProps) {
         {/* Action buttons */}
         <div className="my-4 pt-4 flex gap-3 justify-center">
           <Button
+            type="submit"
+            disabled={!canSubmit}
+            className="flex-2 cursor-pointer font-semibold"
+          >
+            {isLoading || updateMutation.isPending ? (
+              <span className="flex item-center gap-2">
+                <Loader className="animate-spin" />
+                <span>
+                  {isUploading ? "Uploading images" : "Updating unit"}
+                </span>
+              </span>
+            ) : (
+              "Update Unit"
+            )}
+          </Button>
+          <Button
             type="button"
+            className="flex-1"
             variant="outline"
             onClick={() => router.back()}
             disabled={isLoading || updateMutation.isPending}
           >
             Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={!canSubmit}
-            className="w-48 cursor-pointer font-semibold"
-          >
-            {isLoading || updateMutation.isPending
-              ? "Updating Unit..."
-              : "Update Unit"}
           </Button>
         </div>
       </div>

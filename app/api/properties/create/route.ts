@@ -18,13 +18,11 @@ const propertySchema = z.object({
     name: z.string().min(1),
     address: z.string().min(1),
     type: z.string().min(1),
-    rent: z.coerce.number().positive(),
     maxBedrooms: z.coerce.number().positive(),
     maxBathrooms: z.coerce.number().positive(),
     description: z.string().min(1).max(1000),
     images: z.array(uploadedImageSchema).min(1, "At least one image is required"),
 });
-
 
 export async function POST(request: NextRequest) {
     try {
@@ -46,30 +44,27 @@ export async function POST(request: NextRequest) {
             const property = await tx.property.create({
                 data: {
                     ...propertyData,
-                    // Use first image URL as the main property image
-                    image: images[0]?.url || "",
+                    image: images[0]?.url || "",  // Use first image URL as the main property image
                 },
             });
 
             // 2. Create media records for all uploaded images
-            const mediaRecords = [];
             for (const img of images) {
-                const media = await tx.media.create({
+                await tx.media.create({
                     data: {
                         filename: img.filename,
                         originalName: img.originalName,
                         fileSize: img.fileSize,
                         mimeType: img.mimeType,
                         propertyId: property.id,
-                        filePath: img.url, // use supabase public URL
+                        filePath: img.url,
                     },
                 });
-                mediaRecords.push(media);
             }
 
             return {
                 property,
-                media: mediaRecords,
+
             };
 
 
@@ -82,7 +77,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             message: "Property created successfully.",
             property: result.property,
-            media: result.media,
         });
 
 

@@ -38,24 +38,6 @@ export function usePermissions() {
     // Inventory permissions
     const canWorkWithInventory = isUser || isAdmin || isSuperAdmin
 
-    // Check specific permission of the current session user
-    const checkPermission = async (resource: string, action: string): Promise<boolean> => {
-
-        if (!session?.user?.id) return false
-
-        try {
-            const { data } = await authClient.admin.hasPermission({
-                permission: {
-                    [resource]: action
-                }
-            })
-
-            return data?.success || false
-        } catch {
-            return false
-        }
-    }
-
     return {
         role: userRole,
         isSessionPending: isPending,
@@ -79,7 +61,6 @@ export function usePermissions() {
         canUpdateUnit,
         canDeleteUnit,
         canWorkWithInventory,
-        checkPermission
     }
 
 }

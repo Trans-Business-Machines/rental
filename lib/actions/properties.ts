@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { auth } from "../auth";
+import { BUCKET } from "@/lib/utils";
+import { extractFilePath, supabase } from "@/lib/services/MediaService"
 
 interface GetPropertiesParams {
 	page?: number;
@@ -94,8 +96,6 @@ export const getPropertyById = async (propertyId: number) => {
 	}
 }
 
-
-
 export async function getPropertyNames() {
 	try {
 		const propertyNames = await prisma.property.findMany({
@@ -126,45 +126,6 @@ export async function getPropertyNames() {
 	} catch (error) {
 		console.error("An Error occured while getting property names: ", error)
 		return [];
-	}
-}
-
-export async function deleteProperty(id: number) {
-	try {
-		await prisma.property.delete({
-			where: { id },
-		});
-		revalidatePath("/properties");
-	} catch (error) {
-		console.error("Error deleting property:", error);
-		throw new Error("Failed to delete property");
-	}
-}
-
-export async function softDeleteProperty(id: number) {
-	try {
-		// Get the current session using cookies
-		const session = await auth.api.getSession({
-			headers: await headers(),
-		});
-
-		if (!session?.user || session.user.role !== "admin") {
-			throw new Error("Unauthorized: Only admins can delete properties");
-		}
-
-		// Soft delete the property
-		await prisma.property.update({
-			where: { id },
-			data: {
-				deletedAt: new Date(),
-			},
-		});
-
-		revalidatePath("/properties");
-		return { success: true };
-	} catch (error) {
-		console.error("Error soft deleting property:", error);
-		throw new Error("Failed to delete property");
 	}
 }
 
@@ -245,3 +206,75 @@ export async function getUpcomingCheckins(limit: number = 5) {
 		return [];
 	}
 }
+
+export async function deleteProperty(id: number) {
+	try {
+		await prisma.property.delete({
+			where: { id },
+		});
+		revalidatePath("/properties");
+	} catch (error) {
+		console.error("Error deleting property:", error);
+		throw new Error("Failed to delete property");
+	}
+}
+
+export async function deletePropertyImages(urls: string[]) {
+
+	const filePaths = urls.map(url => extractFilePath(url, "property"))
+
+	if (filePaths.length > 0) {
+		const { error } = await supabase.storage
+			.from(BUCKET)
+			.remove(filePaths);
+
+		if (error) {
+			console.error("Failed to delete guest images from storage:", error);
+
+			return {
+				success: false,
+				message: "Failed to delete images"
+			}
+		}
+
+		return {
+			success: true,
+			message: "Images deleted successfully."
+		}
+	}
+
+	return {
+		success: false,
+		message: "Failed to delete images"
+	}
+
+}
+
+export async function softDeleteProperty(id: number) {
+	try {
+		// Get the current session using cookies
+		const session = await auth.api.getSession({
+			headers: await headers(),
+		});
+
+		if (!session?.user || session.user.role !== "admin") {
+			throw new Error("Unauthorized: Only admins can delete properties");
+		}
+
+		// Soft delete the property
+		await prisma.property.update({
+			where: { id },
+			data: {
+				deletedAt: new Date(),
+			},
+		});
+
+		revalidatePath("/properties");
+		return { success: true };
+	} catch (error) {
+		console.error("Error soft deleting property:", error);
+		throw new Error("Failed to delete property");
+	}
+}
+
+

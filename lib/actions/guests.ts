@@ -10,12 +10,8 @@ import type {
 	Role,
 	VerificationStatus
 } from "@/lib/types/types"
-import { createClient } from "@supabase/supabase-js";
+import { supabase, extractFilePath } from "@/lib/services/MediaService"
 
-const supabase = createClient(
-	process.env.NEXT_PUBLIC_SUPABASE_URL!,
-	process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 interface GetGuestsParams {
 	page?: number;
@@ -23,7 +19,7 @@ interface GetGuestsParams {
 	status?: string;
 }
 
-function extractFilePath(url: string): string {
+/*function extractFilePath(url: string): string {
 	const parts = url.split("/guest-documents/");
 	if (parts.length < 2) {
 		throw new Error(`Could not extract file path from URL: ${url}`);
@@ -31,7 +27,7 @@ function extractFilePath(url: string): string {
 
 	const filename = parts[1].split("?")[0];
 	return `guest-documents/${filename}`;
-}
+}*/
 
 export async function getGuestStats() {
 	try {
@@ -441,7 +437,7 @@ export async function deleteGuest(id: number) {
 
 export async function deleteGuestImages(urls: string[]) {
 
-	const filePaths = urls.map(url => extractFilePath(url))
+	const filePaths = urls.map(url => extractFilePath(url, "guest"))
 
 	if (filePaths.length > 0) {
 		const { error } = await supabase.storage
