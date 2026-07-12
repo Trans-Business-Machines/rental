@@ -49,7 +49,7 @@ function GuestCards({
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <CardTitle className="text-lg">
+                  <CardTitle className="text-lg capitalize">
                     {guest.firstName} {guest.lastName}
                   </CardTitle>
 

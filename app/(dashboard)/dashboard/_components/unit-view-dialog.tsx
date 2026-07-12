@@ -63,7 +63,7 @@ export function UnitViewDialog({ unit, children }: UnitViewDialogProps) {
               <Label className="text-sm font-medium text-muted-foreground">
                 Current Guest
               </Label>
-              <p className="text-sm">{unit.guest}</p>
+              <p className="text-sm capitalize">{unit.guest}</p>
             </div>
           )}
 

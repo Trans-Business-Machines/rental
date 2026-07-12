@@ -134,7 +134,7 @@ function BookingsTable({
                         variant="ghost"
                         className="size-8 cursor-pointer p-0"
                       >
-                        <MoreHorizontal className="size-4" />
+                        <MoreHorizontal className="size-4 rotate-90" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>

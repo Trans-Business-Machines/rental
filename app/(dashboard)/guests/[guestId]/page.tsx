@@ -99,7 +99,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h2 className="text-2xl font-bold text-foreground">
+                <h2 className="text-2xl font-bold text-foreground capitalize">
                   {guest.firstName} {guest.lastName}
                 </h2>
                 {guest.verificationStatus && (

@@ -71,7 +71,7 @@ function GuestsTable({
           <TableBody>
             {guests.map((guest) => (
               <TableRow key={guest.id} className="font-medium">
-                <TableCell>
+                <TableCell className="capitalize">
                   {guest.firstName} {guest.lastName}
                 </TableCell>
                 <TableCell className="pl-4">
