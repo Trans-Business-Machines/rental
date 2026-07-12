@@ -2,7 +2,9 @@
 
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { cache } from "react"
+import { cache } from "react";
+import { BUCKET } from "@/lib/utils";
+import { extractFilePath, supabase } from "@/lib/services/MediaService"
 import type { UnitDetailsResponse, GroupedAssigments } from "@/lib/types/types"
 
 export const getUnitDetails = cache(async (unitId: string, propertyId: string) => {
@@ -174,4 +176,23 @@ export const getAggregatedAssignmentsForUnit = async (unitId: string, propertyId
 		throw error;
 	}
 
+}
+
+export async function deleteUnitImages(urls: string[]) {
+	const filePaths = urls.map((url) => extractFilePath(url, "unit"));
+
+	if (filePaths.length > 0) {
+		const { error } = await supabase.storage
+			.from(BUCKET)
+			.remove(filePaths);
+
+		if (error) {
+			console.error("Failed to delete unit images from storage:", error);
+			return { success: false, message: "Failed to delete images" };
+		}
+
+		return { success: true, message: "Images deleted successfully." };
+	}
+
+	return { success: false, message: "No images to delete" };
 }

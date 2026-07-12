@@ -61,7 +61,7 @@ import {
   type BookingRequestFormData,
 } from "@/lib/schemas/booking-requests";
 import { ClientMediaService } from "@/lib/services/clientMediaService";
-import { createGuest } from "@/lib/actions/guests";
+import { createGuest, deleteGuestImages } from "@/lib/actions/guests";
 import { useCreateBookingRequest } from "@/hooks/useBookingRequests";
 import { getBookingRequestFormData } from "@/lib/actions/booking-requests";
 import { NationalityCombobox } from "@/components/NationalityCombobox";
@@ -679,13 +679,9 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
     } catch (error) {
       console.error("Error submitting booking request:", error);
 
-      for (const url of uploadedUrls) {
-        try {
-          await ClientMediaService.deleteGuestIdImage(url);
-        } catch (cleanupError) {
-          console.error("Failed to cleanup uploaded image:", cleanupError);
-        }
-      }
+      const result = await deleteGuestImages(uploadedUrls)
+      console.log("Image delete message: ", result.message)
+
     } finally {
       setIsSubmitting(false);
     }

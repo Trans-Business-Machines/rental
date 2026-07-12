@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { X, Loader } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import {
@@ -32,6 +32,7 @@ import {
 } from "@/lib/schemas/properties";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Property } from "@/lib/types/types";
+import { deletePropertyImages } from "@/lib/actions/properties";
 
 interface ExistingImage {
   id: string;
@@ -92,7 +93,6 @@ export function EditPropertyForm({
     getActiveExistingImages().length + newImages.length;
 
   const getAllExistingNames = () => {
-    // Get names from active existing images
     const existingNames = getActiveExistingImages().map((img) =>
       img.originalName.toLowerCase(),
     );
@@ -153,11 +153,12 @@ export function EditPropertyForm({
     onError: async (error, { uploadedImages }) => {
       console.error("Error updating property: ", error);
 
+      // Clean up newly uploaded images via server action
       if (uploadedImages.length > 0) {
-        console.log("Cleaning up uploaded images...");
-        await ClientMediaService.deleteFromSupabase(
-          uploadedImages.map((img) => img.filename),
-        );
+        const urlsToCleanup = uploadedImages.map((img) => img.url);
+        await deletePropertyImages(urlsToCleanup).catch((err) => {
+          console.error("Failed to cleanup uploaded images:", err);
+        });
       }
 
       const errMsg =
@@ -215,8 +216,8 @@ export function EditPropertyForm({
     }
 
     if (validFiles.length > 0) {
-      setNewImages((prev) => [...prev, ...validFiles]);
-      setImageError(null); // Clear error on successful add
+      setNewImages((prev) => [...validFiles, ...prev]);
+      setImageError(null);
     }
   };
 
@@ -265,14 +266,12 @@ export function EditPropertyForm({
     const totalImages = getTotalImageCount();
 
     if (!canUpdateProperty) {
-      toast.error("Unauthorized, Insufficent permissions!", {
+      toast.error("Unauthorized, Insufficient permissions!", {
         duration: 5000,
       });
-
       return;
     }
 
-    // Final validation before submit
     if (totalImages === 0) {
       setImageError("At least one image is required.");
       return;
@@ -287,28 +286,38 @@ export function EditPropertyForm({
     let uploadedImages: UploadResult[] = [];
 
     try {
-      const imagesToDeleteFromStorage = existingImages
-        .filter((img) => img.markedForDelete)
-        .map((img) => img.filename);
+      // 1. Delete marked images via server action
+      const markedForDeletion = existingImages.filter(
+        (img) => img.markedForDelete,
+      );
 
-      if (imagesToDeleteFromStorage.length > 0) {
+      if (markedForDeletion.length > 0) {
         toast.info("Removing deleted images...", { duration: 3000 });
-        await ClientMediaService.deleteFromSupabase(imagesToDeleteFromStorage);
+
+        const urlsToDelete = markedForDeletion.map((img) => img.filePath);
+        const deleteResult = await deletePropertyImages(urlsToDelete);
+
+        if (!deleteResult.success) {
+          console.error("Storage delete failed:", deleteResult.message);
+          return toast.error("Failed to delete some images from storage.");
+        }
       }
 
+      // 2. Upload new images
       if (newImages.length > 0) {
         toast.info("Uploading new images...", { duration: 5000 });
-        uploadedImages = await ClientMediaService.processAndUploadImages(
-          newImages,
-          "property",
+
+        const uploadPromises = newImages.map((file) =>
+          ClientMediaService.uploadPropertyImage(file),
         );
+        uploadedImages = await Promise.all(uploadPromises);
       }
 
+      setIsUploading(false);
       toast.info("Updating property...", { duration: 5000 });
 
-      const imagesToDelete = existingImages
-        .filter((img) => img.markedForDelete)
-        .map((img) => img.id);
+      // 3. Media record IDs to delete from DB
+      const imagesToDelete = markedForDeletion.map((img) => img.id);
 
       await updateMutation.mutateAsync({
         data,
@@ -621,21 +630,30 @@ export function EditPropertyForm({
         {/* Action buttons */}
         <div className="my-4 pt-4 flex gap-3 justify-center">
           <Button
+            type="submit"
+            disabled={!canSubmit}
+            className="flex-2 cursor-pointer font-semibold"
+          >
+            {isLoading || updateMutation.isPending ? (
+              <span className="flex item-center gap-2">
+                <Loader className="animate-spin" />
+                <span>
+                  {isUploading ? "Uploading images" : "Updating property"}
+                </span>
+              </span>
+            ) : (
+              "Update Property"
+            )}
+          </Button>
+
+          <Button
             type="button"
+            className="flex-1 cursor-pointer"
             variant="outline"
             onClick={() => router.back()}
             disabled={isLoading || updateMutation.isPending}
           >
             Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={!canSubmit}
-            className="w-48 cursor-pointer font-semibold"
-          >
-            {isLoading || updateMutation.isPending
-              ? "Updating Property..."
-              : "Update Property"}
           </Button>
         </div>
       </div>

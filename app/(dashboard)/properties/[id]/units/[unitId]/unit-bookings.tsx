@@ -131,7 +131,7 @@ export default function UnitBookings({ bookings, context }: UnitBookings) {
               <TableBody>
                 {bookings.map((booking) => (
                   <TableRow key={booking.id}>
-                    <TableCell>
+                    <TableCell className="capitalize">
                       {booking.guest.firstName} {booking.guest.lastName}
                     </TableCell>
                     <TableCell>{booking.guest.email}</TableCell>

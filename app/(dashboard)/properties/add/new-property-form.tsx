@@ -31,6 +31,7 @@ import {
 } from "@/lib/schemas/properties";
 import Image from "next/image";
 import { usePermissions } from "@/hooks/usePermissions";
+import { deletePropertyImages } from "@/lib/actions/properties";
 
 function NewPropertyForm() {
   const router = useRouter();
@@ -90,7 +91,8 @@ function NewPropertyForm() {
         throw new Error(errorData.error || "Failed to create property!");
       }
 
-      return response.json();
+      const result = await response.json();
+      return result;
     },
     onSuccess: (data) => {
       toast.success(`${data.property.name} created successfully.`);
@@ -100,8 +102,8 @@ function NewPropertyForm() {
       console.error("Error creating property: ", error);
 
       if (uploadedImages.length > 0) {
-        const fileNames = uploadedImages.map((img) => img.filename);
-        await ClientMediaService.deleteFromSupabase(fileNames);
+        const filePaths = uploadedImages.map((img) => img.url);
+        await deletePropertyImages(filePaths)
       }
 
       let errMsg = "Failed to create property.";
@@ -224,10 +226,10 @@ function NewPropertyForm() {
       return;
     }
 
-    setIsUploading(true);
     let uploadedImages: UploadResult[] = [];
 
     try {
+      setIsUploading(true);
       toast.info("Uploading images...", { duration: 5000 });
 
       uploadedImages = await ClientMediaService.processAndUploadImages(
@@ -235,6 +237,7 @@ function NewPropertyForm() {
         "property",
       );
 
+      setIsUploading(false);
       toast.info("Creating property...", { duration: 5000 });
 
       await createMutation.mutateAsync({ data, uploadedImages });
@@ -332,7 +335,7 @@ function NewPropertyForm() {
             <CardTitle className="text-lg">Property Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="max-bedrooms" className="mb-1.5 block">
                   Max Bedrooms
@@ -503,7 +506,9 @@ function NewPropertyForm() {
             {createMutation.isPending || isLoading ? (
               <span className="flex item-center gap-2">
                 <Loader className="animate-spin" />
-                <span>Creating property</span>
+                <span>
+                  {isUploading ? "Uploading images" : "Creating property"}
+                </span>
               </span>
             ) : (
               "Create Property"

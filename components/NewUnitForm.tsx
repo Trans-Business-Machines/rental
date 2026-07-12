@@ -29,6 +29,7 @@ import {
   NewUnitSchema,
 } from "@/lib/schemas/properties";
 import { usePermissions } from "@/hooks/usePermissions";
+import { deleteUnitImages } from "@/lib/actions/units";
 
 function NewUnitForm({ propertyId }: { propertyId: number }) {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
@@ -92,19 +93,17 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
       return response.json();
     },
     onSuccess: (data) => {
-      toast.success(`${data.unit.name} created successfully.`);
       reset();
       setSelectedImages([]);
       setImageError(null);
+      toast.success(`${data.unit.name} created successfully.`);
     },
     onError: async (error, { uploadedImages }) => {
       console.error("Error creating unit: ", error);
+      const filePaths = uploadedImages.map((img) => img.url);
 
       if (uploadedImages.length > 0) {
-        console.log("Cleaning up uploaded images...");
-        await ClientMediaService.deleteFromSupabase(
-          uploadedImages.map((img) => img.filename),
-        );
+        await deleteUnitImages(filePaths);
       }
 
       let errMsg = "Failed to create unit";
@@ -168,7 +167,7 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
     }
 
     if (validFiles.length > 0) {
-      setSelectedImages((prev) => [...prev, ...validFiles]);
+      setSelectedImages((prev) => [...validFiles, ...prev]);
       setImageError(null);
     }
   };
@@ -238,6 +237,7 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
         "unit",
       );
 
+      setIsUploading(false);
       toast.info("Creating unit...", { duration: 5000 });
 
       await createMutation.mutateAsync({ data, uploadedImages });
@@ -487,7 +487,9 @@ function NewUnitForm({ propertyId }: { propertyId: number }) {
             {createMutation.isPending || isLoading ? (
               <span className="flex item-center gap-2">
                 <Loader className="animate-spin" />
-                <span>Creating unit</span>
+                <span>
+                  {isUploading ? "Uploading images" : "Creating unit"}
+                </span>
               </span>
             ) : (
               "Create Unit"

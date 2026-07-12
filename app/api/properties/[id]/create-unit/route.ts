@@ -17,7 +17,6 @@ const uploadedImageSchema = z.object({
 const unitSchema = z.object({
     name: z.string().min(1),
     type: z.string().min(1),
-    rent: z.coerce.number().positive(),
     bedrooms: z.coerce.number().positive(),
     bathrooms: z.coerce.number().min(0),
     maxGuests: z.coerce.number().positive(),
