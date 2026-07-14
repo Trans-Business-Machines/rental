@@ -202,11 +202,8 @@ export function GuestForm({
       setBackImage(emptySlot);
       setPassportImage(emptySlot);
       closeModal();
-    } catch (error) {
+    } catch {
       setIsUploading(false);
-
-      console.error("Error creating guest: ", error);
-
       const result = await deleteGuestImages(uploadedUrls);
       console.log("Image delete message: ", result.message);
     }

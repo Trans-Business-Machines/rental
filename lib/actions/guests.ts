@@ -299,7 +299,10 @@ export async function createGuest(data: CreateNewGuest) {
 		})
 
 		if (existingGuest) {
-			throw new Error("A guest with this email already exists.")
+			return {
+				success: false,
+				message: "A guest with this email already exists."
+			}
 		}
 
 		const guest = await prisma.guest.create({
@@ -319,12 +322,12 @@ export async function createGuest(data: CreateNewGuest) {
 
 	} catch (error) {
 		console.error("Error creating guest: ", error)
+		const message =
+			error instanceof Error
+				? error.message
+				: "Failed to create guest.";
 
-		if (error instanceof Error) {
-			throw error
-		} else {
-			throw new Error("Failed to create guest.")
-		}
+		return { success: false, message };
 	}
 }
 
@@ -489,3 +492,47 @@ export async function restoreGuest(id: number) {
 	}
 }
 
+export async function cleanupFailedBookingGuest(guestId: number) {
+	const session = await getServerSession();
+
+	if (!session?.user?.id) {
+		return { success: false, message: "Unauthorized" };
+	}
+
+	const guest = await prisma.guest.findUnique({
+		where: { id: guestId },
+		select: {
+			idType: true,
+			idFrontUrl: true,
+			idBackUrl: true,
+			passportUrl: true,
+			verificationStatus: true,
+		},
+	});
+
+	if (!guest) {
+		return { success: false, message: "Guest not found" };
+	}
+
+	// Only allow cleanup of pending guests — verified/rejected guests
+	if (guest.verificationStatus !== "pending") {
+		return { success: false, message: "Can only clean up pending guests" };
+	}
+
+	const imageUrls: string[] = [];
+
+	if (guest.idType === "national_id") {
+		if (guest.idFrontUrl) imageUrls.push(guest.idFrontUrl);
+		if (guest.idBackUrl) imageUrls.push(guest.idBackUrl);
+	} else if (guest.idType === "passport") {
+		if (guest.passportUrl) imageUrls.push(guest.passportUrl);
+	}
+
+	if (imageUrls.length > 0) {
+		await deleteGuestImages(imageUrls);
+	}
+
+	await prisma.guest.delete({ where: { id: guestId } });
+
+	return { success: true, message: "Cleanup completed" };
+}

@@ -21,6 +21,7 @@ import {
   CircleCheckBig,
   User,
   Mail,
+  Loader,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -308,7 +309,14 @@ function AcceptInvitePage() {
                     className="w-full cursor-pointer"
                     disabled={loading}
                   >
-                    {loading ? "Accepting..." : "Accept Invitation"}
+                    {loading ? (
+                      <span className="inline-flex gap-2 items-center">
+                        <Loader className="animate-spin" />
+                        <span>Creating account. . .</span>
+                      </span>
+                    ) : (
+                      "Accept Invitation"
+                    )}
                   </Button>
                 </form>
               </>
