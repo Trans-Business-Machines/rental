@@ -8,7 +8,7 @@ import {
 	restoreGuest
 } from "@/lib/actions/guests";
 import { toast } from "sonner";
-import type { Guest, CreateNewGuest, GuestUpdateFormData } from "@/lib/types/types";
+import type { Guest, GuestUpdateFormData } from "@/lib/types/types";
 import { searchGuestsForBooking } from "@/lib/actions/guests";
 
 interface UseGuestsParams {
@@ -71,13 +71,12 @@ export const useCreateGuest = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async (guestData: CreateNewGuest) => {
-			const guest = await createGuest(guestData);
-			return guest;
-		},
-		onSuccess: (newGuest) => {
-			// Show toast message
-			toast.success("Guest created successfully");
+		mutationFn: createGuest,
+		onSuccess: (data) => {
+
+			if ("message" in data) {
+				throw new Error(data.message)
+			}
 
 			// Invalidate and refetch guests list
 			queryClient.invalidateQueries({ queryKey: guestKeys.stats() });
@@ -88,17 +87,22 @@ export const useCreateGuest = () => {
 				guestKeys.list(),
 				(oldData: Guest[] | undefined) => {
 					if (oldData) {
-						return [newGuest, ...oldData];
+						return [data, ...oldData];
 					}
-					return [newGuest];
+					return [data];
 				}
 			);
+
+			// Show toast message
+			toast.success("Guest created successfully");
 		},
+		
 		onError: (error) => {
+			console.error("Error creating guest:", error)
+
 			const errorMessage = error.message
-			console.error("Hook error:", errorMessage)
 			toast.error(errorMessage, {
-				duration: 6000
+				duration: 5000
 			})
 		}
 	});

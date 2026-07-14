@@ -26,6 +26,7 @@ import {
   Users,
   MessageSquare,
   Target,
+  Info,
   UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -118,8 +119,8 @@ export function BookingRequestDetails({
 
   const isPending = bookingRequest.status === "pending";
   const isAgent = userRole === "agent";
-  const canApproveReject =
-    ["user", "admin", "superAdmin"].includes(userRole) && isPending;
+  const canApproveReject = userRole === "superAdmin" && isPending;
+  const isAdminViewOnly = userRole === "admin" && isPending;
   const canCancel = isAgent && isPending;
 
   const status = bookingRequest.status;
@@ -164,9 +165,7 @@ export function BookingRequestDetails({
             <ArrowLeft className="size-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">
-              View Booking Request Details
-            </h1>
+            <h1 className="text-2xl font-bold">View Booking Request Details</h1>
             <p className="text-muted-foreground">
               Submitted{" "}
               {format(new Date(bookingRequest.createdAt), "PPP 'at' p")}
@@ -209,22 +208,21 @@ export function BookingRequestDetails({
         )}
 
       {/* Cancellation Reason */}
-      {bookingRequest.status === "cancelled" &&
-        bookingRequest.cancelReason && (
-          <Card className="border-destructive/50 bg-destructive/5">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-destructive flex items-center gap-2">
-                <Ban className="size-5" />
-                Cancellation Reason
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-lipstick-red">
-                {bookingRequest.cancelReason}
-              </p>
-            </CardContent>
-          </Card>
-        )}
+      {bookingRequest.status === "cancelled" && bookingRequest.cancelReason && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-destructive flex items-center gap-2">
+              <Ban className="size-5" />
+              Cancellation Reason
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-lipstick-red">
+              {bookingRequest.cancelReason}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Guest Information */}
@@ -730,7 +728,8 @@ export function BookingRequestDetails({
       </Card>
 
       {/* Action Buttons */}
-      {(canApproveReject || canCancel) && (
+      {/* Action Buttons */}
+      {(canApproveReject || canCancel || isAdminViewOnly) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -739,7 +738,9 @@ export function BookingRequestDetails({
             <CardDescription>
               {isAgent
                 ? "You can cancel the request and provide a valid reason."
-                : "You can either approve or reject this booking request."}
+                : canApproveReject
+                  ? "You can either approve or reject this booking request."
+                  : "This request requires super admin review."}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">
@@ -761,6 +762,21 @@ export function BookingRequestDetails({
                   Reject Request
                 </Button>
               </>
+            )}
+            {isAdminViewOnly && (
+              <div className="w-full flex items-start gap-3 p-4 rounded-lg bg-muted border">
+                <Info className="size-5 text-muted-foreground mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">
+                    Super admin approval required
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Only super administrators can approve or reject booking
+                    requests. Please contact a super admin to review this
+                    request.
+                  </p>
+                </div>
+              </div>
             )}
             {canCancel && (
               <Button

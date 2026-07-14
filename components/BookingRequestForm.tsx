@@ -61,7 +61,11 @@ import {
   type BookingRequestFormData,
 } from "@/lib/schemas/booking-requests";
 import { ClientMediaService } from "@/lib/services/clientMediaService";
-import { createGuest, deleteGuestImages } from "@/lib/actions/guests";
+import {
+  createGuest,
+  deleteGuestImages,
+  cleanupFailedBookingGuest,
+} from "@/lib/actions/guests";
 import { useCreateBookingRequest } from "@/hooks/useBookingRequests";
 import { getBookingRequestFormData } from "@/lib/actions/booking-requests";
 import { NationalityCombobox } from "@/components/NationalityCombobox";
@@ -340,7 +344,6 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
   };
 
   // ------------------ Step field mapping ------------------
-
   const getStepFields = (step: number): (keyof BookingRequestFormData)[] => {
     if (step === 1) {
       if (guestType === "existing") {
@@ -586,6 +589,7 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
 
     setIsSubmitting(true);
     const uploadedUrls: string[] = [];
+    let createdGuestId: number | null = null;
 
     try {
       const discounted = calculateDiscountedPrice(
@@ -654,7 +658,15 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
               }),
         });
 
+        // The createGuest returned an error, no guest record was created only clean up images
+        if ("message" in newGuest) {
+          await deleteGuestImages(uploadedUrls);
+          toast.error(newGuest.message, { duration: 5000 });
+          return;
+        }
+
         guestId = newGuest.id;
+        createdGuestId = newGuest.id;
       }
 
       await createBookingRequest.mutateAsync({
@@ -679,9 +691,23 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
     } catch (error) {
       console.error("Error submitting booking request:", error);
 
-      const result = await deleteGuestImages(uploadedUrls)
-      console.log("Image delete message: ", result.message)
+      const errorMsg =
+        error instanceof Error
+          ? error.message
+          : "Failed to submit booking request";
+      toast.error(errorMsg, { duration: 5000 });
 
+      // Guest was created but booking request failed clean up both the guest record and its images
+      if (createdGuestId) {
+        await cleanupFailedBookingGuest(createdGuestId).catch((err) => {
+          console.error("Failed to cleanup guest:", err);
+        });
+      } else if (uploadedUrls.length > 0) {
+        // Image upload succeeded but guest creation threw only images need cleanup
+        await deleteGuestImages(uploadedUrls).catch((err) => {
+          console.error("Failed to cleanup images:", err);
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -1204,7 +1230,7 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
                           errors.propertyId && "border-destructive",
                         )}
                       >
-                        <SelectValue />
+                        <SelectValue placeholder="Select property" />
                       </SelectTrigger>
                       <SelectContent>
                         {formDataCache?.properties.map((property) => (
@@ -1254,7 +1280,7 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
                               errors.unitId && "border-destructive",
                             )}
                           >
-                            <SelectValue />
+                            <SelectValue placeholder="Select a unit" />
                           </SelectTrigger>
                           <SelectContent>
                             {selectedProperty?.units.map((unit) => {
@@ -1727,9 +1753,7 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
 
               {/* Purpose */}
               <div className="space-y-2">
-                <Label>
-                  Purpose <span className="text-lipstick-red">*</span>
-                </Label>
+                <Label>Purpose (Optional)</Label>
                 <Controller
                   name="purpose"
                   control={control}

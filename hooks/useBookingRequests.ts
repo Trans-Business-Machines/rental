@@ -81,8 +81,8 @@ export function useCreateBookingRequest() {
 
             ])
 
-            toast.success("Booking request submitted successfully and notification sent to admin.", {
-                duration: 6000
+            toast.success("Booking request submitted successfully and notification sent to super admin.", {
+                duration: 5000
             });
         },
         onError: (error) => {
@@ -134,7 +134,7 @@ export function useApproveBookingRequest() {
             ]);
 
             toast.success(
-                "Booking request approved. Guest verified and booking created.",
+                "Booking approved, and the agent has been notifed.",
             );
         },
         onError: (error: Error) => {

@@ -268,7 +268,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building className="size-5 text-chart-2" />
-                Property & Unit Details
+                Property & Booking Details
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -324,17 +324,19 @@ async function BookingDetails({ params }: BookingDetailsPros) {
               >
                 <div className="text-center p-3 rounded-lg bg-muted/60">
                   <Bed className="size-5 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">
+                  <p className="text-sm font-semibold text-foreground">
                     {booking.unit.bedrooms}
                   </p>
-                  <p className="text-xs text-muted-foreground">Bedrooms</p>
+                  <p className="text-xs text-accent-foreground">Bedrooms</p>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted/60">
                   <Users className="size-5 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">
+                  <p className="text-sm font-semibold text-foreground">
                     {booking.numberOfGuests}
                   </p>
-                  <p className="text-xs text-muted-foreground">Guests</p>
+                  <p className="text-xs text-accent-foreground">
+                    Guests Staying
+                  </p>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted/60">
                   <Banknote className="size-5 text-muted-foreground mx-auto mb-2" />
@@ -344,17 +346,17 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                         <p className="text-xs text-muted-foreground line-through">
                           {formatPrice(originalUnitPrice)}
                         </p>
-                        <p className="text-sm font-medium text-primary">
+                        <p className="text-sm font-semibold text-primary">
                           {formatPrice(booking.unitPrice)}
                         </p>
                       </>
                     ) : (
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="text-sm font-semibold text-foreground">
                         {formatPrice(booking.unitPrice)}
                       </p>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-accent-foreground">
                     Per {getPeriodLabelSingular(booking.priceDuration)}
                   </p>
                 </div>

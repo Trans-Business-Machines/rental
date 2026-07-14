@@ -28,7 +28,7 @@ import {
 } from "@/lib/schemas/invitations";
 import { authClient } from "@/lib/auth-client";
 import type { Role } from "@/lib/types/types";
-//import { PrismaClientKnownRequestError } from "@/prisma/generated/client/runtime/library";
+import { Loader } from "lucide-react";
 
 interface InviteUserDialogProps {
   children: React.ReactNode;
@@ -231,7 +231,14 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
                 disabled={isSubmitting}
                 className="w-9/12 bg-chart-1 hover:bg-chart-1/90 px-5 cursor-pointer"
               >
-                {isSubmitting ? "Inviting user..." : " Invite User"}
+                {isSubmitting ? (
+                  <span className="inline-flex gap-2 items-center">
+                    <Loader className="animate-spin" />
+                    <span>Inviting user. . .</span>
+                  </span>
+                ) : (
+                  " Invite User"
+                )}
               </Button>
               <Button
                 type="button"
