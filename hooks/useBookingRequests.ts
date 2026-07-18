@@ -19,6 +19,7 @@ export const bookingRequestKeys = {
         [...bookingRequestKeys.lists(), params] as const,
     details: () => [...bookingRequestKeys.all, "detail"] as const,
     detail: (id: number) => [...bookingRequestKeys.details(), id] as const,
+    pendingCount: ["pending-booking-request-count"] as const,
 };
 
 // Fetch booking requests list
@@ -48,7 +49,7 @@ export function useBookingRequest(id: number) {
 // Get pending count
 export function usePendingBookingRequestCount(enabled: boolean = true) {
     return useQuery({
-        queryKey: ["pending-booking-request-count"],
+        queryKey: bookingRequestKeys.pendingCount,
         queryFn: () => getPendingBookingRequestCount(),
         enabled,
         refetchInterval: 30000, // Poll every 30 seconds
@@ -77,6 +78,9 @@ export function useCreateBookingRequest() {
                 }),
                 queryClient.invalidateQueries({
                     queryKey: ["guests", "search"]
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: bookingRequestKeys.pendingCount
                 }),
 
             ])
@@ -131,6 +135,7 @@ export function useApproveBookingRequest() {
                 queryClient.invalidateQueries({ queryKey: bookingRequestKeys.lists() }),
                 queryClient.invalidateQueries({ queryKey: ["bookings"] }),
                 queryClient.invalidateQueries({ queryKey: ["guests"] }),
+                queryClient.invalidateQueries({ queryKey: bookingRequestKeys.pendingCount }),
             ]);
 
             toast.success(
@@ -165,6 +170,7 @@ export function useRejectBookingRequest() {
             await Promise.all([
                 queryClient.invalidateQueries({ queryKey: bookingRequestKeys.lists() }),
                 queryClient.invalidateQueries({ queryKey: ["guests"] }),
+                queryClient.invalidateQueries({ queryKey: bookingRequestKeys.pendingCount }),
             ]);
 
             toast.success("Booking request rejected.");
@@ -189,15 +195,23 @@ export function useCancelBookingRequest() {
             reason: string;
         }) => {
 
-
             const result = await cancelBookingRequest(id, reason);
             return result;
         },
-        onSuccess: () => {
+        onSuccess: (result,) => {
+
+            if (!result.success) {
+                throw new Error(result.message)
+            }
+
             queryClient.invalidateQueries({
                 queryKey: bookingRequestKeys.lists(),
             });
-            toast.success("Booking request cancelled");
+            queryClient.invalidateQueries({
+                queryKey: bookingRequestKeys.pendingCount,
+            });
+
+            toast.success(result.message);
         },
         onError: async (error: Error) => {
             await Promise.all([
@@ -207,6 +221,7 @@ export function useCancelBookingRequest() {
                 }),
                 queryClient.invalidateQueries({ queryKey: ["guests", "search"] }),
             ]);
+            
             toast.error(error.message || "Failed to cancel booking request");
         },
     });

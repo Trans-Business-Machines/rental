@@ -25,6 +25,7 @@ interface NewBookingRequestEmailProps {
   totalAmount: string;
   requestedBy: string;
   requestUrl: string;
+  paymentCode: string;
 }
 
 export function NewBookingRequestEmail({
@@ -40,6 +41,7 @@ export function NewBookingRequestEmail({
   totalAmount = "",
   requestedBy = "",
   requestUrl = "",
+  paymentCode = "",
 }: NewBookingRequestEmailProps) {
   return (
     <Html lang="en">
@@ -132,6 +134,12 @@ export function NewBookingRequestEmail({
                 <strong>Total Amount:</strong>{" "}
                 <span className="text-green-600 font-semibold">
                   {totalAmount}
+                </span>
+              </Text>
+              <Text className="text-gray-700 text-base mb-0">
+                <strong>Payment Cose:</strong>{" "}
+                <span className="text-green-600 font-semibold">
+                  {paymentCode}
                 </span>
               </Text>
             </Section>

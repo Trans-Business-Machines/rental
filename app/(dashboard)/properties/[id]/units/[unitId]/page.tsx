@@ -80,7 +80,7 @@ function UnitDetailsPage() {
       {unit && <UnitInfo unit={unit} />}
 
       {unit && groupedAssignments && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2 overflow-x-scroll">
           <UnitInventory
             assignments={groupedAssignments}
             context={{ unitId: unit.id, propertyId: unit.propertyId }}

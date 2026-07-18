@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardHeader, CardContent, CardTitle } from "./ui/card";
+import { Card, CardHeader, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import {
@@ -144,10 +144,7 @@ function PropertyDetails({
       onMouseEnter={prefetchPropertyUnits}
     >
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-xl lg:text-2xl font-bold text-foreground capitalize">
-            {property.name}
-          </CardTitle>
+        <div className="flex items-center justify-end">
           <Button
             variant="outline"
             className="gap-2 bg-transparent w-40 md:w-80 lg:w-100"
@@ -163,7 +160,9 @@ function PropertyDetails({
       <CardContent className="space-y-4 m-0">
         {/* Description */}
         <div>
-          <p className="text-lg font-semibold text-foreground">
+          <h2 className="mb-2 text-xl lg:text-2xl font-bold text-foreground capitalize">{property.name}</h2>
+
+          <p className="text-base font-medium text-foreground/80">
             {property.description}
           </p>
         </div>
@@ -220,7 +219,7 @@ function PropertyDetails({
         )}
 
         {/* Property Stats */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 gap-4">
           <div className="flex items-center gap-3 p-3 rounded-lg bg-card border border-night/60">
             <div className="p-2 rounded-lg bg-chart-1/10">
               <Home className="h-5 w-5 text-chart-1" />

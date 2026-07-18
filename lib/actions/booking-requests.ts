@@ -35,6 +35,7 @@ export async function notifyAdminsOfNewBookingRequest({
     priceDuration,
     period,
     totalAmount,
+    paymentCode,
     requestedByName,
 }: NotifyAdminsOfBookingRequestParams) {
     try {
@@ -94,6 +95,7 @@ export async function notifyAdminsOfNewBookingRequest({
                     totalAmount: formattedAmount,
                     requestedBy: requestedByName,
                     requestUrl,
+                    paymentCode
                 }),
             });
         });
@@ -670,6 +672,7 @@ export async function createBookingRequest(data: CreateBookingRequestParams) {
             priceDuration: data.priceDuration,
             period: data.period,
             totalAmount: data.totalAmount,
+            paymentCode:data.paymentCode,
             requestedByName: session.user.name,
         }).catch((error) => {
             console.error("Failed to send booking request notifications:", error);
@@ -1069,7 +1072,10 @@ export async function cancelBookingRequest(id: number, reason: string) {
         const session = await getServerSession();
 
         if (!session?.user?.id) {
-            throw new Error("Unauthorized: You must be logged in");
+            return {
+                success: false,
+                message: "Unauthorized, you must be logged in"
+            }
         }
 
         const bookingRequest = await prisma.bookingRequest.findUnique({
@@ -1077,22 +1083,28 @@ export async function cancelBookingRequest(id: number, reason: string) {
         });
 
         if (!bookingRequest) {
-            throw new Error("Booking request not found");
+            return {
+                success: false,
+                message: "Booking request not found"
+            }
         }
 
         if (bookingRequest.requestedById !== session.user.id) {
-            throw new Error(
-                "Unauthorized: You can only cancel your own requests",
-            );
+            return {
+                success: false,
+                message: "Unauthorized, you can only cancel your own requests"
+            }
         }
 
         if (bookingRequest.status !== "pending") {
-            throw new Error(
-                `Cannot cancel a ${bookingRequest.status} request. Only pending requests can be cancelled.`,
-            );
+            return {
+                success: false,
+                message: `Cannot cancel a ${bookingRequest.status} request. Only pending requests can be cancelled.`
+            }
         }
 
-        const result = await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx) => {
+
             const updatedRequest = await tx.bookingRequest.update({
                 where: { id },
                 data: {
@@ -1114,18 +1126,22 @@ export async function cancelBookingRequest(id: number, reason: string) {
             });
 
             return updatedRequest;
-        });
+        }, { timeout: 10000, maxWait: 5000, isolationLevel: "ReadCommitted" });
 
         revalidatePath("/booking-requests");
         revalidatePath(`/booking-requests/${id}`);
 
         return {
             success: true,
-            bookingRequest: result,
+            message: "Booking request has cancelled successfully",
         };
     } catch (error) {
         console.error("Error cancelling booking request:", error);
-        throw error;
+
+        return {
+            success: false,
+            message: "Failed to cancel booking please try again"
+        }
     }
 }
 

@@ -17,8 +17,9 @@ export const CheckoutFormSchema = z.object({
     checkoutDate: z.string().min(1, "Checkout date is required"),
     checkoutItems: z.array(checkoutItemSchema),
     overallDamageCost: z.number({
-        required_error: "Overall damage cost is required."
-    }).min(0),
+        required_error: "Overall Damage cost is required, minmum is 0",
+        invalid_type_error: "Overall Damage cost is required, minmum is 0"
+    }).min(0, "Overall Damage cost is required, minmum is 0"),
     notes: z.string().optional(),
 })
     .refine(

@@ -221,7 +221,7 @@ export async function searchGuestsForBooking(
 			},
 			bookingRequests: {
 				where: {
-					status: { in: ["pending", "approved"] },
+					status: "pending",
 				},
 				select: {
 					status: true,
@@ -254,18 +254,15 @@ export async function searchGuestsForBooking(
 			};
 		}
 
-		// Check for pending/approved booking requests
+		// Check for pending booking requests
 		if (guest.bookingRequests[0]) {
-			const requestStatus =
-				guest.bookingRequests[0].status === "approved" ? "reserved" : "pending";
-
 			return {
 				id: guest.id,
 				firstName: guest.firstName,
 				lastName: guest.lastName,
 				email: guest.email,
 				phone: guest.phone,
-				activeBookingStatus: requestStatus as "pending" | "reserved",
+				activeBookingStatus: "pending" as const,
 				activeBookingUnit: guest.bookingRequests[0].unit.name,
 			};
 		}

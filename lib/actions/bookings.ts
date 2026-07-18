@@ -273,10 +273,10 @@ export async function createBooking(booking: CreateBookingData) {
 						...(isAgent
 							? { requestedById: user.id }
 							: {
-									requestedById: user.id,
-									approvedById: user.id,
-									approvedAt: new Date(),
-								}),
+								requestedById: user.id,
+								approvedById: user.id,
+								approvedAt: new Date(),
+							}),
 					},
 					include: {
 						unit: true,
@@ -422,7 +422,11 @@ export async function updateBooking(
 
 				return { booking, unit };
 			},
-			{ timeout: 6000, maxWait: 3000, isolationLevel: "ReadCommitted" }
+			{
+				timeout: 60000 * 2,
+				maxWait: 5000,
+				isolationLevel: "ReadCommitted",
+			}
 		);
 
 		revalidateTag("unit");
@@ -602,9 +606,7 @@ export const getBookingFormData = async () => {
 				},
 				bookingRequests: {
 					where: {
-						status: {
-							in: ["pending", "approved"],
-						},
+						status: "pending",
 					},
 					orderBy: {
 						createdAt: "desc",

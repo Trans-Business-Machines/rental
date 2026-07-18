@@ -3,13 +3,15 @@ import { toast } from "sonner";
 import { unitKeys } from "./useUnitDetails"
 import {
 	createBooking,
+	updateBooking,
 	getBookings,
 	restoreBooking,
 	softDeleteBooking,
 	deleteBooking,
 	getSoftDeletedBookings
 } from "@/lib/actions/bookings";
-import type { CreateBookingData } from "@/lib/types/types"
+import { checkoutKeys } from "@/hooks/useGuestCheckout";
+import type { CreateBookingData, UpdatedBookingData } from "@/lib/types/types"
 
 interface Booking {
 	id: number;
@@ -155,6 +157,54 @@ export const useCreateBooking = () => {
 				duration: 6000
 			})
 
+		},
+	});
+};
+
+// Update booking
+export const useUpdateBooking = ({
+	setOpen
+}: { setOpen: (open: boolean) => void }) => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (
+			{ bookingId, data }:
+				{ bookingId: number, data: UpdatedBookingData }) => {
+			return await updateBooking(bookingId, data);
+		},
+		onSuccess: async ({ booking: updatedBooking }) => {
+			const invalidations = [
+				queryClient.invalidateQueries({ queryKey: bookingKeys.list() }),
+			];
+
+			if (updatedBooking.status === "checked_in") {
+				invalidations.push(
+					queryClient.invalidateQueries({
+						queryKey: checkoutKeys.bookingsList,
+					})
+				);
+			}
+
+			// Only show the success toast once invalidation has completed
+			await Promise.all(invalidations);
+
+			toast.success("Booking successfully updated.");
+			setOpen(false);
+		},
+		onError: (error) => {
+			console.error(`An error occurred when updating booking: ${error}`);
+
+			if (
+				error instanceof Error &&
+				error.message.includes("Unauthorized: Insufficent permissions.")
+			) {
+				toast.warning(
+					"Unauthorized, Insufficient permissions to update booking1!",
+				);
+			}  else {
+				toast.error("Update failed, try again!");
+			}
 		},
 	});
 };

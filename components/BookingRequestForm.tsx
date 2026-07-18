@@ -1230,7 +1230,7 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
                           errors.propertyId && "border-destructive",
                         )}
                       >
-                        <SelectValue placeholder="Select property" />
+                        <SelectValue placeholder="Select a property" />
                       </SelectTrigger>
                       <SelectContent>
                         {formDataCache?.properties.map((property) => (
@@ -1280,7 +1280,13 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
                               errors.unitId && "border-destructive",
                             )}
                           >
-                            <SelectValue placeholder="Select a unit" />
+                            <SelectValue
+                              placeholder={
+                                isPropertySelected
+                                  ? "Select a unit"
+                                  : "Select a property first"
+                              }
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             {selectedProperty?.units.map((unit) => {
@@ -1780,7 +1786,7 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
               {/* Special Requests */}
               <div className="space-y-2">
                 <Label htmlFor="specialRequests">
-                  Special Requests (optional)
+                  Special Requests (Optional)
                 </Label>
                 <Textarea
                   id="specialRequests"

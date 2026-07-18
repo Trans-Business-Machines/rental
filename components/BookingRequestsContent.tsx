@@ -283,8 +283,20 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
                               router.push(`/booking-requests/${request.id}`)
                             }
                           >
-                            <Eye className="size-4 group-hover:text-azure" />
-                            <span className="group-hover:text-azure">
+                            <Eye
+                              className={cn(
+                                "size-4 group-hover:text-azure",
+                                request.status === "pending" &&
+                                  "text-princeton-orange",
+                              )}
+                            />
+                            <span
+                              className={cn(
+                                "group-hover:text-azure",
+                                request.status === "pending" &&
+                                  "text-princeton-orange",
+                              )}
+                            >
                               View Details
                             </span>
                           </Button>

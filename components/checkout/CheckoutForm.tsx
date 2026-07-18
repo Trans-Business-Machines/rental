@@ -188,21 +188,26 @@ export function CheckoutForm({
         checkoutItems,
       };
 
-      await createCheckoutReport(checkoutData);
+      const result = await createCheckoutReport(checkoutData);
 
-      toast.success("Checkout completed successfully!");
+      if (result.suceess) {
+        toast.success(result.message);
 
-      // Invalidate the necessary Queries
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["booking-request-form-data"],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["guests", "search"],
-        }),
-      ]);
+        // Invalidate the necessary Queries, ["booking-form-data"]
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: ["booking-request-form-data"],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ["guests", "search"],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ["booking-form-data"],
+          }),
+        ]);
 
-      router.push("/bookings");
+        router.push("/bookings");
+      }
     } catch (error) {
       let errMsg = "Failed to complete checkout. Please try again.";
 
