@@ -80,7 +80,7 @@ function UserCards({
   const openDialog = (
     userId: string,
     action: DialogAction,
-    role: Role | null = null
+    role: Role | null = null,
   ) => {
     setDialogState({
       open: true,
@@ -128,8 +128,8 @@ function UserCards({
         return "This user will have to create, read, and update permissions. They will also be able to manage regular users.";
 
       case "demote":
-        if (role === "user") {
-          return "This user will lose all administrative privileges and will only be able to view properties and units.";
+        if (role === "agent") {
+          return "This user will only be able to view properties, units and make booking requests.";
         }
         return "This user will be demoted to admin role with limited privileges. They will no longer be able to manage other admins or delete properties.";
 
@@ -237,16 +237,16 @@ function UserCards({
                               </DropdownMenuItem>
                             )}
 
-                            {user.role !== "user" && !user.banned && (
+                            {user.role !== "agent" && !user.banned && (
                               <DropdownMenuItem
                                 className="cursor-pointer"
                                 onClick={() =>
-                                  openDialog(user.id, "demote", "user")
+                                  openDialog(user.id, "demote", "agent")
                                 }
                                 disabled={roleUpdateMutation.isPending}
                               >
                                 <ShieldBan className="size-4 mr-2" />
-                                <span>Demote to user</span>
+                                <span>Demote to agent</span>
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuGroup>

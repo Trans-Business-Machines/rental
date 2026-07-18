@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   Edit,
   Moon,
@@ -32,9 +32,9 @@ import {
   CalendarRange,
   Minus,
   Plus,
-  Loader2,
+  Loader,
 } from "lucide-react";
-import { updateBooking } from "@/lib/actions/bookings";
+import { useUpdateBooking } from "@/hooks/useBookings";
 import { getUnitPricingOptions } from "@/lib/actions/pricing";
 import {
   cn,
@@ -52,7 +52,6 @@ import {
 } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { checkoutKeys } from "@/hooks/useGuestCheckout";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
   Booking,
@@ -80,7 +79,6 @@ export function BookingEditDialog({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
 }: BookingEditDialogProps) {
-  const queryClient = useQueryClient();
   const { isAgent } = usePermissions();
 
   // Dialog control state
@@ -90,8 +88,10 @@ export function BookingEditDialog({
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? controlledOnOpenChange : setInternalOpen;
 
+  const { mutate: updateBookingMutation, isPending: isSubmitting } =
+    useUpdateBooking({ setOpen });
+
   // Form state
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPricing, setSelectedPricing] =
     useState<UnitTypePricing | null>(null);
   const [formData, setFormData] = useState({
@@ -205,7 +205,7 @@ export function BookingEditDialog({
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (booking.status === "reserved" && formData.status === "pending") {
@@ -213,59 +213,18 @@ export function BookingEditDialog({
       return;
     }
 
-    if (booking.status === "reserved" && formData.status === "pending") {
-      toast.error("You cannot move from reserved to pending!");
-      return;
-    }
-
-    setIsSubmitting(true);
-
     const data = {
       ...formData,
       checkInDate: new Date(formData.checkInDate),
       checkOutDate: new Date(formData.checkOutDate),
     };
 
-    try {
-      const { booking: updatedBooking } = await updateBooking(booking.id, data);
-
-      if (updatedBooking.status === "checked_in") {
-        queryClient.invalidateQueries({
-          queryKey: checkoutKeys.bookingsList,
-        });
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["bookings"] });
-
-      toast.success("Booking successfully updated.");
-      setOpen(false);
-    } catch (error) {
-      console.error(`An error occurred when updating booking: ${error}`);
-
-      if (
-        error instanceof Error &&
-        error.message.includes("Unauthorized: Insufficent permissions.")
-      ) {
-        toast.warning(
-          "Unauthorized: Insufficient permissions to update booking.",
-        );
-      } else if (
-        error instanceof Error &&
-        error.message.includes(
-          "Check-in is only allowed between 12:00 PM and 6:00 PM (EAT)",
-        )
-      ) {
-        toast.error(error.message);
-      } else {
-        toast.error("Update failed, try again!");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+    updateBookingMutation({ bookingId: booking.id, data });
   };
 
   const isCheckedIn = booking.status === "checked_in";
   const isCustomDuration = selectedPricing?.duration === "custom";
+
 
   // Calculate display values
   const discountedPrice = selectedPricing
@@ -707,7 +666,7 @@ export function BookingEditDialog({
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader className="size-4 animate-spin" />
                   Saving...
                 </span>
               ) : (

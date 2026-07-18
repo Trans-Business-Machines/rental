@@ -83,7 +83,7 @@ export default function UnitInfo({ unit }: UnitInfoProps) {
           ))}
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-muted/50 border border-accent-foreground/30">
             <Bath className="h-5 w-5 text-muted-foreground" />
             <span className="text-sm font-medium text-foreground">

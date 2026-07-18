@@ -438,6 +438,7 @@ export interface NotifyAdminsOfBookingRequestParams {
     period: number;
     totalAmount: number;
     requestedByName: string;
+    paymentCode:string
 }
 
 export interface GuestSearchResult {

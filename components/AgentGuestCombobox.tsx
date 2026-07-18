@@ -188,7 +188,7 @@ export function GuestCombobox({
                               >
                                 {statusInfo.label}
                               </Badge>
-                              <span className="text-xs text-muted-foreground max-w-[80px] truncate">
+                              <span className="text-xs text-muted-foreground max-w-30">
                                 {guest.activeBookingUnit}
                               </span>
                             </div>

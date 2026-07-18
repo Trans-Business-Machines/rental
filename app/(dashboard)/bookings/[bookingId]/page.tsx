@@ -118,6 +118,13 @@ async function BookingDetails({ params }: BookingDetailsPros) {
     }
   };
 
+  const guestStatement =
+    booking.status === "checked_in"
+      ? "Guests staying"
+      : booking.status === "checked_out"
+        ? "Guests stayed"
+        : "Incoming guests";
+
   return (
     <section className="space-y-4 lg:space-y-5">
       <Header booking={booking} />
@@ -334,8 +341,8 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                   <p className="text-sm font-semibold text-foreground">
                     {booking.numberOfGuests}
                   </p>
-                  <p className="text-xs text-accent-foreground">
-                    Guests Staying
+                  <p className="text-xs text-accent-foreground capitalize">
+                    {guestStatement}
                   </p>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted/60">

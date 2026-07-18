@@ -388,7 +388,7 @@ export function BookingForm({
                     errors.propertyId && "border-red-400",
                   )}
                 >
-                  <SelectValue placeholder="Select property" />
+                  <SelectValue placeholder="Select a property" />
                 </SelectTrigger>
                 <SelectContent>
                   {formDataCache?.properties.map((property) => (
@@ -434,7 +434,13 @@ export function BookingForm({
                         errors.unitId && "border-red-400",
                       )}
                     >
-                      <SelectValue placeholder="Select unit" />
+                      <SelectValue
+                        placeholder={
+                          isPropertySelected
+                            ? "Select a unit"
+                            : "Select a property first"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {selectedProperty?.units.map((unit) => (
