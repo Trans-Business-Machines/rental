@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import resend from "@/lib/emailClient";
 import { formatPrice, formatDateKE } from "@/lib/utils";
-import { UpcomingCheckoutsEmail } from "@/lib/emails/UpcomingCheckoutsEmail";
+import  UpcomingCheckoutsEmail  from "@/lib/emails/UpcomingCheckoutsEmail";
 import {
     startOfDay,
     setHours,
