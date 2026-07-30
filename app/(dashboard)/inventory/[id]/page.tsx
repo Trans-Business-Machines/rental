@@ -17,7 +17,8 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
+//import { format } from "date-fns";
+import { formatDateInTimezone } from "@/lib/utils";
 import Link from "next/link";
 import {
   Table,
@@ -48,6 +49,8 @@ interface InventoryDetailsPageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ page: string }>;
 }
+
+const TIMEZONE = "Africa/Nairobi";
 
 export default async function InventoryDetailsPage({
   params,
@@ -220,7 +223,15 @@ export default async function InventoryDetailsPage({
                         className={idx % 2 === 0 ? "bg-white" : "bg-muted/50"}
                       >
                         <TableCell className="p-3 whitespace-nowrap">
-                          {format(new Date(move.movedAt), "dd/MM/yyyy hh:mm a")}
+                          {formatDateInTimezone(new Date(move.movedAt), {
+                            timeZone: TIMEZONE,
+                            year: "numeric",
+                            month: "short",
+                            day: "2-digit",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}
                         </TableCell>
                         <TableCell className="p-3 whitespace-nowrap flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />

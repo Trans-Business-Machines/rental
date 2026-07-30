@@ -41,7 +41,6 @@ export async function getDashboardStats() {
         }
     })
 
-
     // Get all units under maintenance from DB
     const reservedUnits = await prisma.unit.count({
         where: {

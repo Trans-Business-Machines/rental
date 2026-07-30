@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/check-permissions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { LIMIT, normalizeCheckOutTo10amEAT } from "@/lib/utils";
+import { LIMIT, normalizeCheckOutTo10amEAT, evaluateUnitStatus } from "@/lib/utils";
 import { NewBookingRequestEmail } from "@/lib/emails/NewBookingRequestEmail";
 import { formatPrice, formatDate, calculateTotalNights, formatDateInTimezone } from "@/lib/utils";
 import resend from "@/lib/emailClient"
@@ -787,7 +787,13 @@ export async function approveBookingRequest(id: number) {
                 },
             });
 
-            // 3. Mark request as approved
+            // 3. Update the unit status to match the newly created booking
+            await tx.unit.update({
+                where: { id: bookingRequest.unitId },
+                data: { status: evaluateUnitStatus(booking.status) },
+            });
+
+            // 4. Mark request as approved
             await tx.bookingRequest.update({
                 where: { id },
                 data: {
@@ -801,8 +807,8 @@ export async function approveBookingRequest(id: number) {
         }, { timeout: 15000, maxWait: 5000, isolationLevel: "ReadCommitted" });
 
         revalidatePath("/booking-requests");
-        revalidatePath("/bookings");
         revalidatePath("/dashboard");
+        revalidatePath("/bookings");
         revalidatePath("/guests");
 
         // Fire-and-forget approval email to agent
