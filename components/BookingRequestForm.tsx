@@ -52,8 +52,6 @@ import {
   calculateTotalWithVAT,
   calculateVAT,
   calculateDiscountedPrice,
-  getStartOfDay,
-  getEndOfDay,
   formatDateKE,
 } from "@/lib/utils";
 import {
@@ -82,6 +80,7 @@ import type {
 } from "@/lib/types/types";
 import { getPaymentSettings } from "@/lib/actions/payments";
 import { DatePicker } from "@/components/DatePicker";
+import {startOfDay, endOfDay} from "date-fns"
 
 const STEPS = [
   { id: 1, title: "Select Guest", icon: Users },
@@ -159,6 +158,7 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
     setValue,
     trigger,
     clearErrors,
+    handleSubmit,
     formState: { errors },
   } = useForm<BookingRequestFormData>({
     mode: "onChange",
@@ -429,8 +429,8 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
         formData.checkInDate
       ) {
         const checkInDate = new Date(formData.checkInDate);
-        const fromDate = getStartOfDay(selectedPricing.fromDate);
-        const toDate = getEndOfDay(selectedPricing.toDate);
+        const fromDate = startOfDay(selectedPricing.fromDate);
+        const toDate = endOfDay(selectedPricing.toDate);
 
         if (checkInDate < fromDate || checkInDate > toDate) {
           toast.error(
@@ -636,12 +636,12 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
         }
 
         const newGuest = await createGuest({
-          firstName: formData.guestFirstName,
-          lastName: formData.guestLastName,
-          email: formData.guestEmail,
-          phone: formData.guestPhone,
-          dateOfBirth: formData.guestDateOfBirth,
-          nationality: formData.guestNationality,
+          firstName: formData.guestFirstName!,
+          lastName: formData.guestLastName!,
+          email: formData.guestEmail!,
+          phone: formData.guestPhone!,
+          dateOfBirth: formData.guestDateOfBirth!,
+          nationality: formData.guestNationality!,
           notes: formData.guestNotes || undefined,
           registeredBy: agentId,
           ...(idType === "national_id"
@@ -711,6 +711,10 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const onInvalid = () => {
+    toast.error("Please fix the errors in the form before submitting.");
   };
 
   // Loading state
@@ -1849,7 +1853,7 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
           ) : (
             <Button
               type="button"
-              onClick={() => onSubmit()}
+              onClick={handleSubmit(onSubmit, onInvalid)}
               disabled={isSubmitting}
               className="min-w-[100px] cursor-pointer"
             >

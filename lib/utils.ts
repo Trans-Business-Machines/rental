@@ -9,7 +9,7 @@ import type { BookingStatus, UnitStatus, Guest, InventoryItem, PriceDuration, Ro
 export const LIMIT = 9;
 const TIMEZONE = "Africa/Nairobi";
 export const BUCKET = "media";
-export const KENYA_VAT_RATE = 0.16;
+export const KENYA_VAT_RATE = Number(process.env.NEXT_PUBLIC_VAT_RATE ?? 0.16);
 
 
 nationalities.registerLocale(enLocale);
@@ -237,7 +237,7 @@ export const formatDateInTimezone = (
 
 }
 
-export function getStartOfDay(date: Date | string): Date {
+/*export function getStartOfDay(date: Date | string): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   return d;
@@ -247,7 +247,7 @@ export function getEndOfDay(date: Date | string): Date {
   const d = new Date(date);
   d.setHours(23, 59, 59, 999);
   return d;
-}
+}*/
 
 export function formatDateKE(date: Date | string): string {
   return new Intl.DateTimeFormat("en-KE", {
@@ -258,15 +258,6 @@ export function formatDateKE(date: Date | string): string {
   }).format(new Date(date));
 }
 
-export function formatDateTimeLocal(date: Date | string): string {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
 
 export function normalizeCheckOutTo10amEAT(date: Date | string): Date {
   const d = new Date(date);

@@ -73,7 +73,6 @@ export default async function DashboardPage({
     unitsStatsPromise,
   ]);
 
-  // In your page.tsx where you transform units
   const unitsForTable = unitsResponse.units.map((unit) => {
     const currentBooking = unit.bookings[0];
     const checkOutDate = currentBooking
@@ -86,7 +85,6 @@ export default async function DashboardPage({
       ? `${currentBooking.guest.firstName} ${currentBooking.guest.lastName}`
       : null;
 
-    // Check if guest has overstayed
     const isOverstayed =
       currentBooking?.status === "checked_in" &&
       checkOutDate &&

@@ -58,36 +58,62 @@ export const BookingRequestFormSchema = z
   .object({
     // Step 1: Guest
     guestType: z.enum(["existing", "new"]),
-    existingGuestId: z.number().min(1, "Please select a guest."),
+    // Required only when guestType === "existing" (enforced below)
+    existingGuestId: z.number().nullable().optional(),
 
+    // Guest detail fields are only collected when guestType === "new".
+    // They're optional here so an existing-guest submission (where these
+    // inputs are never rendered) doesn't fail validation; presence is
+    // enforced conditionally in the superRefine below, while format is
+    // still checked whenever a value is actually provided.
+    // ".or(z.literal(''))" is required (not just ".optional()") because RHF
+    // doesn't clear a field's value when its input unmounts (e.g. switching
+    // guestType away from "new", or toggling guestIdType between
+    // national_id/passport) - the stale "" would otherwise fail .min()/regex.
     guestFirstName: z
       .string()
       .min(3, "At least 3 characters are required.")
       .regex(nameRegex, "Only letters are allowed.")
-      .max(20, "At most 20 characters."),
+      .max(20, "At most 20 characters.")
+      .optional()
+      .or(z.literal("")),
     guestLastName: z
       .string()
       .min(3, "At least 3 characters are required.")
       .regex(nameRegex, "Only letters are allowed.")
-      .max(20, "At most 20 characters."),
-    guestEmail: z.string().email("Invalid email address."),
+      .max(20, "At most 20 characters.")
+      .optional()
+      .or(z.literal("")),
+    guestEmail: z.string().email("Invalid email address.").optional().or(z.literal("")),
     guestPhone: z
       .string()
       .regex(
         phoneRegex,
         "Enter a valid phone number (7–15 digits). Only digits, spaces, hyphens, and a leading + are allowed."
-      ),
-    guestDateOfBirth: dateOfBirthSchema,
-    guestNationality: z.string().min(1, "Nationality is required."),
+      )
+      .optional()
+      .or(z.literal("")),
+    guestDateOfBirth: dateOfBirthSchema.optional().or(z.literal("")),
+    guestNationality: z
+      .string()
+      .min(1, "Nationality is required.")
+      .optional()
+      .or(z.literal("")),
     guestIdType: z.enum(["national_id", "passport"]),
+    // Required only when guestType === "new" and guestIdType === "national_id"
     guestIdNumber: z
       .string()
       .min(8, "At least 8 characters are required.")
-      .max(10, "At most 10 characters."),
+      .max(10, "At most 10 characters.")
+      .optional()
+      .or(z.literal("")),
+    // Required only when guestType === "new" and guestIdType === "passport"
     guestPassportNumber: z
       .string()
       .min(8, "Passport number must be at least 8 characters.")
-      .max(12, "Passport number must be at most 12 characters."),
+      .max(12, "Passport number must be at most 12 characters.")
+      .optional()
+      .or(z.literal("")),
     guestNotes: z.string().nullable().optional(),
 
     // ID Document metadata (handled manually, not validated by Zod)
@@ -96,7 +122,7 @@ export const BookingRequestFormSchema = z
     idDocumentMimeType: z.string().optional(),
     idDocumentFileSize: z.number().optional(),
 
-    // Step 2: Booking Details
+    // Step 2: Booking Details (required regardless of guest type)
     propertyId: z.number().min(1, "Property is required."),
     unitId: z.number().min(1, "Unit is required."),
     checkInDate: z
@@ -115,7 +141,80 @@ export const BookingRequestFormSchema = z
     purpose: z.string().nullable().optional(),
     specialRequests: z.string().nullable().optional(),
   })
-  .superRefine(validatePaymentCode);
+  .superRefine((data, ctx) => {
+    validatePaymentCode(data, ctx);
+
+    if (data.guestType === "existing") {
+      if (!data.existingGuestId || data.existingGuestId < 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please select a guest.",
+          path: ["existingGuestId"],
+        });
+      }
+      return;
+    }
+
+    // guestType === "new": guest detail fields become required
+    if (!data.guestFirstName) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least 3 characters are required.",
+        path: ["guestFirstName"],
+      });
+    }
+    if (!data.guestLastName) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least 3 characters are required.",
+        path: ["guestLastName"],
+      });
+    }
+    if (!data.guestEmail) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid email address.",
+        path: ["guestEmail"],
+      });
+    }
+    if (!data.guestPhone) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Enter a valid phone number (7–15 digits). Only digits, spaces, hyphens, and a leading + are allowed.",
+        path: ["guestPhone"],
+      });
+    }
+    if (!data.guestDateOfBirth) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Date of birth is required.",
+        path: ["guestDateOfBirth"],
+      });
+    }
+    if (!data.guestNationality) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Nationality is required.",
+        path: ["guestNationality"],
+      });
+    }
+
+    if (data.guestIdType === "national_id" && !data.guestIdNumber) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "ID number is required for National ID.",
+        path: ["guestIdNumber"],
+      });
+    }
+    if (data.guestIdType === "passport" && !data.guestPassportNumber) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Passport number is required for Passport.",
+        path: ["guestPassportNumber"],
+      });
+    }
+  });
 
 export type BookingRequestFormData = z.infer<typeof BookingRequestFormSchema>;
 
