@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         // Build the unit filter
         const whereClause: Record<string, unknown> = {
             deletedAt: null,
-            propertyId:1
+            propertyId: 1
         }
 
         if (type && type !== "all") {
@@ -69,6 +69,9 @@ export async function GET(request: NextRequest) {
                         filePath: true,
                     },
                 },
+            },
+            orderBy: {
+                createdAt: "asc"
             },
         })
 
