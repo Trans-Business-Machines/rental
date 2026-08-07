@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
         pathname: '/storage/v1/object/public/**',
       },
     ],
+    unoptimized: true,
   },
 };
 
