@@ -9,7 +9,7 @@ import Link from "next/link";
 import { usePermissions } from "@/hooks/usePermissions";
 
 export default function UnitsPage() {
-  const { isAgent } = usePermissions();
+  const { isSuperAdmin } = usePermissions();
   const searchParams = useSearchParams();
   const params = useParams();
 
@@ -78,7 +78,7 @@ export default function UnitsPage() {
           </Button>
         </div>
 
-        {!isAgent && (
+        {isSuperAdmin && (
           <Button className="space-x-2 text-white" asChild>
             <Link
               href={`/properties/${propertyId}/add-unit`}
@@ -99,6 +99,7 @@ export default function UnitsPage() {
         totalPages={data.totalPages}
         hasNext={data.hasNext}
         hasPrev={data.hasPrev}
+        isSuperAdmin={isSuperAdmin}
         initialFilters={{ search, status, type }}
       />
     </section>

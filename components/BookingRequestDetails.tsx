@@ -159,13 +159,15 @@ export function BookingRequestDetails({
           <Button
             variant="ghost"
             size="icon"
-            className="cursor-pointer"
+            className="cursor-pointer bg-primary py-2 px-4"
             onClick={() => router.push("/booking-requests")}
           >
-            <ArrowLeft className="size-5" />
+            <ArrowLeft className="size-5 text-white" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">View Booking Request Details</h1>
+            <h1 className="text-lg md:text-2xl font-bold">
+              View Booking Request Details
+            </h1>
             <p className="text-muted-foreground">
               Submitted{" "}
               {format(new Date(bookingRequest.createdAt), "PPP 'at' p")}
@@ -185,7 +187,7 @@ export function BookingRequestDetails({
               "border-medium-jungle bg-medium-jungle/10 text-medium-jungle",
           )}
         >
-          {status}
+          <span>Request {status}</span>
         </Badge>
       </div>
 
@@ -229,23 +231,23 @@ export function BookingRequestDetails({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="size-5" />
+              <User className="size-5 hidden md:inline-flex" />
               Guest Information
-              {guest.verificationStatus === "verified" && (
-                <Badge variant="secondary" className="ml-auto">
-                  <UserCheck className="size-3 mr-1" />
-                  Verified
-                </Badge>
-              )}
-              {guest.verificationStatus === "pending" && (
-                <Badge
-                  variant="secondary"
-                  className="ml-auto border-princeton-orange text-princeton-orange"
-                >
-                  <Hourglass className="size-3 mr-1" />
-                  Pending Verification
-                </Badge>
-              )}
+              <Badge
+                className={cn(
+                  "py-[1px] px-4 rounded-md capitalize border text-white ml-auto",
+                  guest.verificationStatus === "pending" &&
+                    "border-princeton-orange bg-princeton-orange",
+                  guest.verificationStatus === "verified" &&
+                    "border-medium-jungle bg-medium-jungle",
+                  guest.verificationStatus === "rejected" &&
+                    "border-lipstick-red bg-lipstick-red",
+                )}
+              >
+                {guest.verificationStatus === "pending"
+                  ? "Pending Verification"
+                  : guest.verificationStatus}
+              </Badge>
             </CardTitle>
             <CardDescription>Guest details for this booking</CardDescription>
           </CardHeader>
@@ -728,7 +730,6 @@ export function BookingRequestDetails({
       </Card>
 
       {/* Action Buttons */}
-      {/* Action Buttons */}
       {(canApproveReject || canCancel || isAdminViewOnly) && (
         <Card>
           <CardHeader>
@@ -797,7 +798,8 @@ export function BookingRequestDetails({
         <>
           <ApproveRequestDialog
             requestId={bookingRequest.id}
-            guestName={guestName}
+            guestName={`${guest.firstName} ${guest.lastName}`}
+            isVerified={guest.verificationStatus === "verified"}
             open={approveDialogOpen}
             onOpenChange={(open) => {
               if (!approveMutation.isPending) {
@@ -808,7 +810,10 @@ export function BookingRequestDetails({
           />
           <RejectRequestDialog
             requestId={bookingRequest.id}
+            guestId={guest.id}
+            guestName={guestName}
             open={rejectDialogOpen}
+            isGuestReviewed={guest.verificationStatus !== "pending"}
             onOpenChange={(open) => {
               if (!rejectMutation.isPending) {
                 setRejectDialogOpen(open);

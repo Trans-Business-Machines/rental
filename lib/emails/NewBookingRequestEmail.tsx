@@ -137,7 +137,7 @@ export function NewBookingRequestEmail({
                 </span>
               </Text>
               <Text className="text-gray-700 text-base mb-0">
-                <strong>Payment Cose:</strong>{" "}
+                <strong>Payment Code:</strong>{" "}
                 <span className="text-green-600 font-semibold">
                   {paymentCode}
                 </span>

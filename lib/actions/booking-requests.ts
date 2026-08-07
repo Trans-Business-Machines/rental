@@ -672,7 +672,7 @@ export async function createBookingRequest(data: CreateBookingRequestParams) {
             priceDuration: data.priceDuration,
             period: data.period,
             totalAmount: data.totalAmount,
-            paymentCode:data.paymentCode,
+            paymentCode: data.paymentCode,
             requestedByName: session.user.name,
         }).catch((error) => {
             console.error("Failed to send booking request notifications:", error);
@@ -1012,16 +1012,7 @@ export async function rejectBookingRequest(
         const guestName = `${guest.firstName} ${guest.lastName}`;
 
         await prisma.$transaction(async (tx) => {
-
-            // 1. If the guest is still pending, mark as rejected
-            if (guest.verificationStatus === "pending") {
-                await tx.guest.update({
-                    where: { id: guest.id },
-                    data: { verificationStatus: "rejected" },
-                });
-            }
-
-            // 2. Mark request as rejected
+            // 1. Mark request as rejected
             await tx.bookingRequest.update({
                 where: { id },
                 data: {
@@ -1032,13 +1023,13 @@ export async function rejectBookingRequest(
                 },
             });
 
-            // 3. Free up the unit
+            // 2. Free up the unit
             await tx.unit.update({
                 where: { id: bookingRequest.unitId },
                 data: { status: "available" },
             });
 
-            // 4. Decrement property occupancy
+            // 3. Decrement property occupancy
             await tx.property.update({
                 where: { id: bookingRequest.propertyId },
                 data: { occupied: { decrement: 1 } },
@@ -1111,6 +1102,7 @@ export async function cancelBookingRequest(id: number, reason: string) {
 
         await prisma.$transaction(async (tx) => {
 
+            // 1. Cancel booking request
             const updatedRequest = await tx.bookingRequest.update({
                 where: { id },
                 data: {
@@ -1121,11 +1113,13 @@ export async function cancelBookingRequest(id: number, reason: string) {
                 },
             });
 
+            // 2. Update a unit to available
             await tx.unit.update({
                 where: { id: updatedRequest.unitId },
                 data: { status: "available" },
             });
 
+            // 3. Decrease the apartment occupancy percentage
             await tx.property.update({
                 where: { id: updatedRequest.propertyId },
                 data: { occupied: { decrement: 1 } },

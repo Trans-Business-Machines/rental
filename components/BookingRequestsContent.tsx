@@ -63,7 +63,7 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
     useState<BookingRequestListItem | null>(null);
 
   const isAgent = userRole === "agent";
-  const canApproveReject = ["user", "admin", "superAdmin"].includes(userRole);
+  const canApproveReject = ["superAdmin"].includes(userRole);
 
   const cancelMutation = useCancelBookingRequest();
 

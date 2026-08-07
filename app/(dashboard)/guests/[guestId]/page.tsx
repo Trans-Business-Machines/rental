@@ -38,9 +38,13 @@ import type { Role } from "@/lib/types/types";
 
 interface GuestDetailsPageProps {
   params: Promise<{ guestId: string | number }>;
+  searchParams: Promise<{ returnTo?: string }>;
 }
 
-async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
+async function GuestDetailsPage({
+  params,
+  searchParams,
+}: GuestDetailsPageProps) {
   const session = await getServerSession();
   const user = session?.user;
 
@@ -55,6 +59,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
   }
 
   const { guestId } = await params;
+  const { returnTo } = await searchParams;
 
   const id = typeof guestId === "string" ? Number(guestId) : guestId;
 
@@ -68,7 +73,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
 
   return (
     <section className="space-y-6 pb-4">
-      <Header guest={guest} />
+      <Header guest={guest} returnTo={returnTo} />
 
       {/* Guest status banner */}
       <Card

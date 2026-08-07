@@ -250,7 +250,7 @@ export async function createCheckoutReport(data: CheckoutData) {
 				}
 
 				// 3. Update booking status
-				const booking = await tx.booking.update({
+				await tx.booking.update({
 					where: { id: data.bookingId },
 					data: {
 						status: "checked_out",
@@ -277,10 +277,10 @@ export async function createCheckoutReport(data: CheckoutData) {
 
 				// 6. Decrement property occupancy
 				await tx.property.update({
-					where: { id: booking.propertyId },
+					where: { id: report.booking.propertyId },
 					data: {
 						occupied: {
-							increment: -1,
+							decrement: 1
 						},
 					},
 				});
