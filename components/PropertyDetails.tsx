@@ -130,9 +130,6 @@ function PropertyDetails({
               {formatPrice(calculateTotalWithVAT(pricing.price))}
             </p>
           )}
-          <p className="text-xs text-muted-foreground font-semibold">
-            incl. VAT
-          </p>
         </div>
       </div>
     );
@@ -160,7 +157,9 @@ function PropertyDetails({
       <CardContent className="space-y-4 m-0">
         {/* Description */}
         <div>
-          <h2 className="mb-2 text-xl lg:text-2xl font-bold text-foreground capitalize">{property.name}</h2>
+          <h2 className="mb-2 text-xl lg:text-2xl font-bold text-foreground capitalize">
+            {property.name}
+          </h2>
 
           <p className="text-base font-medium text-foreground/80">
             {property.description}

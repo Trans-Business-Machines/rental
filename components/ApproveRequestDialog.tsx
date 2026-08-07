@@ -7,6 +7,7 @@ import {
   AlertDialogAction,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
@@ -15,6 +16,7 @@ import type { UseMutationResult } from "@tanstack/react-query";
 interface ApproveRequestDialogProps {
   requestId: number;
   guestName: string;
+  isVerified: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mutation: UseMutationResult<any, Error, any, unknown>;
@@ -23,6 +25,7 @@ interface ApproveRequestDialogProps {
 export function ApproveRequestDialog({
   requestId,
   guestName,
+  isVerified,
   open,
   onOpenChange,
   mutation,
@@ -51,26 +54,25 @@ export function ApproveRequestDialog({
             <AlertDialogTitle>Approve Booking Request</AlertDialogTitle>
           </div>
           <AlertDialogDescription className="p-4 border border-green-600 bg-green-600/10 text-green-600 rounded-lg">
-            This will verify <strong>{guestName}</strong> and create a reserved
-            booking from this request.
+            {isVerified ? (
+              <>This will create a reserved booking for {guestName}.</>
+            ) : (
+              <>
+                This will verify <strong>{guestName}</strong> and create a
+                reserved booking from this request.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="mt-3 flex justify-end gap-2">
-          <Button
-            disabled={mutation.isPending}
-            className="cursor-pointer bg-lipstick-red hover:bg-crimson-red w-1/5 px-10"
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
+        <AlertDialogFooter className="mt-3 gap-3">
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
               handleApprove();
             }}
             disabled={mutation.isPending}
-            className="bg-green-600 cursor-pointer w-3/5 hover:bg-green-700"
+            className="bg-green-600 cursor-pointer w-full sm:w-auto hover:bg-green-700"
           >
             {mutation.isPending ? (
               <span className="flex items-center gap-2">
@@ -81,7 +83,15 @@ export function ApproveRequestDialog({
               "Approve & Create Booking"
             )}
           </AlertDialogAction>
-        </div>
+
+          <Button
+            disabled={mutation.isPending}
+            className="cursor-pointer bg-lipstick-red hover:bg-crimson-red w-full sm:w-auto sm:px-10"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+        </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );

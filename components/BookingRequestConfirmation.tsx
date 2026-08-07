@@ -115,7 +115,10 @@ export function BookingRequestConfirmation({
               <User className="size-4 text-primary" />
               Guest Information
               {guestType === "existing" && (
-                <Badge variant="secondary" className="ml-auto">
+                <Badge
+                  variant="secondary"
+                  className="ml-auto border-medium-jungle bg-medium-jungle text-white"
+                >
                   <UserCheck className="size-3 mr-1" />
                   Existing Guest
                 </Badge>

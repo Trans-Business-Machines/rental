@@ -20,7 +20,7 @@ export default async function EditPropertyPage({
     redirect("/login");
   }
 
-  if (!["admin", "superAdmin"].includes(user.role as Role)) {
+  if (!["superAdmin"].includes(user.role as Role)) {
     return <UnauthorizedUI />;
   }
 

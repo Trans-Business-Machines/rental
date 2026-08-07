@@ -51,7 +51,7 @@ async function PropertyDetailsPage({ params }: PropertyDetailsPageProps) {
           </div>
         </div>
 
-        {user.role !== "agent" && (
+        {user.role === "superAdmin" && (
           <div className="flex items-center gap-2 py-3 md:py-0">
             <Button asChild>
               <Link href={`/properties/${id}/edit`}>

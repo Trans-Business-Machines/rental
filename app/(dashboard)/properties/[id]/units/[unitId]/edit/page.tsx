@@ -3,7 +3,11 @@ import { Button } from "@/components/ui/button";
 import { getUnitById } from "@/lib/actions/units";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { getServerSession } from "@/lib/check-permissions";
+import { UnauthorizedUI } from "../../../../unauthorized-ui";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import type { Role } from "@/lib/types/types";
 
 interface EditUnitPageParams {
   params: Promise<{ id: string; unitId: string }>;
@@ -11,6 +15,16 @@ interface EditUnitPageParams {
 
 async function EditUnitPage({ params }: EditUnitPageParams) {
   const { id: propertyId, unitId } = await params;
+  const session = await getServerSession();
+  const user = session?.user;
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!["superAdmin"].includes(user.role as Role)) {
+    return <UnauthorizedUI />;
+  }
 
   const unit = await getUnitById(unitId, propertyId);
 

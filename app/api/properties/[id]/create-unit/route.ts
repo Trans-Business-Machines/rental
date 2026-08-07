@@ -78,7 +78,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
                 // 2. Create media records for all uploaded images
                 const mediaRecords = [];
-
                 for (const img of images) {
                     const media = await tx.media.create({
                         data: {
@@ -93,6 +92,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                     mediaRecords.push(media);
                 }
 
+                // 3. update property's total unit count
+
+                await tx.property.update({
+                    where: {
+                        id: propertyId
+                    },
+                    data: {
+                        totalUnits: {
+                            increment: 1
+                        }
+                    }
+                })
+
                 return {
                     unit,
                     media: mediaRecords,
@@ -106,7 +118,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         revalidatePath("/dashboard");
 
         return NextResponse.json({
-            message: "Unit created successfully.",
+            message: `${result.unit.name} created successfully.`,
             unit: result.unit,
             media: result.media,
         });

@@ -38,7 +38,6 @@ import { prefetchUnitDetails } from "@/hooks/useUnitDetails";
 import Link from "next/link";
 import Image from "next/image";
 import type { Unit, UnitStatus } from "@/lib/types/types";
-import { usePermissions } from "@/hooks/usePermissions";
 import {
   getDurationLabel,
   calculateTotalWithVAT,
@@ -54,6 +53,7 @@ interface UnitFilters {
 
 interface UnitListingProps {
   units: Unit[];
+  isSuperAdmin: boolean;
   propertyId: number;
   currentPage: number;
   totalPages: number;
@@ -101,6 +101,7 @@ const getStatusBadge = (status: UnitStatus) => {
 
 export function UnitListing({
   units,
+  isSuperAdmin,
   propertyId,
   currentPage,
   totalPages,
@@ -108,7 +109,6 @@ export function UnitListing({
   hasPrev,
   initialFilters,
 }: UnitListingProps) {
-  const { isAgent } = usePermissions();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -408,7 +408,7 @@ export function UnitListing({
                     variant="default"
                     className={cn(
                       "flex-1 gap-2 bg-chart-3 hover:bg-chart-3/90",
-                      isAgent && "hidden",
+                      !isSuperAdmin && "hidden",
                     )}
                     size="sm"
                     asChild

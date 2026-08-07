@@ -251,6 +251,8 @@ export async function createBooking(booking: CreateBookingData) {
 
 		const result = await prisma.$transaction(
 			async (tx) => {
+
+				// 1. create booking
 				const newBooking = await tx.booking.create({
 					data: {
 						guestId: booking.guestId,
@@ -284,17 +286,25 @@ export async function createBooking(booking: CreateBookingData) {
 					},
 				});
 
-				await tx.unit.update({
+				// 2. update unit status
+				const unit = await tx.unit.update({
 					where: {
 						id: newBooking.unit.id,
 						propertyId: newBooking.propertyId,
 					},
 					data: { status: unitStatus },
+					select: {
+						id: true,
+						propertyId: true,
+						name: true,
+						status: true
+					}
 				});
 
-				if (["checked_in", "reserved"].includes(booking.status)) {
+				// Update property occupancy
+				if (["booked", "reserved", "occupied"].includes(unit.status)) {
 					await tx.property.update({
-						where: { id: booking.propertyId },
+						where: { id: newBooking.propertyId },
 						data: { occupied: { increment: 1 } },
 					});
 				}
@@ -407,18 +417,6 @@ export async function updateBooking(
 						status: unitStatus,
 					},
 				});
-
-				// increment property occupied count only on real transition
-				if (isCheckingInNow) {
-					await tx.property.update({
-						where: { id: booking.propertyId },
-						data: {
-							occupied: {
-								increment: 1,
-							},
-						},
-					});
-				}
 
 				return { booking, unit };
 			},

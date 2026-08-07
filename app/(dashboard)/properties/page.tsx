@@ -28,7 +28,8 @@ export default async function PropertiesPage({
 
   const page = Number(params.page) || 1;
   const search = params.search || "";
-  const isAgentOrUser = user.role === "agent" || user.role === "user";
+  const isAgentOrUserOrAdmin =
+    user.role === "agent" || user.role === "user" || user.role === "admin";
 
   const propertiesData = await getProperties({ page, search });
 
@@ -40,13 +41,13 @@ export default async function PropertiesPage({
             Properties
           </h1>
           <p className="text-muted-foreground">
-            {isAgentOrUser
+            {isAgentOrUserOrAdmin
               ? "View rental properties for bookings"
               : "Manage your rental properties"}
           </p>
         </div>
 
-        {["admin", "superAdmin"].includes(user.role as Role) && (
+        {["superAdmin"].includes(user.role as Role) && (
           <Link href="/properties/add">
             <Button>
               <Plus className="size-4 mr-1" />
@@ -63,7 +64,7 @@ export default async function PropertiesPage({
         totalPages={propertiesData.totalPages}
         currentPage={page}
         initialFilters={{ search }}
-        isAgentOrUser={isAgentOrUser}
+        isAgentOrUser={isAgentOrUserOrAdmin}
       />
     </section>
   );

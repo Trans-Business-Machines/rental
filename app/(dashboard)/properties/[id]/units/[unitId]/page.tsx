@@ -12,7 +12,7 @@ import UnitBookings from "./unit-bookings";
 import { usePermissions } from "@/hooks/usePermissions";
 
 function UnitDetailsPage() {
-  const { isAgent, isUser } = usePermissions();
+  const { isSuperAdmin } = usePermissions();
   const params = useParams();
   const propertyId = params.id as string;
   const unitId = params.unitId as string;
@@ -62,7 +62,7 @@ function UnitDetailsPage() {
           </Button>
         </div>
 
-        {!isAgent && !isUser && (
+        {isSuperAdmin && (
           <Button className="gap-2 bg-chart-1 hover:bg-chart-1/90" asChild>
             <Link
               href={`/properties/${propertyId}/units/${unitId}/edit`}

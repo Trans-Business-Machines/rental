@@ -16,7 +16,7 @@ function UnauthorizedUI() {
             You don&apos;t have permission to access this page.
           </p>
           <p className="text-sm text-muted-foreground">
-            Only Administrators can access this page.
+            Only Super Administrators can access this page.
           </p>
         </CardContent>
       </Card>
