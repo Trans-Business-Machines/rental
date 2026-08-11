@@ -37,7 +37,6 @@ interface GuestEditDialogProps {
   children?: React.ReactNode;
   isDialogOpen?: boolean;
   setIsDialogOpen?: (open: boolean) => void;
-  onReviewed?: () => void;
 }
 
 const emptySlot: ImageSlot = { file: null, preview: null, uploadedUrl: null };
@@ -47,7 +46,6 @@ export function GuestEditDialog({
   children,
   isDialogOpen: controlledOpen,
   setIsDialogOpen: controlledSetOpen,
-  onReviewed,
 }: GuestEditDialogProps) {
   // Dialog control
   const [internalOpen, setInternalOpen] = useState(false);
@@ -223,16 +221,7 @@ export function GuestEditDialog({
         }),
       };
 
-      updateGuestDetails(
-        { guestId: guest.id, values: updatePayload },
-        {
-          onSuccess: (updatedGuest) => {
-            if (updatedGuest.verificationStatus !== "pending") {
-              onReviewed?.();
-            }
-          },
-        },
-      );
+      updateGuestDetails({ guestId: guest.id, values: updatePayload });
     } catch (error) {
       setIsUploading(false);
       console.error("Error updating guest: ", error);

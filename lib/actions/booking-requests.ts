@@ -749,15 +749,7 @@ export async function approveBookingRequest(id: number) {
 
         const result = await prisma.$transaction(async (tx) => {
 
-            // 1. Update guest verification status to verified
-            if (guest.verificationStatus !== "verified") {
-                await tx.guest.update({
-                    where: { id: guest.id },
-                    data: { verificationStatus: "verified" },
-                });
-            }
-
-            // 2. Create the booking
+            // 1. Create the booking
             const checkOutAt10amEAT = normalizeCheckOutTo10amEAT(
                 bookingRequest.checkOutDate
             );
@@ -787,13 +779,13 @@ export async function approveBookingRequest(id: number) {
                 },
             });
 
-            // 3. Update the unit status to match the newly created booking
+            // 2. Update the unit status to match the newly created booking
             await tx.unit.update({
                 where: { id: bookingRequest.unitId },
                 data: { status: evaluateUnitStatus(booking.status) },
             });
 
-            // 4. Mark request as approved
+            // 3. Mark request as approved
             await tx.bookingRequest.update({
                 where: { id },
                 data: {

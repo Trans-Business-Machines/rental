@@ -8,6 +8,7 @@ import {
 import { getProperties, getPropertyNames, getPropertyById } from "@/lib/actions/properties";
 import { getGuests, } from "@/lib/actions/guests";
 import { getUnitPricingOptions } from "@/lib/actions/pricing"
+import { getBookingRequestById } from "@/lib/actions/booking-requests"
 
 /* ---------------- Type Definitions ---------------- */
 export type Booking = NonNullable<Awaited<ReturnType<typeof getBookingById>>>
@@ -17,6 +18,9 @@ export type PropertyNames = Awaited<ReturnType<typeof getPropertyNames>>
 export type GuestsResponse = Awaited<ReturnType<typeof getGuests>>
 export type Guest = GuestsResponse["guests"][number]
 export type sortTypes = "none" | "asc" | "desc"
+
+export type BookingRequestDetail = NonNullable<Awaited<ReturnType<typeof getBookingRequestById>>>
+export type BookingRequestGuest = BookingRequestDetail["guest"]
 
 type PropertyResponse = Awaited<ReturnType<typeof getProperties>>
 export type Property = PropertyResponse["properties"][number]

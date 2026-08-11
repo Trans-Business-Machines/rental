@@ -16,7 +16,6 @@ import type { UseMutationResult } from "@tanstack/react-query";
 interface ApproveRequestDialogProps {
   requestId: number;
   guestName: string;
-  isVerified: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mutation: UseMutationResult<any, Error, any, unknown>;
@@ -25,7 +24,6 @@ interface ApproveRequestDialogProps {
 export function ApproveRequestDialog({
   requestId,
   guestName,
-  isVerified,
   open,
   onOpenChange,
   mutation,
@@ -39,8 +37,6 @@ export function ApproveRequestDialog({
         },
       },
     );
-
-    // onOpenChange(false);
   };
 
   return (
@@ -54,14 +50,7 @@ export function ApproveRequestDialog({
             <AlertDialogTitle>Approve Booking Request</AlertDialogTitle>
           </div>
           <AlertDialogDescription className="p-4 border border-green-600 bg-green-600/10 text-green-600 rounded-lg">
-            {isVerified ? (
-              <>This will create a reserved booking for {guestName}.</>
-            ) : (
-              <>
-                This will verify <strong>{guestName}</strong> and create a
-                reserved booking from this request.
-              </>
-            )}
+            This will create a reserved booking for {guestName}.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
