@@ -23,7 +23,7 @@ import {
   Building,
   ChevronLeft,
   ChevronRight,
-  Loader2,
+  Loader,
   Moon,
   Calendar,
   CalendarIcon,
@@ -31,7 +31,7 @@ import {
   CalendarRange,
   Minus,
   Plus,
-  FileText,
+  Send,
   CheckCircle2,
   Info,
   ClipboardCheck,
@@ -1859,13 +1859,13 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
                   <span className="hidden sm:inline">Submitting...</span>
+                  <Loader className="size-4 mr-2 animate-spin" />
                 </>
               ) : (
                 <>
-                  <FileText className="size-4 mr-2" />
                   Submit Request
+                  <Send className="size-4 mr-2" />
                 </>
               )}
             </Button>

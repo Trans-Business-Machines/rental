@@ -181,7 +181,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                 </Avatar>
 
                 <div>
-                  <h3 className="text-xl font-semibold text-foreground">
+                  <h3 className="text-xl font-semibold text-foreground capitalize">
                     {booking.guest.firstName} {booking.guest.lastName}
                   </h3>
                 </div>

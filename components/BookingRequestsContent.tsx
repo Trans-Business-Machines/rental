@@ -176,7 +176,9 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
                 <TableRow className="bg-muted/50 py-2 hover:bg-muted/50">
                   <TableHead className="font-semibold">Guest</TableHead>
                   <TableHead className="font-semibold">Property</TableHead>
-                  <TableHead className="font-semibold">Phone</TableHead>
+                  <TableHead className="font-semibold hidden lg:table-cell">
+                    Phone
+                  </TableHead>
                   <TableHead className="font-semibold">Check-in</TableHead>
                   <TableHead className="font-semibold">Total</TableHead>
                   <TableHead className="font-semibold">Status</TableHead>
@@ -202,10 +204,10 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div>
-                            <p className="font-medium">
+                            <p className="font-medium capitalize">
                               {guest.firstName} {guest.lastName}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="hidden md:block text-xs text-muted-foreground">
                               {maskEmail(guest.email, userRole)}
                             </p>
                           </div>
@@ -227,7 +229,7 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
                       </TableCell>
 
                       {/* Phone */}
-                      <TableCell className="text-night">
+                      <TableCell className="text-night hidden lg:table-cell">
                         {maskPhone(guest.phone, userRole)}
                       </TableCell>
 

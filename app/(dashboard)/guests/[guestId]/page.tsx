@@ -38,13 +38,9 @@ import type { Role } from "@/lib/types/types";
 
 interface GuestDetailsPageProps {
   params: Promise<{ guestId: string | number }>;
-  searchParams: Promise<{ returnTo?: string }>;
 }
 
-async function GuestDetailsPage({
-  params,
-  searchParams,
-}: GuestDetailsPageProps) {
+async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
   const session = await getServerSession();
   const user = session?.user;
 
@@ -59,7 +55,6 @@ async function GuestDetailsPage({
   }
 
   const { guestId } = await params;
-  const { returnTo } = await searchParams;
 
   const id = typeof guestId === "string" ? Number(guestId) : guestId;
 
@@ -73,7 +68,7 @@ async function GuestDetailsPage({
 
   return (
     <section className="space-y-6 pb-4">
-      <Header guest={guest} returnTo={returnTo} />
+      <Header guest={guest} />
 
       {/* Guest status banner */}
       <Card
@@ -99,8 +94,8 @@ async function GuestDetailsPage({
                       "bg-lipstick-red/10 text-lipstick-red",
                   )}
                 >
-                  {guest.firstName[0]}
-                  {guest.lastName[0]}
+                  {guest.firstName[0].toUpperCase()}
+                  {guest.lastName[0].toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div>

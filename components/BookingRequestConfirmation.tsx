@@ -181,6 +181,16 @@ export function BookingRequestConfirmation({
                 <div className="flex items-start gap-3">
                   <IdCard className="size-4 text-muted-foreground mt-0.5" />
                   <div>
+                    <p className="text-xs text-muted-foreground">ID type</p>
+                    <p className="font-medium capitalize">
+                      {formData.guestIdType}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <IdCard className="size-4 text-muted-foreground mt-0.5" />
+                  <div>
                     <p className="text-xs text-muted-foreground">
                       {isNationalId ? "National ID Number" : "Passport Number"}
                     </p>

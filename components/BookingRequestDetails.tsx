@@ -42,6 +42,7 @@ import { Separator } from "@/components/ui/separator";
 import { ApproveRequestDialog } from "@/components/ApproveRequestDialog";
 import { RejectRequestDialog } from "@/components/RejectRequestDialog";
 import { CancelRequestDialog } from "@/components/CancelRequestDialog";
+import { GuestVerificationGate } from "@/components/GuestVerificationGate";
 import {
   useBookingRequest,
   useApproveBookingRequest,
@@ -122,6 +123,10 @@ export function BookingRequestDetails({
   const canApproveReject = userRole === "superAdmin" && isPending;
   const isAdminViewOnly = userRole === "admin" && isPending;
   const canCancel = isAgent && isPending;
+
+  const isGuestPending = guest.verificationStatus === "pending";
+  const isGuestVerified = guest.verificationStatus === "verified";
+  const isGuestRejected = guest.verificationStatus === "rejected";
 
   const status = bookingRequest.status;
 
@@ -257,7 +262,7 @@ export function BookingRequestDetails({
                 <User className="size-4 text-muted-foreground mt-0.5" />
                 <div>
                   <p className="text-sm text-muted-foreground">Full Name</p>
-                  <p className="font-medium">{guestName}</p>
+                  <p className="font-medium capitalize">{guestName}</p>
                 </div>
               </div>
 
@@ -300,6 +305,16 @@ export function BookingRequestDetails({
                 <div>
                   <p className="text-sm text-muted-foreground">Nationality</p>
                   <p className="font-medium">{guest.nationality || "-"}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <IdCard className="size-4 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm text-muted-foreground">ID Type</p>
+                  <p className="font-medium">
+                    {isNationalId ? "National ID" : "Passport"}
+                  </p>
                 </div>
               </div>
 
@@ -739,13 +754,20 @@ export function BookingRequestDetails({
             <CardDescription>
               {isAgent
                 ? "You can cancel the request and provide a valid reason."
-                : canApproveReject
-                  ? "You can either approve or reject this booking request."
-                  : "This request requires super admin review."}
+                : !canApproveReject
+                  ? "This request requires super admin review."
+                  : isGuestPending
+                    ? "Review the guest's identity above, then verify or reject them below before you can act on this request."
+                    : isGuestRejected
+                      ? "This guest's identity was rejected, so this request can only be rejected."
+                      : "You can either approve or reject this booking request."}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">
-            {canApproveReject && (
+            {canApproveReject && isGuestPending && (
+              <GuestVerificationGate requestId={bookingRequest.id} guest={guest} />
+            )}
+            {canApproveReject && isGuestVerified && (
               <>
                 <Button
                   onClick={() => setApproveDialogOpen(true)}
@@ -763,6 +785,16 @@ export function BookingRequestDetails({
                   Reject Request
                 </Button>
               </>
+            )}
+            {canApproveReject && isGuestRejected && (
+              <Button
+                variant="destructive"
+                onClick={() => setRejectDialogOpen(true)}
+                className="cursor-pointer w-full md:w-4/12"
+              >
+                <XCircle className="size-5 mr-2" />
+                Reject Request
+              </Button>
             )}
             {isAdminViewOnly && (
               <div className="w-full flex items-start gap-3 p-4 rounded-lg bg-muted border">
@@ -799,7 +831,6 @@ export function BookingRequestDetails({
           <ApproveRequestDialog
             requestId={bookingRequest.id}
             guestName={`${guest.firstName} ${guest.lastName}`}
-            isVerified={guest.verificationStatus === "verified"}
             open={approveDialogOpen}
             onOpenChange={(open) => {
               if (!approveMutation.isPending) {
@@ -810,10 +841,7 @@ export function BookingRequestDetails({
           />
           <RejectRequestDialog
             requestId={bookingRequest.id}
-            guestId={guest.id}
-            guestName={guestName}
             open={rejectDialogOpen}
-            isGuestReviewed={guest.verificationStatus !== "pending"}
             onOpenChange={(open) => {
               if (!rejectMutation.isPending) {
                 setRejectDialogOpen(open);
