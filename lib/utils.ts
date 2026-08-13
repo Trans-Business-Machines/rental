@@ -9,7 +9,6 @@ import type { BookingStatus, UnitStatus, Guest, InventoryItem, PriceDuration, Ro
 export const LIMIT = 9;
 const TIMEZONE = "Africa/Nairobi";
 export const BUCKET = "media";
-export const KENYA_VAT_RATE = Number(process.env.NEXT_PUBLIC_VAT_RATE ?? 0.16);
 
 
 nationalities.registerLocale(enLocale);
@@ -176,16 +175,6 @@ export function calculateTotalAmount(
 ): number {
   const subtotal = unitPrice * period;
   return calculateDiscountedPrice(subtotal, discountRate);
-}
-
-// Calculate VAT amount
-export function calculateVAT(amount: number): number {
-  return Math.round(amount * KENYA_VAT_RATE);
-}
-
-// Calculate total including VAT
-export function calculateTotalWithVAT(amount: number): number {
-  return amount + calculateVAT(amount);
 }
 
 //  Format discount rate as percentage string

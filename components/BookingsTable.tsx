@@ -30,8 +30,8 @@ import type {
   BookingStatus,
 } from "@/lib/types/types";
 import { useRouter } from "next/navigation";
-import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
+import { Price } from "@/components/Price";
 
 export const getStatusColor = (status: BookingStatus): string => {
   switch (status) {
@@ -114,7 +114,7 @@ function BookingsTable({
                 <TableCell className="capitalize">
                   {booking.approvedBy ? booking.approvedBy.name : "-"}
                 </TableCell>
-                <TableCell>{formatPrice(booking.totalAmount)}</TableCell>
+                <TableCell><Price kes={booking.totalAmount} /></TableCell>
                 <TableCell>{booking.paymentCode}</TableCell>
                 <TableCell>
                   <Badge

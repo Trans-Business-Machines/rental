@@ -40,7 +40,6 @@ import {
 } from "lucide-react";
 import {
   cn,
-  formatPrice,
   formatDiscount,
   formatDate,
   hasDiscount,
@@ -49,8 +48,6 @@ import {
   calculateCheckoutDate,
   calculateTotalNights,
   calculateTotalAmount,
-  calculateTotalWithVAT,
-  calculateVAT,
   calculateDiscountedPrice,
   formatDateKE,
 } from "@/lib/utils";
@@ -81,6 +78,7 @@ import type {
 import { getPaymentSettings } from "@/lib/actions/payments";
 import { DatePicker } from "@/components/DatePicker";
 import {startOfDay, endOfDay} from "date-fns"
+import { Price } from "@/components/Price";
 
 const STEPS = [
   { id: 1, title: "Select Guest", icon: Users },
@@ -230,15 +228,12 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
         )
     : 0;
 
-  // Total Price with VAT
-  const subtotal = selectedPricing
+  // The price set by a super admin is the price charged — no tax added on top.
+  const totalAmount = selectedPricing
     ? isCustomDuration
       ? discountedPrice * customNights
       : calculateTotalAmount(discountedPrice, period)
     : 0;
-
-  const vatAmount = calculateVAT(subtotal);
-  const totalAmount = calculateTotalWithVAT(subtotal);
 
   // Calculate savings
   const savings = selectedPricing
@@ -273,10 +268,9 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
         selectedPricing.discountRate,
       );
 
-      const subtotalCalc = isCustomDuration
+      const total = isCustomDuration
         ? discounted * customNights
         : calculateTotalAmount(discounted, period);
-      const total = calculateTotalWithVAT(subtotalCalc);
 
       checkOut.setHours(10, 0, 0, 0);
       setValue("checkOutDate", checkOut);
@@ -599,10 +593,9 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
 
       const isCustom = selectedPricing.duration === "custom";
       const finalPeriod = isCustom ? customNights : period;
-      const finalSubtotal = isCustom
+      const finalTotalAmount = isCustom
         ? discounted * customNights
         : calculateTotalAmount(discounted, period);
-      const finalTotalAmount = calculateTotalWithVAT(finalSubtotal);
 
       let guestId: number;
 
@@ -1476,15 +1469,15 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
                                   {hasDiscount(pricing.discountRate) ? (
                                     <>
                                       <p className="text-sm text-muted-foreground line-through">
-                                        {formatPrice(pricing.price)}
+                                        <Price kes={pricing.price} />
                                       </p>
                                       <p className="text-lg font-bold text-primary">
-                                        {formatPrice(pricingDiscountedPrice)}
+                                        <Price kes={pricingDiscountedPrice} />
                                       </p>
                                     </>
                                   ) : (
                                     <p className="text-lg font-bold text-foreground">
-                                      {formatPrice(pricing.price)}
+                                      <Price kes={pricing.price} />
                                     </p>
                                   )}
                                 </div>
@@ -1658,7 +1651,7 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
                 <div className="p-4 rounded-lg bg-muted">
                   <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
                     <span>
-                      {formatPrice(discountedPrice)} × {totalNights}{" "}
+                      <Price kes={discountedPrice} /> × {totalNights}{" "}
                       {totalNights === 1 ? "night" : "nights"}
                     </span>
                     {selectedPricing?.discountRate &&
@@ -1669,24 +1662,16 @@ export function BookingRequestForm({ agentId }: { agentId: string }) {
                         </span>
                       )}
                   </div>
-                  <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
-                    <span>Subtotal</span>
-                    <span>{formatPrice(subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
-                    <span>VAT (16%)</span>
-                    <span>{formatPrice(vatAmount)}</span>
-                  </div>
                   <div className="flex justify-between items-center pt-2 border-t">
                     <span className="font-medium">Total Amount</span>
                     <span className="text-2xl font-bold text-foreground">
-                      {formatPrice(totalAmount)}
+                      <Price kes={totalAmount} />
                     </span>
                   </div>
                   {hasDiscount(selectedPricing?.discountRate) &&
                     savings > 0 && (
                       <p className="text-xs text-green-600 mt-1 text-right">
-                        You save {formatPrice(savings)}
+                        You save <Price kes={savings} />
                       </p>
                     )}
                 </div>

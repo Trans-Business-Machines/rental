@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { Price } from "@/components/Price";
 import { useRouter } from "next/navigation";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -40,8 +41,6 @@ import Image from "next/image";
 import type { Unit, UnitStatus } from "@/lib/types/types";
 import {
   getDurationLabel,
-  calculateTotalWithVAT,
-  formatPrice,
   cn,
 } from "@/lib/utils";
 
@@ -357,7 +356,7 @@ export function UnitListing({
                           <span>{getDurationLabel(opt.duration)} </span>-
                           <span>
                             {" "}
-                            {formatPrice(calculateTotalWithVAT(opt.price))}
+                            <Price kes={opt.price} />
                           </span>
                         </div>
                       ))}

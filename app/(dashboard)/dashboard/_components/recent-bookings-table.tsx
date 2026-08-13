@@ -33,8 +33,8 @@ import { ItemsNotFound } from "@/components/ItemsNotFound";
 import { Footer } from "@/components/Footer";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { format } from "date-fns";
-import { formatPrice } from "@/lib/utils";
 import type { Booking } from "@/lib/types/types";
+import { Price } from "@/components/Price";
 
 interface BookingFilters {
   search: string;
@@ -172,7 +172,7 @@ export function RecentBookingsTable({
                     <TableCell>
                       {format(new Date(booking.checkOutDate), "dd/MM/yyyy")}
                     </TableCell>
-                    <TableCell>{formatPrice(booking.totalAmount)}</TableCell>
+                    <TableCell><Price kes={booking.totalAmount} /></TableCell>
                     <TableCell>{booking.paymentCode}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

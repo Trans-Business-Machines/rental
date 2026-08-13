@@ -7,7 +7,6 @@ import { Moon, Calendar, CalendarDays, CalendarRange } from "lucide-react";
 import { getUnitPricingOptions } from "@/lib/actions/pricing";
 import {
   getDurationLabel,
-  formatPrice,
   formatDate,
   calculateDiscountedPrice,
   hasDiscount,
@@ -16,6 +15,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import type { PriceDuration, UnitTypePricing } from "@/lib/types/types";
+import { Price } from "@/components/Price";
 
 interface BookingPricingSelectorProps {
   unitId: number;
@@ -152,15 +152,15 @@ export function BookingPricingSelector({
                     {showDiscount ? (
                       <div className="space-y-0.5">
                         <p className="text-sm text-muted-foreground line-through">
-                          {formatPrice(pricing.price)}
+                          <Price kes={pricing.price} />
                         </p>
                         <p className="text-lg font-bold text-primary">
-                          {formatPrice(discountedPrice)}
+                          <Price kes={discountedPrice} />
                         </p>
                       </div>
                     ) : (
                       <p className="text-lg font-bold text-foreground">
-                        {formatPrice(pricing.price)}
+                        <Price kes={pricing.price} />
                       </p>
                     )}
                   </div>

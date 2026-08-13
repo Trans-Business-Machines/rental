@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import resend from "@/lib/emailClient";
-import { formatPrice, formatDateKE } from "@/lib/utils";
+import { formatDateKE } from "@/lib/utils";
+import { formatBoth } from "@/lib/currency";
 import  UpcomingCheckoutsEmail  from "@/lib/emails/UpcomingCheckoutsEmail";
 import {
     startOfDay,
@@ -121,7 +122,7 @@ export async function GET(request: NextRequest) {
             unitName: booking.unit.name,
             checkInDate: formatDateKE(booking.checkInDate),
             checkOutDate: formatDateKE(booking.checkOutDate),
-            totalAmount: formatPrice(booking.totalAmount),
+            totalAmount: formatBoth(booking.totalAmount),
             bookingId: booking.id,
         }));
 
@@ -132,7 +133,7 @@ export async function GET(request: NextRequest) {
             unitName: booking.unit.name,
             checkInDate: formatDateKE(booking.checkInDate),
             checkOutDate: formatDateKE(booking.checkOutDate),
-            totalAmount: formatPrice(booking.totalAmount),
+            totalAmount: formatBoth(booking.totalAmount),
             daysOverstayed: differenceInCalendarDays(now, booking.checkOutDate),
             bookingId: booking.id,
         }));

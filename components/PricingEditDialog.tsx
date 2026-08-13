@@ -23,7 +23,14 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { useUpdatePricing } from "@/hooks/useSettings";
-import { formatPrice, calculateDiscountedPrice, cn } from "@/lib/utils";
+import { calculateDiscountedPrice, cn } from "@/lib/utils";
+import {
+  formatUSD,
+  formatKESFromUsd,
+  usdToKes,
+  kesToUsd,
+  USD_TO_KES_RATE,
+} from "@/lib/currency";
 import {
   PricingEditSchema,
   type PricingEditFormData,
@@ -58,7 +65,7 @@ export function PricingEditDialog({
     defaultValues: {
       unitType: pricing.unitType,
       duration: pricing.duration as PriceDuration,
-      price: pricing.price,
+      price: kesToUsd(pricing.price),
       nights: pricing.nights,
       fromDate: pricing.fromDate ? new Date(pricing.fromDate) : null,
       toDate: pricing.toDate ? new Date(pricing.toDate) : null,
@@ -84,7 +91,7 @@ export function PricingEditDialog({
       reset({
         unitType: pricing.unitType,
         duration: pricing.duration as PriceDuration,
-        price: pricing.price,
+        price: kesToUsd(pricing.price),
         nights: pricing.nights,
         fromDate: pricing.fromDate ? new Date(pricing.fromDate) : null,
         toDate: pricing.toDate ? new Date(pricing.toDate) : null,
@@ -110,7 +117,8 @@ export function PricingEditDialog({
         id: pricing.id,
         unitType: data.unitType,
         duration: data.duration,
-        price: data.price,
+        // The form takes USD; KES is the stored base unit.
+        price: usdToKes(data.price),
         fromDate: data.fromDate,
         toDate: data.toDate,
         discountRate: data.discountRate ? data.discountRate / 100 : null,
@@ -287,16 +295,21 @@ export function PricingEditDialog({
 
           {/* Price */}
           <div className="space-y-2">
-            <Label htmlFor="price">Price (KSH)</Label>
+            <Label htmlFor="price">Price (USD)</Label>
             <Input
               id="price"
               type="number"
               min={1}
-              placeholder="Enter price"
+              step="0.01"
+              placeholder="Enter price in USD"
               disabled={updatePricingMutation.isPending}
               className={cn(errors.price && "border-red-400")}
               {...register("price", { valueAsNumber: true })}
             />
+            <p className="text-xs text-muted-foreground">
+              Enter the price in US Dollars. It is stored and charged in Kenyan
+              Shillings at a rate of {USD_TO_KES_RATE} KES per USD.
+            </p>
             {errors.price && (
               <p className="text-sm text-red-400">{errors.price.message}</p>
             )}
@@ -361,10 +374,10 @@ export function PricingEditDialog({
                 {watchedDiscountPercent && watchedDiscountPercent > 0 ? (
                   <>
                     <span className="text-lg text-muted-foreground line-through">
-                      {formatPrice(watchedPrice)}
+                      {formatUSD(watchedPrice)}
                     </span>
                     <span className="text-2xl font-bold text-primary">
-                      {formatPrice(discountedPrice)}
+                      {formatUSD(discountedPrice)}
                     </span>
                     <span className="text-sm font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded">
                       {watchedDiscountPercent}% off
@@ -372,26 +385,34 @@ export function PricingEditDialog({
                   </>
                 ) : (
                   <span className="text-2xl font-bold text-primary">
-                    {formatPrice(watchedPrice)}
+                    {formatUSD(watchedPrice)}
                   </span>
                 )}
               </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                {watchedDiscountPercent && watchedDiscountPercent > 0 ? (
+                  <>
+                    <span className="line-through mr-2">
+                      {formatKESFromUsd(watchedPrice)}
+                    </span>
+                    <span className="font-medium text-foreground">
+                      {formatKESFromUsd(discountedPrice)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-medium text-foreground">
+                    {formatKESFromUsd(watchedPrice)}
+                  </span>
+                )}
+              </p>
             </div>
           )}
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">
             <Button
-              type="button"
-              className="px-6 bg-lipstick-red hover:bg-crimson-red cursor-pointer"
-              onClick={() => onOpenChange(false)}
-              disabled={updatePricingMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
               type="submit"
-              className="px-12 bg-azure hover:bg-blue-500 cursor-pointer"
+              className="flex-1 px-12 bg-azure hover:bg-blue-500 cursor-pointer"
               disabled={updatePricingMutation.isPending}
             >
               {updatePricingMutation.isPending ? (
@@ -402,6 +423,15 @@ export function PricingEditDialog({
               ) : (
                 "Save Changes"
               )}
+            </Button>
+
+            <Button
+              type="button"
+              className="px-6 bg-lipstick-red hover:bg-crimson-red cursor-pointer"
+              onClick={() => onOpenChange(false)}
+              disabled={updatePricingMutation.isPending}
+            >
+              Cancel
             </Button>
           </div>
         </form>

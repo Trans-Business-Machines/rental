@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Price } from "@/components/Price";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,14 +39,12 @@ import { useUpdateBooking } from "@/hooks/useBookings";
 import { getUnitPricingOptions } from "@/lib/actions/pricing";
 import {
   cn,
-  formatPrice,
   formatDiscount,
   formatDate,
   hasDiscount,
   getDurationLabel,
   getPeriodLabel,
   calculateCheckoutDate,
-  calculateTotalWithVAT,
   calculateTotalNights,
   calculateTotalAmount,
   calculateDiscountedPrice,
@@ -152,8 +151,7 @@ export function BookingEditDialog({
         selectedPricing.discountRate,
       );
 
-      const subtotalCalc = calculateTotalAmount(discountedPrice, actualPeriod);
-      const total = calculateTotalWithVAT(subtotalCalc);
+      const total = calculateTotalAmount(discountedPrice, actualPeriod);
 
       setFormData((prev) => ({
         ...prev,
@@ -374,15 +372,15 @@ export function BookingEditDialog({
                               {hasDiscount(pricing.discountRate) ? (
                                 <>
                                   <p className="text-sm text-muted-foreground line-through">
-                                    {formatPrice(pricing.price)}
+                                    <Price kes={pricing.price} />
                                   </p>
                                   <p className="text-lg font-bold text-primary">
-                                    {formatPrice(pricingDiscountedPrice)}
+                                    <Price kes={pricingDiscountedPrice} />
                                   </p>
                                 </>
                               ) : (
                                 <p className="text-lg font-bold text-foreground">
-                                  {formatPrice(pricing.price)}
+                                  <Price kes={pricing.price} />
                                 </p>
                               )}
                             </div>
@@ -448,7 +446,7 @@ export function BookingEditDialog({
                   <div className="p-4 rounded-lg bg-muted">
                     <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
                       <span>
-                        {formatPrice(discountedPrice)} × {actualPeriod}{" "}
+                        <Price kes={discountedPrice} /> × {actualPeriod}{" "}
                         {getPeriodLabel(formData.priceDuration)}
                       </span>
                       <span>
@@ -464,13 +462,13 @@ export function BookingEditDialog({
                     <div className="flex justify-between items-center">
                       <span className="font-medium">Total Amount</span>
                       <span className="text-2xl font-bold text-foreground">
-                        {formatPrice(formData.totalAmount)}
+                        <Price kes={formData.totalAmount} />
                       </span>
                     </div>
                     {hasDiscount(selectedPricing.discountRate) &&
                       savings > 0 && (
                         <p className="text-xs text-green-600 mt-1 text-right">
-                          You save {formatPrice(savings)}
+                          You save <Price kes={savings} />
                         </p>
                       )}
                   </div>

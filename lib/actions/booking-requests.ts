@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { LIMIT, normalizeCheckOutTo10amEAT, evaluateUnitStatus } from "@/lib/utils";
 import { NewBookingRequestEmail } from "@/lib/emails/NewBookingRequestEmail";
-import { formatPrice, formatDate, calculateTotalNights, formatDateInTimezone } from "@/lib/utils";
+import { formatDate, calculateTotalNights, formatDateInTimezone } from "@/lib/utils";
+import { formatBoth } from "@/lib/currency";
 import resend from "@/lib/emailClient"
 import { BookingRequestApprovedEmail } from "@/lib/emails/BookingApprovedEmail"
 import { BookingRequestRejectedEmail } from "@/lib/emails/BookingRejectedEmail"
@@ -71,7 +72,7 @@ export async function notifyAdminsOfNewBookingRequest({
         // Format dates and amount
         const formattedCheckIn = formatDate(checkInDate);
         const formattedCheckOut = formatDate(checkOutDate);
-        const formattedAmount = formatPrice(totalAmount);
+        const formattedAmount = formatBoth(totalAmount);
         const guestName = `${guestFirstName} ${guestLastName}`;
 
         // Create email promises
@@ -150,7 +151,7 @@ export async function notifyAgentOfApproval({
                 checkInDate: formatDate(checkInDate),
                 checkOutDate: formatDateInTimezone(checkOutDate),
                 numberOfGuests,
-                totalAmount: formatPrice(totalAmount),
+                totalAmount: formatBoth(totalAmount),
                 bookingId,
             }),
         });
