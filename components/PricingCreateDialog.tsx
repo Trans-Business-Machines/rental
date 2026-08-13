@@ -24,7 +24,13 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { useCreatePricing } from "@/hooks/useSettings";
-import { formatPrice, calculateDiscountedPrice, cn } from "@/lib/utils";
+import { calculateDiscountedPrice, cn } from "@/lib/utils";
+import {
+  formatUSD,
+  formatKESFromUsd,
+  usdToKes,
+  USD_TO_KES_RATE,
+} from "@/lib/currency";
 import { PricingFormSchema, type PricingFormData } from "@/lib/schemas/pricing";
 import type { PriceDuration } from "@/lib/types/types";
 
@@ -98,7 +104,8 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
       {
         unitType: data.unitType,
         duration: data.duration,
-        price: data.price,
+        // The form takes USD; KES is the stored base unit.
+        price: usdToKes(data.price),
         fromDate: data.fromDate,
         toDate: data.toDate,
         discountRate: data.discountRate ? data.discountRate / 100 : null,
@@ -204,85 +211,23 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
             )}
           </div>
 
-         {/* 
-          {watchedDuration === "custom" && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="fromDate">From Date</Label>
-                <Controller
-                  name="fromDate"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="date"
-                      disabled={createPricingMutation.isPending}
-                      className={cn(errors.fromDate && "border-red-400")}
-                      value={
-                        field.value
-                          ? new Date(field.value).toISOString().split("T")[0]
-                          : ""
-                      }
-                      onChange={(e) => {
-                        const date = e.target.value
-                          ? new Date(e.target.value)
-                          : null;
-                        field.onChange(date);
-                      }}
-                    />
-                  )}
-                />
-                {errors.fromDate && (
-                  <p className="text-sm text-red-400">
-                    {errors.fromDate.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="toDate">To Date</Label>
-                <Controller
-                  name="toDate"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="date"
-                      disabled={createPricingMutation.isPending}
-                      className={cn(errors.toDate && "border-red-400")}
-                      value={
-                        field.value
-                          ? new Date(field.value).toISOString().split("T")[0]
-                          : ""
-                      }
-                      onChange={(e) => {
-                        const date = e.target.value
-                          ? new Date(e.target.value)
-                          : null;
-                        field.onChange(date);
-                      }}
-                    />
-                  )}
-                />
-                {errors.toDate && (
-                  <p className="text-sm text-red-400">
-                    {errors.toDate.message}
-                  </p>
-                )}
-              </div>
-            </div>
-          )} */}
-
           {/* Price */}
           <div className="space-y-2">
-            <Label htmlFor="price">Price (KSH)</Label>
+            <Label htmlFor="price">Price (USD)</Label>
             <Input
               id="price"
               type="number"
               min={1}
-              placeholder="Enter price"
+              step="0.01"
+              placeholder="Enter price in USD"
               disabled={createPricingMutation.isPending}
               className={cn(errors.price && "border-red-400")}
               {...register("price", { valueAsNumber: true })}
             />
+            <p className="text-xs text-muted-foreground">
+              Enter the price in US Dollars. It is stored and charged in Kenyan
+              Shillings at a rate of {USD_TO_KES_RATE} KES per USD.
+            </p>
             {errors.price && (
               <p className="text-sm text-red-400">{errors.price.message}</p>
             )}
@@ -347,10 +292,10 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
                 {watchedDiscountPercent && watchedDiscountPercent > 0 ? (
                   <>
                     <span className="text-lg text-muted-foreground line-through">
-                      {formatPrice(watchedPrice)}
+                      {formatUSD(watchedPrice)}
                     </span>
                     <span className="text-2xl font-bold text-primary">
-                      {formatPrice(discountedPrice)}
+                      {formatUSD(discountedPrice)}
                     </span>
                     <span className="text-sm font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded">
                       {watchedDiscountPercent}% off
@@ -358,26 +303,34 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
                   </>
                 ) : (
                   <span className="text-2xl font-bold text-primary">
-                    {formatPrice(watchedPrice)}
+                    {formatUSD(watchedPrice)}
                   </span>
                 )}
               </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                {watchedDiscountPercent && watchedDiscountPercent > 0 ? (
+                  <>
+                    <span className="line-through mr-2">
+                      {formatKESFromUsd(watchedPrice)}
+                    </span>
+                    <span className="font-medium text-foreground">
+                      {formatKESFromUsd(discountedPrice)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-medium text-foreground">
+                    {formatKESFromUsd(watchedPrice)}
+                  </span>
+                )}{" "}
+              </p>
             </div>
           )}
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">
             <Button
-              type="button"
-              className="px-6 bg-lipstick-red hover:bg-crimson-red cursor-pointer"
-              onClick={() => onOpenChange(false)}
-              disabled={createPricingMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
               type="submit"
-              className="px-12 bg-azure hover:bg-blue-500 cursor-pointer"
+              className="flex-1 px-12 bg-azure hover:bg-blue-500 cursor-pointer"
               disabled={createPricingMutation.isPending}
             >
               {createPricingMutation.isPending ? (
@@ -388,6 +341,15 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
               ) : (
                 "Create Pricing"
               )}
+            </Button>
+
+            <Button
+              type="button"
+              className="px-6 bg-lipstick-red hover:bg-crimson-red cursor-pointer"
+              onClick={() => onOpenChange(false)}
+              disabled={createPricingMutation.isPending}
+            >
+              Cancel
             </Button>
           </div>
         </form>

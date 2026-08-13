@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Edit, Loader2, Trash2 } from "lucide-react";
 import {
-  formatPrice,
   formatDiscount,
   getDurationLabel,
   hasDiscount,
@@ -33,6 +32,7 @@ import {
 } from "@/lib/utils";
 import { PricingEditDialog } from "@/components/PricingEditDialog";
 import type { UnitTypePricing } from "@/lib/types/types";
+import { Price } from "@/components/Price";
 
 function SettingsTable() {
   const { data: pricings, isLoading, error, refetch } = useSettings();
@@ -160,15 +160,15 @@ function SettingsTable() {
                       {hasDiscount(pricing.discountRate) ? (
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground line-through">
-                            {formatPrice(pricing.price)}
+                            <Price kes={pricing.price} />
                           </p>
                           <p className="font-semibold text-primary">
-                            {formatPrice(discountedPrice)}
+                            <Price kes={discountedPrice} />
                           </p>
                         </div>
                       ) : (
                         <p className="font-semibold text-primary">
-                          {formatPrice(pricing.price)}
+                          <Price kes={pricing.price} />
                         </p>
                       )}
                     </TableCell>

@@ -36,6 +36,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AppSkeleton } from "./AppSkeleton";
+import { CurrencySelect } from "@/components/CurrencySelect";
 import { usePendingBookingRequestCount } from "@/hooks/useBookingRequests";
 import type { Role } from "@/lib/types/types";
 
@@ -311,6 +312,7 @@ export function Layout({ children }: LayoutProps) {
           </div>
 
           <div className="flex items-center gap-4">
+            <CurrencySelect />
             <div className="flex items-center gap-3">
               <div className="hidden md:block text-right">
                 <p className="text-sm font-medium">{userName}</p>

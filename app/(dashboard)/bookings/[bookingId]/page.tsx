@@ -29,17 +29,16 @@ import type { BookingStatus } from "@/lib/types/types";
 import {
   cn,
   getPeriodLabelSingular,
-  formatPrice,
   formatDateInTimezone,
   formatDateKE,
   hasDiscount,
   getDurationLabel,
-  calculateVAT,
   maskPhone,
   maskEmail,
   maskIdNumber,
 } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Price } from "@/components/Price";
 import Link from "next/link";
 import { getServerSession } from "@/lib/check-permissions";
 import { Role } from "@/lib/types/types";
@@ -100,8 +99,10 @@ async function BookingDetails({ params }: BookingDetailsPros) {
     : booking.unitPrice;
 
   const originalTotalAmount = originalUnitPrice * booking.period;
-  const savings = originalTotalAmount - booking.totalAmount;
-  const subtotal = booking.unitPrice * booking.period;
+  // The set price is the price charged — derive the total rather than reading the
+  // stored totalAmount, which on pre-VAT-removal records still includes 16% tax.
+  const totalAmount = booking.unitPrice * booking.period;
+  const savings = originalTotalAmount - totalAmount;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -351,15 +352,15 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                     {hasDiscountApplied ? (
                       <>
                         <p className="text-xs text-muted-foreground line-through">
-                          {formatPrice(originalUnitPrice)}
+                          <Price kes={originalUnitPrice} />
                         </p>
                         <p className="text-sm font-semibold text-primary">
-                          {formatPrice(booking.unitPrice)}
+                          <Price kes={booking.unitPrice} />
                         </p>
                       </>
                     ) : (
                       <p className="text-sm font-semibold text-foreground">
-                        {formatPrice(booking.unitPrice)}
+                        <Price kes={booking.unitPrice} />
                       </p>
                     )}
                   </div>
@@ -496,14 +497,14 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                     {hasDiscountApplied ? (
                       <span className="flex items-center gap-2">
                         <span className="line-through text-muted-foreground">
-                          {formatPrice(originalUnitPrice)}
+                          <Price kes={originalUnitPrice} />
                         </span>
                         <span className="text-primary font-medium">
-                          {formatPrice(booking.unitPrice)}
+                          <Price kes={booking.unitPrice} />
                         </span>
                       </span>
                     ) : (
-                      formatPrice(booking.unitPrice)
+                      <Price kes={booking.unitPrice} />
                     )}
                   </span>
                 </div>
@@ -514,19 +515,19 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                       Discount ({Math.round(discountRate * 100)}%)
                     </span>
                     <span className="text-green-600 font-medium">
-                      -{formatPrice(originalUnitPrice - booking.unitPrice)}
+                      -<Price kes={originalUnitPrice - booking.unitPrice} />
                     </span>
                   </div>
                 )}
 
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    {formatPrice(booking.unitPrice)} × {booking.period}{" "}
+                    <Price kes={booking.unitPrice} /> × {booking.period}{" "}
                     {getPeriodLabelSingular(booking.priceDuration)}
                     {booking.period > 1 ? "s" : ""}
                   </span>
                   <span className="text-foreground">
-                    {formatPrice(subtotal)}
+                    <Price kes={totalAmount} />
                   </span>
                 </div>
 
@@ -538,31 +539,19 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                       Total Savings
                     </span>
                     <span className="text-green-600 font-bold">
-                      {formatPrice(savings)}
+                      <Price kes={savings} />
                     </span>
                   </div>
                 )}
-
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-medium">{formatPrice(subtotal)}</span>
-                </div>
-
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">VAT (16%)</span>
-                  <span className="font-medium">
-                    {formatPrice(calculateVAT(subtotal))}
-                  </span>
-                </div>
 
                 <Separator />
 
                 <div className="flex justify-between pt-2">
                   <span className="font-semibold text-foreground">
-                    Total (incl. VAT)
+                    Total Amount
                   </span>
                   <span className="text-xl font-bold text-foreground">
-                    {formatPrice(booking.totalAmount)}
+                    <Price kes={totalAmount} />
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

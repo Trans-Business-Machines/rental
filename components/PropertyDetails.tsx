@@ -18,15 +18,14 @@ import Link from "next/link";
 import { propertyUnitKeys } from "@/hooks/useProperties";
 import {
   getOccupancyRate,
-  formatPrice,
   getDurationLabel,
   formatDate,
   hasDiscount,
   calculateDiscountedPrice,
-  calculateTotalWithVAT,
 } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import type { UniqueProperty, PropertyPricings } from "@/lib/types/types";
+import { Price } from "@/components/Price";
 
 const durationIcons: Record<string, React.ElementType> = {
   one_night: Moon,
@@ -34,6 +33,19 @@ const durationIcons: Record<string, React.ElementType> = {
   monthly: CalendarDays,
   custom: CalendarRange,
 };
+
+// Display order for pricing rows — shortest stay first, seasonal/custom last.
+const durationOrder: Record<string, number> = {
+  one_night: 0,
+  weekly: 1,
+  monthly: 2,
+  custom: 3,
+};
+
+const byDuration = (
+  a: PropertyPricings[number],
+  b: PropertyPricings[number],
+) => (durationOrder[a.duration] ?? 99) - (durationOrder[b.duration] ?? 99);
 
 function PropertyDetails({
   property,
@@ -68,9 +80,13 @@ function PropertyDetails({
 
   const maxGuests = property?.maxBedrooms ? property.maxBedrooms * 2 : 1;
 
-  // Group pricings by unit type
-  const oneBedroomPricings = pricings.filter((p) => p.unitType === "1 bedroom");
-  const twoBedroomPricings = pricings.filter((p) => p.unitType === "2 bedroom");
+  // Group pricings by unit type, ordered one night → weekly → monthly → custom
+  const oneBedroomPricings = pricings
+    .filter((p) => p.unitType === "1 bedroom")
+    .sort(byDuration);
+  const twoBedroomPricings = pricings
+    .filter((p) => p.unitType === "2 bedroom")
+    .sort(byDuration);
 
   // Render pricing item
   const renderPricingItem = (
@@ -119,15 +135,15 @@ function PropertyDetails({
           {showDiscount ? (
             <>
               <p className="text-xs text-muted-foreground line-through">
-                {formatPrice(calculateTotalWithVAT(pricing.price))}
+                <Price kes={pricing.price} />
               </p>
               <p className={`text-lg font-bold ${colorClass}`}>
-                {formatPrice(calculateTotalWithVAT(discountedPrice))}
+                <Price kes={discountedPrice} />
               </p>
             </>
           ) : (
             <p className={`text-lg font-bold ${colorClass}`}>
-              {formatPrice(calculateTotalWithVAT(pricing.price))}
+              <Price kes={pricing.price} />
             </p>
           )}
         </div>

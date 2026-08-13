@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Price } from "@/components/Price";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,7 @@ import {
   useBookingRequests,
   useCancelBookingRequest,
 } from "@/hooks/useBookingRequests";
-import { formatPrice, cn, maskPhone, maskEmail } from "@/lib/utils";
+import { cn, maskPhone, maskEmail } from "@/lib/utils";
 import { format } from "date-fns";
 import type {
   BookingRequestStatus,
@@ -245,7 +246,7 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
 
                       {/* Total */}
                       <TableCell className="font-medium">
-                        {formatPrice(request.totalAmount)}
+                        <Price kes={request.totalAmount} />
                       </TableCell>
 
                       {/* Status */}

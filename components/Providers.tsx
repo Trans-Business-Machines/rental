@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import React from "react";
+import { CurrencyProvider } from "@/components/CurrencyProvider";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -37,7 +38,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <CurrencyProvider>{children}</CurrencyProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

@@ -51,7 +51,6 @@ import {
 } from "@/hooks/useBookingRequests";
 import {
   cn,
-  formatPrice,
   formatDiscount,
   hasDiscount,
   getDurationLabel,
@@ -59,7 +58,6 @@ import {
   getPeriodLabelSingular,
   calculateTotalNights,
   formatDateInTimezone,
-  calculateVAT,
   maskPhone,
   maskEmail,
   maskIdNumber,
@@ -67,6 +65,7 @@ import {
 } from "@/lib/utils";
 import { BookingRequestDetailsSkeleton } from "@/components/BookingRequestDetailsSkeleton";
 import type { PriceDuration, Role } from "@/lib/types/types";
+import { Price } from "@/components/Price";
 
 interface BookingRequestDetailsProps {
   requestId: number;
@@ -142,14 +141,16 @@ export function BookingRequestDetails({
     bookingRequest.period,
   );
 
-  const subtotal = bookingRequest.unitPrice * bookingRequest.period;
+  // The set price is the price charged — derive the total rather than reading the
+  // stored totalAmount, which on pre-VAT-removal records still includes 16% tax.
+  const totalAmount = bookingRequest.unitPrice * bookingRequest.period;
 
   const originalUnitPrice = hasDiscount(bookingRequest.discountRate)
     ? bookingRequest.unitPrice / (1 - bookingRequest.discountRate!)
     : bookingRequest.unitPrice;
 
-  const originalSubtotal = originalUnitPrice * bookingRequest.period;
-  const discountAmount = originalSubtotal - subtotal;
+  const originalTotalAmount = originalUnitPrice * bookingRequest.period;
+  const discountAmount = originalTotalAmount - totalAmount;
 
   // Determine which ID images to show
   const hasIdImages = isNationalId
@@ -554,11 +555,11 @@ export function BookingRequestDetails({
                 <div className="text-right">
                   {hasDiscount(bookingRequest.discountRate) && (
                     <span className="text-muted-foreground line-through mr-2">
-                      {formatPrice(originalUnitPrice)}
+                      <Price kes={originalUnitPrice} />
                     </span>
                   )}
                   <span className="font-medium">
-                    {formatPrice(bookingRequest.unitPrice)}
+                    <Price kes={bookingRequest.unitPrice} />
                   </span>
                 </div>
               </div>
@@ -579,10 +580,10 @@ export function BookingRequestDetails({
                 <>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">
-                      Original Subtotal
+                      Original Total
                     </span>
                     <span className="text-muted-foreground line-through">
-                      {formatPrice(originalSubtotal)}
+                      <Price kes={originalTotalAmount} />
                     </span>
                   </div>
 
@@ -596,30 +597,24 @@ export function BookingRequestDetails({
                         {formatDiscount(bookingRequest.discountRate)}
                       </Badge>
                     </span>
-                    <span>-{formatPrice(discountAmount)}</span>
+                    <span>-<Price kes={discountAmount} /></span>
                   </div>
                 </>
               )}
 
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium">{formatPrice(subtotal)}</span>
-              </div>
-
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">VAT (16%)</span>
-                <span className="font-medium">
-                  {formatPrice(calculateVAT(subtotal))}
+                <span className="text-muted-foreground">
+                  Total Amount (<Price kes={bookingRequest.unitPrice} /> &times;{" "}
+                  {bookingRequest.period})
                 </span>
+                <span className="font-medium"><Price kes={totalAmount} /></span>
               </div>
 
               <Separator />
 
               <div className="flex justify-between text-sm md:text-lg font-semibold">
-                <span>Total (incl. VAT)</span>
-                <span className="text-primary">
-                  {formatPrice(bookingRequest.totalAmount)}
-                </span>
+                <span>Total Amount</span>
+                <span className="text-primary"><Price kes={totalAmount} /></span>
               </div>
 
               <div className="flex justify-between text-base font-medium">

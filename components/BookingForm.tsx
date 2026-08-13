@@ -16,9 +16,6 @@ import {
   calculateTotalAmount,
   calculateDiscountedPrice,
   calculateTotalNights,
-  calculateTotalWithVAT,
-  calculateVAT,
-  formatPrice,
   getPeriodLabel,
   formatDateKE,
 } from "@/lib/utils";
@@ -38,6 +35,7 @@ import { format } from "date-fns";
 import { getPaymentSettings } from "@/lib/actions/payments";
 import type { PriceDuration, UnitTypePricing } from "@/lib/types/types";
 import { DatePicker } from "@/components/DatePicker";
+import { Price } from "@/components/Price";
 
 interface BookingFormProps {
   onSuccess?: () => void;
@@ -158,15 +156,12 @@ export function BookingForm({
         )
     : 0;
 
-  // With:
-  const subtotal = selectedPricing
+  // The price set by a super admin is the price charged — no tax added on top.
+  const totalAmount = selectedPricing
     ? isCustomDuration
       ? discountedPrice * customNights
       : calculateTotalAmount(discountedPrice, period)
     : 0;
-
-  const vatAmount = calculateVAT(subtotal);
-  const totalAmount = calculateTotalWithVAT(subtotal);
 
   // Update checkout date when check-in, duration, or period changes
   useEffect(() => {
@@ -246,10 +241,9 @@ export function BookingForm({
     );
 
     const finalPeriod = isCustomDuration ? customNights : period;
-    const finalSubtotal = isCustomDuration
+    const finalTotalAmount = isCustomDuration
       ? discounted * customNights
       : calculateTotalAmount(discounted, period);
-    const finalTotalAmount = calculateTotalWithVAT(finalSubtotal);
 
     const newBooking = {
       guestId: parseInt(data.guestId),
@@ -669,7 +663,7 @@ export function BookingForm({
           <article className="p-4 rounded-lg bg-muted">
             <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
               <span>
-                {formatPrice(discountedPrice)} × {totalNights}{" "}
+                <Price kes={discountedPrice} /> × {totalNights}{" "}
                 {totalNights === 1 ? "night" : "nights"}
               </span>
               {selectedPricing?.discountRate &&
@@ -680,18 +674,10 @@ export function BookingForm({
                   </span>
                 )}
             </div>
-            <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
-              <span>Subtotal</span>
-              <span>{formatPrice(subtotal)}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
-              <span>VAT (16%)</span>
-              <span>{formatPrice(vatAmount)}</span>
-            </div>
             <div className="flex justify-between items-center pt-2 border-t">
               <span className="font-medium">Total Amount</span>
               <span className="text-2xl font-bold text-foreground">
-                {formatPrice(totalAmount)}
+                <Price kes={totalAmount} />
               </span>
             </div>
           </article>

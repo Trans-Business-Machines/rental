@@ -1,6 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
+import { Price } from "@/components/Price";
 import {
   User,
   Mail,
@@ -23,12 +24,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  formatPrice,
   formatDiscount,
   hasDiscount,
   getDurationLabel,
   calculateTotalNights,
-  calculateVAT,
 } from "@/lib/utils";
 import type { BookingRequestFormData } from "@/lib/schemas/booking-requests";
 import type {
@@ -435,11 +434,11 @@ export function BookingRequestConfirmation({
                 <div className="text-right">
                   {hasDiscount(selectedPricing?.discountRate) && (
                     <span className="text-xs text-muted-foreground line-through mr-2">
-                      {formatPrice(selectedPricing?.price || 0)}
+                      <Price kes={selectedPricing?.price || 0} />
                     </span>
                   )}
                   <span className="font-medium">
-                    {formatPrice(formData.unitPrice || 0)}
+                    <Price kes={formData.unitPrice || 0} />
                   </span>
                 </div>
               </div>
@@ -454,34 +453,28 @@ export function BookingRequestConfirmation({
               {hasDiscount(selectedPricing?.discountRate) && savings > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>You Save</span>
-                  <span className="font-medium">-{formatPrice(savings)}</span>
+                  <span className="font-medium">-<Price kes={savings} /></span>
                 </div>
               )}
 
               <Separator />
 
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium">
-                  {formatPrice((formData.unitPrice || 0) * period)}
+                <span className="text-muted-foreground">
+                  Total Amount (<Price kes={formData.unitPrice || 0} /> &times;{" "}
+                  {period})
                 </span>
-              </div>
-
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">VAT (16%)</span>
                 <span className="font-medium">
-                  {formatPrice(
-                    calculateVAT((formData.unitPrice || 0) * period),
-                  )}
+                  <Price kes={(formData.unitPrice || 0) * period} />
                 </span>
               </div>
 
               <Separator />
 
               <div className="flex justify-between items-center pt-2 text-sm md:text-xl">
-                <span className="font-semibold">Total Amount (incl. VAT)</span>
+                <span className="font-semibold">Total Amount</span>
                 <span className="font-bold text-primary">
-                  {formatPrice(formData.totalAmount || 0)}
+                  <Price kes={formData.totalAmount || 0} />
                 </span>
               </div>
 
