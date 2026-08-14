@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { CategorySelect } from "@/components/CategorySelect";
 import { Package, Search, Loader } from "lucide-react";
 import { useTableMode } from "@/hooks/useTableMode";
 import { ItemsNotFound } from "./ItemsNotFound";
@@ -152,67 +153,15 @@ function InventoryItems({
             </SelectContent>
           </Select>
 
-          <Select
+          <CategorySelect
             value={filters.category}
             onValueChange={(value) =>
               setFilters((prev) => ({ ...prev, category: value }))
             }
+            includeAllOption
             disabled={isPending}
-          >
-            <SelectTrigger className="w-full md:flex-1 text-black/70 hover:cursor-pointer">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="cursor-pointer">
-                All Categories
-              </SelectItem>
-              <SelectItem value="Amenities" className="cursor-pointer">
-                Amenities
-              </SelectItem>
-              <SelectItem value="Bathroom" className="cursor-pointer">
-                Bathroom
-              </SelectItem>
-              <SelectItem
-                value="Bedroom Accessories"
-                className="cursor-pointer"
-              >
-                Bedroom Accessories
-              </SelectItem>
-              <SelectItem value="Bedroom Amenities" className="cursor-pointer">
-                Bedroom Amenities
-              </SelectItem>
-              <SelectItem value="Cutlery" className="cursor-pointer">
-                Cutlery
-              </SelectItem>
-              <SelectItem value="Electronics" className="cursor-pointer">
-                Electronics
-              </SelectItem>
-              <SelectItem value="Furniture" className="cursor-pointer">
-                Furniture
-              </SelectItem>
-              <SelectItem
-                value="Kitchen Accessories"
-                className="cursor-pointer"
-              >
-                Kitchen Accessories
-              </SelectItem>
-              <SelectItem
-                value="Kitchen Consumables"
-                className="cursor-pointer"
-              >
-                Kitchen Consumables
-              </SelectItem>
-              <SelectItem value="Lighting" className="cursor-pointer">
-                Lighting
-              </SelectItem>
-              <SelectItem value="Room Accessories" className="cursor-pointer">
-                Room Accessories
-              </SelectItem>
-              <SelectItem value="Other" className="cursor-pointer">
-                Other
-              </SelectItem>
-            </SelectContent>
-          </Select>
+            className="md:flex-1 text-black/70"
+          />
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:justify-between">
