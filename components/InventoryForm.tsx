@@ -3,13 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { CategorySelect } from "@/components/CategorySelect";
 import { Switch } from "@/components/ui/switch";
 import {
   createInventoryItem,
@@ -109,36 +103,10 @@ export function InventoryForm({
 
         <div className="space-y-2">
           <Label htmlFor="category">Category *</Label>
-          <Select
+          <CategorySelect
             value={formData.category}
             onValueChange={(value) => handleInputChange("category", value)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Amenities">Amenities</SelectItem>
-              <SelectItem value="Bathroom">Bathroom</SelectItem>
-              <SelectItem value="Bedroom Accessories">
-                Bedroom Accessories
-              </SelectItem>
-              <SelectItem value="Bedroom Amenities">
-                Bedroom Amenities
-              </SelectItem>
-              <SelectItem value="Cutlery">Cutlery</SelectItem>
-              <SelectItem value="Electronics">Electronics</SelectItem>
-              <SelectItem value="Furniture">Furniture</SelectItem>
-              <SelectItem value="Kitchen Accessories">
-                Kitchen Accessories
-              </SelectItem>
-              <SelectItem value="Kitchen Consumables">
-                Kitchen Consumables
-              </SelectItem>
-              <SelectItem value="Lighting">Lighting</SelectItem>
-              <SelectItem value="Room Accessories">Room Accessories</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
-            </SelectContent>
-          </Select>
+          />
         </div>
 
         <div className="col-span-2 space-y-2">
@@ -257,7 +225,7 @@ export function InventoryForm({
       <div className="flex flex-row justify-end gap-2 pt-3">
         <Button
           type="submit"
-          className="cursor-pointer w-1/3"
+          className="cursor-pointer flex-1"
           disabled={loading}
         >
           {loading ? "Saving..." : item ? "Update Item" : "Add Item"}
