@@ -11,7 +11,6 @@ import {
   Moon,
   Calendar,
   CalendarDays,
-  CalendarRange,
   Bed,
 } from "lucide-react";
 import Link from "next/link";
@@ -19,7 +18,6 @@ import { propertyUnitKeys } from "@/hooks/useProperties";
 import {
   getOccupancyRate,
   getDurationLabel,
-  formatDate,
   hasDiscount,
   calculateDiscountedPrice,
 } from "@/lib/utils";
@@ -31,15 +29,13 @@ const durationIcons: Record<string, React.ElementType> = {
   one_night: Moon,
   weekly: Calendar,
   monthly: CalendarDays,
-  custom: CalendarRange,
 };
 
-// Display order for pricing rows — shortest stay first, seasonal/custom last.
+// Display order for pricing rows — shortest stay first.
 const durationOrder: Record<string, number> = {
   one_night: 0,
   weekly: 1,
   monthly: 2,
-  custom: 3,
 };
 
 const byDuration = (
@@ -80,7 +76,7 @@ function PropertyDetails({
 
   const maxGuests = property?.maxBedrooms ? property.maxBedrooms * 2 : 1;
 
-  // Group pricings by unit type, ordered one night → weekly → monthly → custom
+  // Group pricings by unit type, ordered one night → weekly → monthly
   const oneBedroomPricings = pricings
     .filter((p) => p.unitType === "1 bedroom")
     .sort(byDuration);
@@ -118,17 +114,9 @@ function PropertyDetails({
                 </span>
               )}
             </div>
-            {pricing.duration === "custom" &&
-            pricing.fromDate &&
-            pricing.toDate ? (
-              <p className="text-xs text-muted-foreground">
-                {formatDate(pricing.fromDate)} - {formatDate(pricing.toDate)}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                {pricing.nights} {pricing.nights === 1 ? "night" : "nights"}
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              {pricing.nights} {pricing.nights === 1 ? "night" : "nights"}
+            </p>
           </div>
         </div>
         <div className="text-right">

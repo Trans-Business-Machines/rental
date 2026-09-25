@@ -27,7 +27,6 @@ import {
   formatDiscount,
   getDurationLabel,
   hasDiscount,
-  formatDate,
   calculateDiscountedPrice,
 } from "@/lib/utils";
 import { PricingEditDialog } from "@/components/PricingEditDialog";
@@ -142,14 +141,6 @@ function SettingsTable() {
                     <TableCell>
                       <div>
                         <p>{getDurationLabel(pricing.duration)}</p>
-                        {pricing.duration === "custom" &&
-                          pricing.fromDate &&
-                          pricing.toDate && (
-                            <p className="text-xs text-muted-foreground">
-                              {formatDate(pricing.fromDate)} -{" "}
-                              {formatDate(pricing.toDate)}
-                            </p>
-                          )}
                       </div>
                     </TableCell>
                     <TableCell>

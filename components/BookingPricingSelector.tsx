@@ -3,11 +3,10 @@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Moon, Calendar, CalendarDays, CalendarRange } from "lucide-react";
+import { Moon, Calendar, CalendarDays } from "lucide-react";
 import { getUnitPricingOptions } from "@/lib/actions/pricing";
 import {
   getDurationLabel,
-  formatDate,
   calculateDiscountedPrice,
   hasDiscount,
   cn,
@@ -30,7 +29,6 @@ const durationIcons: Record<
   one_night: Moon,
   weekly: Calendar,
   monthly: CalendarDays,
-  custom: CalendarRange,
 };
 
 export function BookingPricingSelector({
@@ -92,7 +90,6 @@ export function BookingPricingSelector({
               className={cn(
                 "cursor-pointer",
                 pricing.duration === "monthly" && "md:col-span-2",
-                pricing.duration === "custom" && "md:col-span-2",
               )}
             >
               <Card
@@ -133,19 +130,10 @@ export function BookingPricingSelector({
                         </span>
                       )}
                     </div>
-                    {pricing.duration === "custom" &&
-                    pricing.fromDate &&
-                    pricing.toDate ? (
-                      <p className="text-sm text-muted-foreground">
-                        {formatDate(pricing.fromDate)} -{" "}
-                        {formatDate(pricing.toDate)}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        {pricing.nights}{" "}
-                        {pricing.nights === 1 ? "night" : "nights"} stay
-                      </p>
-                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {pricing.nights}{" "}
+                      {pricing.nights === 1 ? "night" : "nights"} stay
+                    </p>
                   </div>
 
                   <div className="text-right">

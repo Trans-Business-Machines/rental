@@ -1,241 +1,411 @@
 "use client";
 
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CategorySelect } from "@/components/CategorySelect";
-import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Info } from "lucide-react";
 import {
   createInventoryItem,
   updateInventoryItem,
 } from "@/lib/actions/inventory";
-import { useState } from "react";
-import { toast } from "sonner";
-import { usePermissions } from "@/hooks/usePermissions";
-import type { InventoryItem } from "@/lib/types/types";
+import type {
+  InventoryCategory,
+  UnitOfMeasure,
+} from "@/prisma/generated/client";
+
+/* ------------------------------------------------------------------ *
+ * OPTIONS
+ *
+ * Category drives behaviour everywhere else in the system, so the
+ * helper text spells out what each one means operationally.
+ * ------------------------------------------------------------------ */
+
+const CATEGORY_OPTIONS: {
+  value: InventoryCategory;
+  label: string;
+  hint: string;
+  defaultUom: UnitOfMeasure;
+}[] = [
+  {
+    value: "electronics",
+    label: "Electronics",
+    hint: "Assigned to units and expected back. Issues can be reported.",
+    defaultUom: "pieces",
+  },
+  {
+    value: "furniture",
+    label: "Furniture",
+    hint: "Assigned to units and expected back. Issues can be reported.",
+    defaultUom: "pieces",
+  },
+  {
+    value: "bedroom",
+    label: "Bedroom items",
+    hint: "Assigned to units and expected back. Issues can be reported.",
+    defaultUom: "pieces",
+  },
+  {
+    value: "cutlery",
+    label: "Cutlery",
+    hint: "Assigned to units and expected back. Issues can be reported.",
+    defaultUom: "pieces",
+  },
+  {
+    value: "linens",
+    label: "Linens",
+    hint: "Assigned to units and expected back. Issues can be reported.",
+    defaultUom: "pieces",
+  },
+  {
+    value: "kitchen_consumables",
+    label: "Kitchen consumables",
+    hint: "Assigned to units and consumed there — never returned.",
+    defaultUom: "sachets",
+  },
+  {
+    value: "laundry",
+    label: "Laundry commodities",
+    hint: "Used centrally by housekeeping. Tracked with usage logs, not assignments.",
+    defaultUom: "kg",
+  },
+];
+
+const UOM_OPTIONS: { value: UnitOfMeasure; label: string }[] = [
+  { value: "pieces", label: "Pieces" },
+  { value: "pairs", label: "Pairs" },
+  { value: "sets", label: "Sets" },
+  { value: "kg", label: "Kilograms (kg)" },
+  { value: "litres", label: "Litres" },
+  { value: "sachets", label: "Sachets" },
+  { value: "packets", label: "Packets" },
+  { value: "bottles", label: "Bottles" },
+  { value: "rolls", label: "Rolls" },
+];
+
+/* ------------------------------------------------------------------ */
+
+export interface InventoryFormItem {
+  id: string;
+  propertyId: number;
+  category: InventoryCategory;
+  itemName: string;
+  description: string | null;
+  unitOfMeasure: UnitOfMeasure;
+  restockAt: number;
+  unitCost: number | null;
+}
+
+interface PropertyOption {
+  id: number;
+  name: string;
+}
 
 interface InventoryFormProps {
-  item?: InventoryItem;
+  properties: PropertyOption[];
+  item?: InventoryFormItem;
+  /**
+   * True when the item already has restock, assignment, issue or usage
+   * history. Category and unit of measure are frozen at that point —
+   * the server rejects the change too, this just prevents the attempt.
+   */
+  hasHistory?: boolean;
   onSuccess?: () => void;
   onCancel?: () => void;
-  isEditing?: boolean;
 }
 
 export function InventoryForm({
+  properties,
   item,
+  hasHistory = false,
   onSuccess,
   onCancel,
-  isEditing = false,
 }: InventoryFormProps) {
-  const { isSuperAdmin, isAdmin } = usePermissions();
+  const isEditing = Boolean(item);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    category: item?.category || "",
-    itemName: item?.itemName || "",
-    description: item?.description || "",
-    quantity: item?.quantity || 1,
-    purchasePrice: item?.purchasePrice || 0,
-    currentValue: item?.currentValue || 0,
-    supplier: item?.supplier || "",
-    warrantyExpiry: item?.warrantyExpiry
-      ? new Date(item.warrantyExpiry).toISOString().split("T")[0]
-      : "",
-    assignableOnBooking: item?.assignableOnBooking ?? true,
+
+  const [form, setForm] = useState({
+    propertyId: item?.propertyId ? String(item.propertyId) : "",
+    category: (item?.category ?? "") as InventoryCategory | "",
+    itemName: item?.itemName ?? "",
+    description: item?.description ?? "",
+    unitOfMeasure: (item?.unitOfMeasure ?? "pieces") as UnitOfMeasure,
+    openingQuantity: "",
+    restockAt: item?.restockAt != null ? String(item.restockAt) : "0",
+    unitCost: item?.unitCost != null ? String(item.unitCost) : "",
   });
 
-  // No need to fetch properties since inventory items are now templates
+  const selectedCategory = CATEGORY_OPTIONS.find(
+    (c) => c.value === form.category,
+  );
+
+  const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  /** Picking a category suggests a sensible unit, but doesn't force it. */
+  const handleCategoryChange = (value: string) => {
+    const category = value as InventoryCategory;
+    const match = CATEGORY_OPTIONS.find((c) => c.value === category);
+    setForm((prev) => ({
+      ...prev,
+      category,
+      unitOfMeasure: isEditing
+        ? prev.unitOfMeasure
+        : (match?.defaultUom ?? "pieces"),
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!form.itemName.trim()) {
+      toast.error("An item name is required.", {
+        description: "Enter a name such as “Bath towels”.",
+      });
+      return;
+    }
+
+    if (!isEditing && !form.propertyId) {
+      toast.error("Select a property.", {
+        description: "Each property keeps its own inventory store.",
+      });
+      return;
+    }
+
+    if (!form.category) {
+      toast.error("Select a category.", {
+        description: "The category decides how this item is tracked.",
+      });
+      return;
+    }
+
     setLoading(true);
 
-    try {
-      const submitData = {
-        ...formData,
-        purchasePrice: formData.purchasePrice || undefined,
-        currentValue: formData.currentValue || undefined,
-        supplier: formData.supplier || undefined,
-        warrantyExpiry: formData.warrantyExpiry
-          ? new Date(formData.warrantyExpiry)
-          : undefined,
-        status: item?.status || "active",
-      };
+    const result = isEditing
+      ? await updateInventoryItem(item!.id, {
+          itemName: form.itemName,
+          description: form.description || undefined,
+          restockAt: Number(form.restockAt) || 0,
+          unitCost: form.unitCost ? Number(form.unitCost) : undefined,
+          ...(hasHistory
+            ? {}
+            : {
+                category: form.category as InventoryCategory,
+                unitOfMeasure: form.unitOfMeasure,
+              }),
+        })
+      : await createInventoryItem({
+          propertyId: Number(form.propertyId),
+          category: form.category as InventoryCategory,
+          itemName: form.itemName,
+          description: form.description || undefined,
+          unitOfMeasure: form.unitOfMeasure,
+          restockAt: Number(form.restockAt) || 0,
+          unitCost: form.unitCost ? Number(form.unitCost) : undefined,
+          openingQuantity: Number(form.openingQuantity) || 0,
+        });
 
-      if (item && isEditing) {
-        // Update existing item
-        await updateInventoryItem(item.id, submitData);
-        toast.success("Inventory item updated successfully");
-      } else {
-        // Create new item
-        await createInventoryItem(submitData);
-        toast.success("Inventory item created successfully");
-      }
-      onSuccess?.();
-    } catch (error) {
-      console.error("Error saving inventory item:", error);
-      toast.error("Failed to save inventory item");
-    } finally {
-      setLoading(false);
+    setLoading(false);
+
+    if (!result.success) {
+      // message = what went wrong, nextStep = what to do about it
+      toast.error(result.message, { description: result.nextStep });
+      return;
     }
-  };
 
-  const handleInputChange = (
-    field: string,
-    value: string | number | boolean,
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    toast.success(result.message);
+    onSuccess?.();
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Property — locked after creation, since the store is property-scoped */}
         <div className="space-y-2">
-          <Label htmlFor="item-name">Item Name *</Label>
+          <Label htmlFor="property">Property *</Label>
+          <Select
+            value={form.propertyId}
+            onValueChange={(v) => set("propertyId", v)}
+            disabled={isEditing || loading}
+          >
+            <SelectTrigger id="property" className="w-full">
+              <SelectValue placeholder="Select a property" />
+            </SelectTrigger>
+            <SelectContent>
+              {properties.map((p) => (
+                <SelectItem key={p.id} value={String(p.id)}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {isEditing && (
+            <p className="text-xs text-muted-foreground">
+              Items can&apos;t move between property stores.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="item-name">Item name *</Label>
           <Input
             id="item-name"
-            value={formData.itemName}
-            onChange={(e) => handleInputChange("itemName", e.target.value)}
-            placeholder="e.g., Plates, Laptops, Sofas"
-            disabled={isEditing && !(isSuperAdmin || isAdmin)}
+            value={form.itemName}
+            onChange={(e) => set("itemName", e.target.value)}
+            placeholder='e.g. Bath towels, Sugar, Samsung 43" TV'
+            disabled={loading}
             required
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="category">Category *</Label>
-          <CategorySelect
-            value={formData.category}
-            onValueChange={(value) => handleInputChange("category", value)}
-          />
+          <Select
+            value={form.category}
+            onValueChange={handleCategoryChange}
+            disabled={hasHistory || loading}
+          >
+            <SelectTrigger id="category" className="w-full">
+              <SelectValue placeholder="Select a category" />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORY_OPTIONS.map((c) => (
+                <SelectItem key={c.value} value={c.value}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="col-span-2 space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Input
-            id="description"
-            value={formData.description}
-            onChange={(e) => handleInputChange("description", e.target.value)}
-            placeholder="Detailed description of the item"
-            disabled={isEditing && !(isSuperAdmin || isAdmin)}
-          />
+        <div className="space-y-2">
+          <Label htmlFor="uom">Unit of measure *</Label>
+          <Select
+            value={form.unitOfMeasure}
+            onValueChange={(v) => set("unitOfMeasure", v as UnitOfMeasure)}
+            disabled={hasHistory || loading}
+          >
+            <SelectTrigger id="uom" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {UOM_OPTIONS.map((u) => (
+                <SelectItem key={u.value} value={u.value}>
+                  {u.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-
-        <div className="space-y-2 col-span-2">
-          <Label htmlFor="quantity">Quantity *</Label>
-          <Input
-            id="quantity"
-            type="number"
-            min="0"
-            value={formData.quantity}
-            onChange={(e) =>
-              handleInputChange("quantity", parseInt(e.target.value) || 0)
-            }
-            placeholder="Available quantity"
-            disabled={isEditing && !(isSuperAdmin || isAdmin)}
-            required
-          />
-        </div>
-
-        <div className="col-span-2 space-y-3">
-          <div className="flex items-center space-x-3">
-            <Switch
-              id="assignable-on-booking"
-              checked={formData.assignableOnBooking}
-              onCheckedChange={(checked) =>
-                handleInputChange("assignableOnBooking", checked)
-              }
-              disabled={isEditing && !(isSuperAdmin || isAdmin)}
-            />
-            <div className="space-y-1">
-              <Label
-                htmlFor="assignable-on-booking"
-                className="text-sm font-medium"
-              >
-                Can be assigned to guests
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {formData.assignableOnBooking
-                  ? "This item can be given to guests during check-in and returned at checkout"
-                  : "This item is fixed in the room and cannot be assigned to guests"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Show these fields only when editing */}
-        {item && isEditing && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="supplier">Supplier (optional)</Label>
-              <Input
-                id="supplier"
-                value={formData.supplier}
-                onChange={(e) => handleInputChange("supplier", e.target.value)}
-                placeholder="Supplier name (optional)"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="purchase-price">Purchase Price (KES)</Label>
-              <Input
-                id="purchase-price"
-                type="number"
-                value={formData.purchasePrice}
-                onChange={(e) =>
-                  handleInputChange(
-                    "purchasePrice",
-                    parseInt(e.target.value) || 1,
-                  )
-                }
-                placeholder="0"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="current-value">Current Value (KES)</Label>
-              <Input
-                id="current-value"
-                type="number"
-                value={formData.currentValue}
-                onChange={(e) =>
-                  handleInputChange(
-                    "currentValue",
-                    parseInt(e.target.value) || 1,
-                  )
-                }
-                placeholder="0"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="warranty-expiry">Warranty Expiry</Label>
-              <Input
-                id="warranty-expiry"
-                type="date"
-                value={formData.warrantyExpiry}
-                onChange={(e) =>
-                  handleInputChange("warrantyExpiry", e.target.value)
-                }
-              />
-            </div>
-          </>
-        )}
       </div>
 
-      <div className="flex flex-row justify-end gap-2 pt-3">
-        <Button
-          type="submit"
-          className="cursor-pointer flex-1"
+      {/* Category behaviour, so nobody has to guess why Assign is missing */}
+      {selectedCategory && (
+        <div className="flex gap-2 rounded-md border border-blue-700 bg-blue-500/10 p-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
+          <p className="text-xs text-blue-600">
+            {selectedCategory.hint}
+          </p>
+        </div>
+      )}
+
+      {hasHistory && (
+        <p className="text-xs text-muted-foreground">
+          Category and unit of measure are locked because this item already has
+          stock history changing them would reinterpret every past record.
+          Create a separate item if you need different settings.
+        </p>
+      )}
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={form.description}
+          onChange={(e) => set("description", e.target.value)}
+          placeholder="Optional detail, brand, size, model . . ."
+          rows={2}
           disabled={loading}
-        >
-          {loading ? "Saving..." : item ? "Update Item" : "Add Item"}
-        </Button>
-        <Button
-          type="button"
-          className="w-1/4 bg-chart-5 hover:bg-chart-5 cursor-pointer"
-          onClick={onCancel}
-        >
-          Cancel
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {!isEditing && (
+          <div className="space-y-2">
+            <Label htmlFor="opening">Opening stock</Label>
+            <Input
+              id="opening"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.openingQuantity}
+              onChange={(e) => set("openingQuantity", e.target.value)}
+              placeholder="0"
+              disabled={loading}
+            />
+            <p className="text-xs text-muted-foreground">
+              Recorded as the first stock receipt.
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="restock-at">Restock threshold</Label>
+          <Input
+            id="restock-at"
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.restockAt}
+            onChange={(e) => set("restockAt", e.target.value)}
+            disabled={loading}
+          />
+          <p className="text-xs text-muted-foreground">
+            Flagged low at or below this level
+            {form.unitOfMeasure ? ` (${form.unitOfMeasure})` : ""}.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="unit-cost">Unit cost (KES)</Label>
+          <Input
+            id="unit-cost"
+            type="number"
+            min="0"
+            value={form.unitCost}
+            onChange={(e) => set("unitCost", e.target.value)}
+            placeholder="0"
+            disabled={loading}
+          />
+          <p className="text-xs text-muted-foreground">
+            Current replacement cost.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" disabled={loading} className="flex-1 cursor-pointer">
+          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isEditing ? "Save changes" : "Add item"}
         </Button>
       </div>
     </form>

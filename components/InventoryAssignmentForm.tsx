@@ -1,414 +1,372 @@
 "use client";
 
+import { useState, useMemo } from "react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, Info, AlertTriangle } from "lucide-react";
+import { createInventoryAssignment } from "@/lib/actions/inventory";
 import { unitKeys } from "@/hooks/useUnitDetails";
-import {
-  createInventoryAssignment,
-  getAllUnitsForAssignment,
-  getInventoryItemsWithAvailability,
-} from "@/lib/actions/inventory";
-import { ChevronDown, Package, Plus, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
-interface InventoryAssignmentFormProps {
-  preselectedUnitId?: number;
-  preselectedPropertyId?: number;
-  preselectedItemId?: number;
-  onSuccess?: () => void;
-  onCancel?: () => void;
-}
-
-interface InventoryItem {
-  id: number;
+interface AssignableItem {
+  id: string;
+  propertyId: number;
   itemName: string;
   category: string;
+  unitOfMeasure: string;
   availableQuantity: number;
-  isAvailable: boolean;
+  expectsReturn: boolean;
+  property: { id: number; name: string };
 }
 
-interface Unit {
+interface UnitOption {
   id: number;
   propertyId: number;
   name: string;
   propertyName: string;
   displayName: string;
-  value: string;
 }
 
-interface AssignmentDetail {
-  id: string;
-  serialNumber: string;
-  notes: string;
+interface InventoryAssignmentFormProps {
+  items: AssignableItem[];
+  units: UnitOption[];
+  preselectedUnitId?: number;
+  preselectedPropertyId?: number;
+  preselectedItemId?: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+/** Serial numbers only make sense for individually identifiable assets. */
+const SERIAL_CATEGORIES = new Set(["electronics", "furniture"]);
+
+function formatQty(value: number) {
+  return Number(value.toFixed(2)).toLocaleString();
 }
 
 export function InventoryAssignmentForm({
-  preselectedItemId,
+  items,
+  units,
   preselectedUnitId,
   preselectedPropertyId,
   onSuccess,
   onCancel,
+  preselectedItemId,
 }: InventoryAssignmentFormProps) {
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [units, setUnits] = useState<Unit[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
-  const [formData, setFormData] = useState({
-    inventoryItemId: preselectedItemId || "",
-    unitId: preselectedUnitId?.toString() || "",
-    propertyId: preselectedPropertyId?.toString() || "",
-    quantity: 1,
-  });
-  const [assignmentDetails, setAssignmentDetails] = useState<
-    AssignmentDetail[]
-  >([]);
-
   const queryClient = useQueryClient();
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [itemsData, unitsData] = await Promise.all([
-          getInventoryItemsWithAvailability(),
-          getAllUnitsForAssignment(),
-        ]);
+  const [unitId, setUnitId] = useState(
+    preselectedUnitId ? String(preselectedUnitId) : "",
+  );
+  const [itemId, setItemId] = useState(preselectedItemId || "");
+  const [quantity, setQuantity] = useState("1");
+  const [serialNumber, setSerialNumber] = useState("");
+  const [notes, setNotes] = useState("");
 
-        // Filter only available items (quantity > 0)
-        const availableItems = itemsData.filter(
-          (item: any) => item.isAvailable
-        );
-        setItems(availableItems);
-        setUnits(unitsData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Failed to load data");
-      }
-    };
-    fetchData();
-  }, []);
+  /**
+   * Opened from a specific item (its row menu or detail page): the item
+   * is fixed, and only units at that item's property are offered.
+   */
+  const lockedItem = preselectedItemId
+    ? items.find((i) => i.id === preselectedItemId)
+    : undefined;
 
+  const unitOptions = useMemo(
+    () =>
+      lockedItem
+        ? units.filter((u) => u.propertyId === lockedItem.propertyId)
+        : units,
+    [units, lockedItem],
+  );
+
+  const selectedUnit = unitOptions.find((u) => u.id === Number(unitId));
+
+  /**
+   * The unit determines the property, and an item can only be assigned
+   * within its own property's store. Filtering here means the invalid
+   * combination is never offered rather than rejected after the fact.
+   */
+  const availableItems = useMemo(() => {
+    if (lockedItem) return [lockedItem];
+    if (!selectedUnit) return [];
+    return items.filter((i) => i.propertyId === selectedUnit.propertyId);
+  }, [items, selectedUnit, lockedItem]);
+
+  const selectedItem = availableItems.find((i) => i.id === itemId);
+
+  const parsedQty = Number(quantity);
+  const validQty = quantity !== "" && !Number.isNaN(parsedQty) && parsedQty > 0;
+  const exceedsStock =
+    validQty && selectedItem
+      ? parsedQty > selectedItem.availableQuantity
+      : false;
+
+  // Whole units for pieces/pairs/sets; fractions for kg and litres.
+  const isCountable =
+    selectedItem &&
+    [
+      "pieces",
+      "pairs",
+      "sets",
+      "sachets",
+      "packets",
+      "bottles",
+      "rolls",
+    ].includes(selectedItem.unitOfMeasure);
+
+  const showSerial =
+    selectedItem &&
+    SERIAL_CATEGORIES.has(selectedItem.category) &&
+    parsedQty === 1;
+
+  /** Changing the unit can invalidate the chosen item's property. */
   const handleUnitChange = (value: string) => {
-    const [propertyId, unitId] = value.split("-").map(Number);
-    setFormData((prev) => ({
-      ...prev,
-      unitId: unitId.toString(),
-      propertyId: propertyId.toString(),
-    }));
-  };
-
-  const handleQuantityChange = (quantity: number) => {
-    setFormData((prev) => ({ ...prev, quantity }));
-    // Auto-expand details if quantity > 1
-    if (quantity > 1) {
-      setIsDetailsExpanded(true);
+    setUnitId(value);
+    const nextUnit = units.find((u) => u.id === Number(value));
+    if (
+      selectedItem &&
+      nextUnit &&
+      selectedItem.propertyId !== nextUnit.propertyId
+    ) {
+      setItemId("");
     }
-  };
-
-  const generateAssignmentDetails = () => {
-    const details: AssignmentDetail[] = [];
-    for (let i = 0; i < formData.quantity; i++) {
-      details.push({
-        id: `assignment-${i + 1}`,
-        serialNumber: "",
-        notes: "",
-      });
-    }
-    setAssignmentDetails(details);
-    setIsDetailsExpanded(true);
-  };
-
-  const updateAssignmentDetail = (
-    id: string,
-    field: keyof AssignmentDetail,
-    value: string
-  ) => {
-    setAssignmentDetails((prev) =>
-      prev.map((detail) =>
-        detail.id === id ? { ...detail, [field]: value } : detail
-      )
-    );
-  };
-
-  const removeAssignmentDetail = (id: string) => {
-    setAssignmentDetails((prev) => prev.filter((detail) => detail.id !== id));
-    setFormData((prev) => ({ ...prev, quantity: prev.quantity - 1 }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!unitId) {
+      toast.error("Select a unit.", {
+        description: "Items are assigned to a specific unit.",
+      });
+      return;
+    }
+
+    if (!itemId) {
+      toast.error("Select an item.", {
+        description: "Only items stocked at this unit's property are listed.",
+      });
+      return;
+    }
+
+    if (!validQty) {
+      toast.error("Enter a quantity greater than zero.");
+      return;
+    }
+
     setLoading(true);
 
-    try {
-      if (!formData.inventoryItemId || !formData.unitId) {
-        toast.error("Please select an inventory item and unit");
-        return;
-      }
+    // One call with a quantity — the old version looped N create calls
+    // in Promise.all, which could half-succeed and leave stock wrong.
+    const result = await createInventoryAssignment({
+      inventoryItemId: itemId,
+      unitId: Number(unitId),
+      quantity: parsedQty,
+      serialNumber: showSerial && serialNumber ? serialNumber : undefined,
+      notes: notes.trim() || undefined,
+    });
 
-      if (formData.quantity <= 0) {
-        toast.error("Quantity must be greater than 0");
-        return;
-      }
+    setLoading(false);
 
-      // Create assignments based on quantity
-      const promises = [];
-      for (let i = 0; i < formData.quantity; i++) {
-        const detail = assignmentDetails[i];
-        promises.push(
-          createInventoryAssignment({
-            inventoryItemId: Number(formData.inventoryItemId),
-            unitId: Number(formData.unitId),
-            propertyId: Number(formData.propertyId),
-            serialNumber: detail?.serialNumber || undefined,
-            notes: detail?.notes || undefined,
-          })
-        );
-      }
-
-      await Promise.all(promises);
-
-      if (preselectedUnitId && preselectedPropertyId) {
-        await queryClient.invalidateQueries({
-          queryKey: unitKeys.details(
-            preselectedUnitId.toString(),
-            preselectedPropertyId.toString()
-          ),
-        });
-      }
-
-      const itemName = selectedItem?.itemName || "items";
-      toast.success(`${formData.quantity} ${itemName} assigned successfully`);
-      onSuccess?.();
-    } catch (error) {
-      console.error("Error creating assignments:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create assignments"
-      );
-    } finally {
-      setLoading(false);
+    if (!result.success) {
+      toast.error(result.message, { description: result.nextStep });
+      return;
     }
+
+    if (preselectedUnitId && preselectedPropertyId) {
+      await queryClient.invalidateQueries({
+        queryKey: unitKeys.details(
+          preselectedUnitId.toString(),
+          preselectedPropertyId.toString(),
+        ),
+      });
+    }
+
+    toast.success(result.message);
+    onSuccess?.();
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const selectedItem = items.find(
-    (item) => item.id === Number(formData.inventoryItemId)
-  );
-  const maxQuantity = selectedItem?.availableQuantity || 0;
+  // Group units under their property so the list stays readable.
+  const unitsByProperty = useMemo(() => {
+    const map = new Map<string, UnitOption[]>();
+    for (const unit of unitOptions) {
+      const list = map.get(unit.propertyName) ?? [];
+      list.push(unit);
+      map.set(unit.propertyName, list);
+    }
+    return Array.from(map.entries());
+  }, [unitOptions]);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic Assignment Info - 2 Column Layout */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-2 col-span-2">
-          <Label htmlFor="inventory-item">Inventory Item *</Label>
-          <Select
-            value={formData.inventoryItemId.toString()}
-            onValueChange={(value) =>
-              handleInputChange("inventoryItemId", value)
-            }
-            disabled={!!preselectedItemId}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select item" />
-            </SelectTrigger>
-            <SelectContent>
-              {items.map((item) => (
-                <SelectItem key={item.id} value={item.id.toString()}>
-                  <div className="flex justify-between items-center w-full">
-                    <span className="truncate">{item.itemName}</span>
-                    <span className="text-xs text-muted-foreground ml-2">
-                      {item.availableQuantity}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2 col-span-2">
-          <Label htmlFor="unit">Unit *</Label>
-          <Select
-            value={
-              formData.unitId ? `${formData.propertyId}-${formData.unitId}` : ""
-            }
-            onValueChange={handleUnitChange}
-          >
-            <SelectTrigger className="w-full" disabled={!!preselectedUnitId}>
-              <SelectValue placeholder="Select unit" />
-            </SelectTrigger>
-            <SelectContent>
-              {units.map((unit) => (
-                <SelectItem key={unit.id} value={unit.value}>
-                  {unit.displayName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="assign-unit">Unit *</Label>
+        <Select
+          value={unitId}
+          onValueChange={handleUnitChange}
+          disabled={Boolean(preselectedUnitId) || loading}
+        >
+          <SelectTrigger id="assign-unit" className="w-full">
+            <SelectValue placeholder="Select a unit" />
+          </SelectTrigger>
+          <SelectContent>
+            {unitsByProperty.map(([propertyName, propertyUnits]) => (
+              <SelectGroup key={propertyName}>
+                <SelectLabel>{propertyName}</SelectLabel>
+                {propertyUnits.map((unit) => (
+                  <SelectItem key={unit.id} value={String(unit.id)}>
+                    {unit.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Quantity Section */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="quantity">Quantity *</Label>
-          {selectedItem && (
-            <span className="text-sm text-muted-foreground">
-              Available: {selectedItem.availableQuantity}
-            </span>
+      <div className="space-y-2">
+        <Label htmlFor="assign-item">Item *</Label>
+        <Select
+          value={itemId}
+          onValueChange={setItemId}
+          disabled={Boolean(lockedItem) || !selectedUnit || loading}
+        >
+          <SelectTrigger id="assign-item" className="w-full">
+            <SelectValue
+              placeholder={
+                selectedUnit ? "Select an item" : "Choose a unit first"
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {availableItems.map((item) => (
+              <SelectItem key={item.id} value={item.id}>
+                {item.itemName} — {formatQty(item.availableQuantity)}{" "}
+                {item.unitOfMeasure} in store
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {preselectedItemId && !lockedItem && (
+          <p className="text-xs text-muted-foreground">
+            This item has no stock in store to assign. Restock it first.
+          </p>
+        )}
+
+        {!preselectedItemId && selectedUnit && availableItems.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            Nothing in stock at {selectedUnit.propertyName}. Restock an item
+            first, or check that it isn&apos;t a laundry commodity — those are
+            tracked with usage logs rather than assignments.
+          </p>
+        )}
+      </div>
+
+      {selectedItem && (
+        <>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="assign-qty">
+                Quantity * ({selectedItem.unitOfMeasure})
+              </Label>
+              <span className="text-xs text-muted-foreground">
+                {formatQty(selectedItem.availableQuantity)}{" "}
+                {selectedItem.unitOfMeasure} available
+              </span>
+            </div>
+            <Input
+              id="assign-qty"
+              type="number"
+              min={isCountable ? "1" : "0.01"}
+              step={isCountable ? "1" : "0.01"}
+              max={selectedItem.availableQuantity}
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              disabled={loading}
+              required
+            />
+            {exceedsStock && (
+              <p className="flex items-center gap-1.5 text-xs text-destructive">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Only {formatQty(selectedItem.availableQuantity)}{" "}
+                {selectedItem.unitOfMeasure} in store.
+              </p>
+            )}
+          </div>
+
+          {/* Consumables never come back — say so before it's committed */}
+          {!selectedItem.expectsReturn && (
+            <div className="flex gap-2 rounded-md border border-border bg-muted/50 p-3">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">
+                {selectedItem.itemName} is a kitchen consumable. It will be
+                marked as consumed on assignment and won&apos;t appear in the
+                outstanding list or be returnable.
+              </p>
+            </div>
           )}
-        </div>
-        <div className="flex gap-2">
-          <Input
-            id="quantity"
-            type="number"
-            min="1"
-            max={maxQuantity}
-            value={formData.quantity}
-            onChange={(e) =>
-              handleQuantityChange(parseInt(e.target.value) || 1)
-            }
-            className="flex-1"
-          />
+
+          {showSerial && (
+            <div className="space-y-2">
+              <Label htmlFor="assign-serial">Serial number</Label>
+              <Input
+                id="assign-serial"
+                value={serialNumber}
+                onChange={(e) => setSerialNumber(e.target.value)}
+                placeholder="e.g. SN-4471"
+                disabled={loading}
+              />
+              <p className="text-xs text-muted-foreground">
+                Worth recording for warranty claims and repair history.
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      <div className="space-y-2">
+        <Label htmlFor="assign-notes">Notes</Label>
+        <Textarea
+          id="assign-notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Optional"
+          rows={2}
+          disabled={loading}
+        />
+      </div>
+
+      <div className="flex justify-end gap-2 pt-1">
+        {onCancel && (
           <Button
             type="button"
             variant="outline"
-            onClick={generateAssignmentDetails}
-            disabled={formData.quantity <= 0}
-            className="gap-2"
+            onClick={onCancel}
+            disabled={loading}
           >
-            <Plus className="h-4 w-4" />
-            Generate Details
+            Cancel
           </Button>
-        </div>
-      </div>
-
-      {/* Assignment Details - Expandable Card */}
-      {(formData.quantity > 1 || assignmentDetails.length > 0) && (
-        <Collapsible
-          open={isDetailsExpanded}
-          onOpenChange={setIsDetailsExpanded}
-        >
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    Assignment Details ({assignmentDetails.length})
-                  </CardTitle>
-                  <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="pt-0">
-                {assignmentDetails.length === 0 ? (
-                  <div className="text-center py-4 text-muted-foreground">
-                    <p className="text-sm">
-                      Click &quot;Generate Details&quot; to add serial numbers
-                      and notes
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {assignmentDetails.map((detail, index) => (
-                      <Card key={detail.id} className="p-3 bg-muted/30">
-                        <div className="flex items-start justify-between mb-2">
-                          <span className="text-sm font-medium">
-                            Item #{index + 1}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeAssignmentDetail(detail.id)}
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <Label className="text-xs text-muted-foreground">
-                              Serial Number
-                            </Label>
-                            <Input
-                              value={detail.serialNumber}
-                              onChange={(e) =>
-                                updateAssignmentDetail(
-                                  detail.id,
-                                  "serialNumber",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Optional"
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs text-muted-foreground">
-                              Notes
-                            </Label>
-                            <Input
-                              value={detail.notes}
-                              onChange={(e) =>
-                                updateAssignmentDetail(
-                                  detail.id,
-                                  "notes",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Optional"
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
-
-      <Separator />
-
-      {/* Action Buttons */}
-      <div className="flex space-x-2">
-        <Button type="submit" className="flex-1" disabled={loading}>
-          {loading
-            ? "Assigning..."
-            : `Assign ${formData.quantity} Item${formData.quantity !== 1 ? "s" : ""}`}
-        </Button>
+        )}
         <Button
-          type="button"
-          variant="outline"
-          className="flex-1"
-          onClick={onCancel}
+          type="submit"
+          disabled={loading || !selectedItem || !validQty || exceedsStock}
         >
-          Cancel
+          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Assign
         </Button>
       </div>
     </form>

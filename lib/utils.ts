@@ -1,14 +1,14 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { addDays, differenceInDays } from "date-fns"
+import { addDays } from "date-fns"
 import nationalities from 'i18n-nationality';
 import enLocale from 'i18n-nationality/langs/en.json';
-import type { BookingStatus, UnitStatus, Guest, InventoryItem, PriceDuration, Role } from "@/lib/types/types";
+import type { BookingStatus, UnitStatus, Guest, PriceDuration, Role } from "@/lib/types/types";
 
 // Constants
 export const LIMIT = 9;
 const TIMEZONE = "Africa/Nairobi";
-export const BUCKET = "media";
+export const BUCKET = "media_dev";
 
 
 nationalities.registerLocale(enLocale);
@@ -18,7 +18,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getNationalities() {
-
   const nationalitiesObj = nationalities.getNames("en");
   return Object.values(nationalitiesObj).sort();
 }
@@ -58,19 +57,6 @@ export const getOccupancyRate = (occupied: number, total: number | null) => {
   return Math.round((occupied / total) * 100);
 };
 
-export function getInventoryStatus(item: InventoryItem) {
-  const assignedQuantity = item.assignments.length;
-  const totalStock = assignedQuantity + item.quantity;
-  const availableQuantity = item.quantity;
-
-  if (availableQuantity <= 0) {
-    return { status: "critical", label: "Critical" };
-  } else if (availableQuantity <= Math.round(totalStock * 0.25)) {
-    return { status: "low", label: "Low Stock" };
-  } else {
-    return { status: "good", label: "Good" };
-  }
-}
 
 // ================= UNIT PRICING UTILITIES =================
 // Get human-readable label for duration
@@ -79,17 +65,12 @@ export function getDurationLabel(duration: PriceDuration | string): string {
     one_night: "One Night",
     weekly: "Weekly",
     monthly: "Monthly",
-    custom: "Custom",
   };
   return labels[duration] || duration;
 }
 
 //Get number of nights for a duration
-export function getDurationNights(
-  duration: PriceDuration | string,
-  fromDate?: Date | string | null,
-  toDate?: Date | string | null
-): number {
+export function getDurationNights(duration: PriceDuration | string): number {
   switch (duration) {
     case "one_night":
       return 1;
@@ -97,13 +78,6 @@ export function getDurationNights(
       return 7;
     case "monthly":
       return 30;
-    case "custom":
-      if (fromDate && toDate) {
-        const from = typeof fromDate === "string" ? new Date(fromDate) : fromDate;
-        const to = typeof toDate === "string" ? new Date(toDate) : toDate;
-        return differenceInDays(to, from);
-      }
-      return 0;
     default:
       return 1;
   }
@@ -115,7 +89,6 @@ export function getPeriodLabel(duration: PriceDuration | string): string {
     one_night: "nights",
     weekly: "weeks",
     monthly: "months",
-    custom: "stays",
   };
   return labels[duration] || "nights";
 }
@@ -126,7 +99,6 @@ export function getPeriodLabelSingular(duration: PriceDuration | string): string
     one_night: "night",
     weekly: "week",
     monthly: "month",
-    custom: "stay",
   };
   return labels[duration] || "night";
 }
@@ -135,23 +107,19 @@ export function getPeriodLabelSingular(duration: PriceDuration | string): string
 export function calculateCheckoutDate(
   checkInDate: Date | string,
   duration: PriceDuration | string,
-  period: number,
-  fromDate?: Date | string | null,
-  toDate?: Date | string | null
+  period: number
 ): Date {
   const checkIn = typeof checkInDate === "string" ? new Date(checkInDate) : checkInDate;
-  const nights = getDurationNights(duration, fromDate, toDate);
+  const nights = getDurationNights(duration);
   return addDays(checkIn, nights * period);
 }
 
 // Calculate total nights for a booking
 export function calculateTotalNights(
   duration: PriceDuration | string,
-  period: number,
-  fromDate?: Date | string | null,
-  toDate?: Date | string | null
+  period: number
 ): number {
-  const nights = getDurationNights(duration, fromDate, toDate);
+  const nights = getDurationNights(duration);
   return nights * period;
 }
 

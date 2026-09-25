@@ -12,7 +12,12 @@ import {
 import { Plus } from "lucide-react";
 import { useState } from "react";
 
-export function InventoryDialog({ children }: { children?: React.ReactNode }) {
+interface InventoryDialogProps {
+  properties: { id: number; name: string }[];
+  children?: React.ReactNode;
+}
+
+export function InventoryDialog({ properties, children }: InventoryDialogProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -30,6 +35,7 @@ export function InventoryDialog({ children }: { children?: React.ReactNode }) {
           <DialogTitle>Add Inventory Item</DialogTitle>
         </DialogHeader>
         <InventoryForm
+          properties={properties}
           onSuccess={() => setOpen(false)}
           onCancel={() => setOpen(false)}
         />

@@ -21,7 +21,7 @@ export const ac = createAccessControl(statement)
 export const user = ac.newRole({
     user: ["set-password"],
     booking: ["create", "read", "update"],
-    guest: ["create", "read", "update", "check-out"],
+    guest: ["create", "read", "update"],
     property: ["create", "read", "update"],
     unit: ["create", "read", "update",],
     inventory: ["create", "read", "update"],

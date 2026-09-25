@@ -23,7 +23,7 @@ export const BookingFormSchema = z
             .number()
             .min(1, "At least 1 guest is required")
             .max(20, "Maximum 20 guests allowed"),
-        priceDuration: z.enum(["one_night", "weekly", "monthly", "custom"], {
+        priceDuration: z.enum(["one_night", "weekly", "monthly"], {
             required_error: "Please select a duration",
         }),
         period: z.number().min(1),

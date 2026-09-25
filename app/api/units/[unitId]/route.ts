@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUnitDetails, getAggregatedAssignmentsForUnit } from "@/lib/actions/units";
+import { getUnitDetails } from "@/lib/actions/units";
+import { getAggregatedAssignmentsForUnit } from "@/lib/actions/inventory";
 
 
 export async function GET(request: NextRequest, context: { params: Promise<{ unitId: string }> }) {

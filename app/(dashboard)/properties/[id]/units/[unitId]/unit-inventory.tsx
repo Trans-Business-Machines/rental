@@ -1,3 +1,5 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package } from "lucide-react";
 import {
@@ -10,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { InventoryAssignmentDialog } from "@/components/InventoryAssignmentDialog";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import type { GroupedAssigments } from "@/lib/types/types";
 import { usePermissions } from "@/hooks/usePermissions";
 
@@ -21,11 +24,16 @@ interface Assignments {
   };
 }
 
+/** Trim trailing zeros: 2.50 -> 2.5, 12.00 -> 12 */
+function formatQty(value: number) {
+  return Number(value.toFixed(2)).toLocaleString();
+}
+
 export default function UnitInventory({ assignments, context }: Assignments) {
   const { isAgent } = usePermissions();
 
   return (
-    <Card className="border-border shadow-sm bg-card rounded-xl">
+    <Card className="rounded-xl border-border bg-card shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -33,8 +41,8 @@ export default function UnitInventory({ assignments, context }: Assignments) {
               Inventory & Assignments
             </CardTitle>
             {assignments.length > 0 && (
-              <p className="text-sm text-muted-foreground mt-1">
-                This table shows the assignments made to this unit.
+              <p className="mt-1 text-sm text-muted-foreground">
+                What&apos;s currently out in this unit and not yet returned.
               </p>
             )}
           </div>
@@ -49,13 +57,14 @@ export default function UnitInventory({ assignments, context }: Assignments) {
           )}
         </div>
       </CardHeader>
+
       <CardContent>
         {assignments.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="p-4 rounded-full bg-muted mb-4">
+            <div className="mb-4 rounded-full bg-muted p-4">
               <Package className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="font-semibold text-foreground mb-1">
+            <h3 className="mb-1 font-semibold text-foreground">
               No inventory items assigned yet.
             </h3>
             <p className="text-sm text-muted-foreground">
@@ -63,28 +72,38 @@ export default function UnitInventory({ assignments, context }: Assignments) {
             </p>
           </div>
         ) : (
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {/* Inventory items list will go here */}
+          <div className="max-h-60 space-y-2 overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Item Name</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead>Quantity</TableHead>
+                  <TableHead className="text-right">Quantity</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {assignments.map((assignment) => (
                   <TableRow key={assignment.inventoryItemId}>
-                    <TableCell className="capitalize text-sm">
-                      {assignment.itemName}
+                    <TableCell className="text-sm capitalize">
+                      <Link
+                        href={`/inventory/${assignment.inventoryItemId}`}
+                        className="hover:underline"
+                      >
+                        {assignment.itemName}
+                      </Link>
                     </TableCell>
 
                     <TableCell className="text-sm capitalize">
-                      {assignment.category}
+                      {assignment.category.replace(/_/g, " ")}
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {assignment.quantity}
+
+                    {/* Summed across assignments, net of returns —
+                        not a count of assignment rows. */}
+                    <TableCell className="text-right text-sm tabular-nums">
+                      {formatQty(assignment.quantity)}
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        {assignment.unitOfMeasure}
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))}

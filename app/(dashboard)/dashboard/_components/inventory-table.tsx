@@ -1,9 +1,7 @@
-// app/(system)/dashboard/_components/inventory-table.tsx
 "use client";
 
-import { InventoryEditDialog } from "@/components/InventoryEditDialog";
+import { InventoryActions } from "@/components/InventoryActions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -20,13 +18,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
-import { Edit, Search, Package, Loader2 } from "lucide-react";
+import {
+  Search,
+  Package,
+  Loader2,
+  AlertTriangle,
+} from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
-import { getInventoryStatus } from "@/lib/utils";
 import type { InventoryItem } from "@/lib/types/types";
 
 interface InventoryFilters {
@@ -42,28 +49,43 @@ interface InventoryTableProps {
   initialFilters: InventoryFilters;
 }
 
-function getInventoryBadge(status: string) {
-  switch (status) {
-    case "good":
-      return (
-        <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-          Good
-        </Badge>
-      );
-    case "low":
-      return (
-        <Badge
-          variant="secondary"
-          className="bg-amber-500 hover:bg-amber-600 text-white"
-        >
-          Low Stock
-        </Badge>
-      );
-    case "critical":
-      return <Badge variant="destructive">Critical</Badge>;
-    default:
-      return <Badge variant="outline">{status}</Badge>;
+/** Laundry is used centrally, so an "assigned" figure is always zero. */
+const NEVER_ASSIGNED = new Set(["laundry"]);
+
+/** Trim trailing zeros: 2.50 -> 2.5, 40.00 -> 40 */
+function formatQty(value: number) {
+  return Number(value.toFixed(2)).toLocaleString();
+}
+
+/**
+ * Stock state comes straight off the item now — needsRestock is derived
+ * server-side from availableQuantity <= restockAt, so each item is
+ * judged against its own threshold rather than a shared constant.
+ */
+function StockBadge({ item }: { item: InventoryItem }) {
+  if (item.availableQuantity <= 0) {
+    return <Badge variant="destructive">Out of stock</Badge>;
   }
+
+  if (item.needsRestock) {
+    return (
+      <Badge
+        variant="secondary"
+        className="bg-amber-500 text-white hover:bg-amber-600"
+      >
+        {/* Assets keep spares in store — "low" there means few spares */}
+        {NEVER_ASSIGNED.has(item.category) || item.assignedQuantity === 0
+          ? "Low stock"
+          : "Spares low"}
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+      Good
+    </Badge>
+  );
 }
 
 export function InventoryTable({
@@ -93,7 +115,7 @@ export function InventoryTable({
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col gap-4 md:gap-0 md:flex-row md:items-start md:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-0">
           <div>
             <CardTitle>Inventory Management</CardTitle>
             <CardDescription>
@@ -101,15 +123,14 @@ export function InventoryTable({
             </CardDescription>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-2">
-            {/* Search Input */}
+          <div className="flex flex-col items-center gap-2 sm:flex-row">
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by item name..."
                 value={searchValue}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-8 w-xs md:w-64 lg:w-96"
+                className="w-xs pl-8 md:w-64 lg:w-96"
               />
               {isSearching && (
                 <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
@@ -126,7 +147,7 @@ export function InventoryTable({
         />
       ) : (
         <CardContent>
-          <div className="rounded-lg overflow-hidden border border-border">
+          <div className="overflow-hidden rounded-lg border border-border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted">
@@ -134,55 +155,106 @@ export function InventoryTable({
                     Item
                   </TableHead>
                   <TableHead className="font-semibold text-foreground">
-                    Total Stock
+                    Property
                   </TableHead>
-                  <TableHead className="font-semibold text-foreground">
+                  {/* Same order as the main inventory table */}
+                  <TableHead className="text-right font-semibold text-foreground">
                     Available
                   </TableHead>
-                  <TableHead className="font-semibold text-foreground">
+                  <TableHead className="text-right font-semibold text-foreground">
                     Assigned
+                  </TableHead>
+                  <TableHead className="text-right font-semibold text-foreground">
+                    Total
                   </TableHead>
                   <TableHead className="font-semibold text-foreground">
                     Status
                   </TableHead>
-                  <TableHead className="font-semibold text-foreground">
+                  <TableHead className="text-right font-semibold text-foreground">
                     Actions
                   </TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {items.map((item) => {
-                  const assignedQuantity = item.assignments.length;
-                  const inventoryStatus = getInventoryStatus(item);
 
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium capitalize">
-                        {item.itemName}
-                      </TableCell>
-                      <TableCell>{item.quantity + assignedQuantity}</TableCell>
-                      <TableCell>{item.quantity}</TableCell>
-                      <TableCell>{assignedQuantity}</TableCell>
-                      <TableCell>
-                        {getInventoryBadge(inventoryStatus.status)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <InventoryEditDialog item={item}>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="cursor-pointer"
-                            >
-                              <span>Edit</span>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </InventoryEditDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <span className="capitalize">{item.itemName}</span>
+
+                        {item.openIssueCount > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center gap-1 text-amber-600">
+                                <AlertTriangle className="h-3.5 w-3.5" />
+                                <span className="text-xs font-medium">
+                                  {item.openIssueCount}
+                                </span>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {item.openIssueCount} unresolved{" "}
+                              {item.openIssueCount === 1 ? "issue" : "issues"}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="text-sm text-muted-foreground">
+                      {item.property.name}
+                    </TableCell>
+
+                    <TableCell className="text-right tabular-nums">
+                      <span className="font-medium">
+                        {formatQty(item.availableQuantity)}
+                      </span>
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        {item.unitOfMeasure}
+                      </span>
+                    </TableCell>
+
+                    <TableCell className="text-right tabular-nums">
+                      {NEVER_ASSIGNED.has(item.category) ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : (
+                        <>
+                          <span
+                            className={
+                              item.assignedQuantity > 0
+                                ? "font-medium"
+                                : "text-muted-foreground"
+                            }
+                          >
+                            {formatQty(item.assignedQuantity)}
+                          </span>
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            {item.unitOfMeasure}
+                          </span>
+                        </>
+                      )}
+                    </TableCell>
+
+                    {/* available + assigned, derived rather than stored */}
+                    <TableCell className="text-right tabular-nums">
+                      <span className="font-semibold">
+                        {formatQty(item.totalOwned)}
+                      </span>
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        {item.unitOfMeasure}
+                      </span>
+                    </TableCell>
+
+                    <TableCell>
+                      <StockBadge item={item} />
+                    </TableCell>
+
+                    <TableCell className="text-right">
+                      <InventoryActions item={item} />
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>

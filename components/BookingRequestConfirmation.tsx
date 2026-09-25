@@ -65,16 +65,10 @@ export function BookingRequestConfirmation({
   savings,
   paymentCode,
 }: BookingRequestConfirmationProps) {
-  const isCustomDuration = selectedPricing?.duration === "custom";
-
-  const totalNights = isCustomDuration
-    ? period
-    : calculateTotalNights(
-        formData.priceDuration as PriceDuration,
-        period,
-        selectedPricing?.fromDate,
-        selectedPricing?.toDate,
-      );
+  const totalNights = calculateTotalNights(
+    formData.priceDuration as PriceDuration,
+    period,
+  );
 
   const guestName =
     guestType === "existing" && selectedGuest

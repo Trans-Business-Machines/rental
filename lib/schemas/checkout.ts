@@ -1,13 +1,14 @@
 import { z } from "zod"
 
 const checkoutItemSchema = z.object({
-    itemId: z.number(),
+    itemId: z.string(),
     itemName: z.string(),
     category: z.string(),
-    totalQuantity: z.number().min(1),
-    damagedCount: z.number().min(0),
-    missingCount: z.number().min(0),
-    assignmentIds: z.array(z.number()),
+    // Outstanding quantity in the unit; the server spreads flagged counts
+    // across the item's assignments, so no assignment IDs are needed here.
+    totalQuantity: z.number().positive(),
+    damagedCount: z.number().int().min(0),
+    missingCount: z.number().int().min(0),
 }).refine(
     (item) => item.damagedCount + item.missingCount <= item.totalQuantity,
     { message: "Damaged plus missing cannot exceed total quantity" }

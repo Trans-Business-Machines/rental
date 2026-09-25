@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { InventoryItemsCards } from "./InventoryItemsCards";
 import { InventoryItemsTable } from "./InventoryItemsTable";
-import { Switch } from "./ui/switch";
 import { Input } from "./ui/input";
 import {
   Select,
@@ -12,24 +10,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { CategorySelect } from "@/components/CategorySelect";
+import { Label } from "./ui/label";
+import { Switch } from "./ui/switch";
 import { Package, Search, Loader } from "lucide-react";
-import { useTableMode } from "@/hooks/useTableMode";
 import { ItemsNotFound } from "./ItemsNotFound";
 import { SearchNotFound } from "./SearchNotFound";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import type { InventoryItem } from "@/lib/types/types";
+import type { InventoryItem, PropertyNames } from "@/lib/types/types";
+
+/**
+ * Category is a fixed enum now, so the options live here rather than
+ * being derived from whatever strings happen to be in the database.
+ */
+const CATEGORY_OPTIONS = [
+  { value: "electronics", label: "Electronics" },
+  { value: "furniture", label: "Furniture" },
+  { value: "bedroom", label: "Bedroom" },
+  { value: "cutlery", label: "Cutlery" },
+  { value: "linens", label: "Linens" },
+  { value: "kitchen_consumables", label: "Kitchen consumables" },
+  { value: "laundry", label: "Laundry" },
+] as const;
 
 interface InventoryItemsFilters {
   search: string;
   status: string;
   category: string;
+  propertyId: string;
+  lowStock: boolean;
 }
 
 interface InventoryItemsProps {
   items: InventoryItem[];
+  properties: PropertyNames;
   totalPages: string | number;
   hasNext: boolean;
   hasPrev: boolean;
@@ -39,32 +54,28 @@ interface InventoryItemsProps {
 
 function InventoryItems({
   items,
+  properties,
   hasNext,
   hasPrev,
   totalPages,
   currentPage,
   initialFilters,
 }: InventoryItemsProps) {
-  // Get table mode context from useTableMode Hook
-  const { tableMode, setTableMode } = useTableMode();
-
-  // Get the router object
   const router = useRouter();
 
   const [isApplyPending, startApplyTransition] = useTransition();
   const [isClearPending, startClearTransition] = useTransition();
 
-  // Combined pending state for disabling inputs
   const isPending = isApplyPending || isClearPending;
 
-  // Local state for filter inputs (before Apply is clicked)
   const [filters, setFilters] = useState<InventoryItemsFilters>(initialFilters);
 
-  // Check if there are any active filters in the URL
   const hasActiveFilters =
     initialFilters.search !== "" ||
     initialFilters.status !== "all" ||
-    initialFilters.category !== "all";
+    initialFilters.category !== "all" ||
+    initialFilters.propertyId !== "all" ||
+    initialFilters.lowStock;
 
   /*  -------------- URL update handlers -------------- */
   const applyFilters = () => {
@@ -81,6 +92,12 @@ function InventoryItems({
     if (filters.category !== "all") {
       params.set("category", filters.category);
     }
+    if (filters.propertyId !== "all") {
+      params.set("propertyId", filters.propertyId);
+    }
+    if (filters.lowStock) {
+      params.set("lowStock", "true");
+    }
 
     startApplyTransition(() => {
       router.push(`/inventory?${params.toString()}`);
@@ -88,14 +105,14 @@ function InventoryItems({
   };
 
   const clearFilters = () => {
-    // Reset local state
     setFilters({
       search: "",
       status: "all",
       category: "all",
+      propertyId: "all",
+      lowStock: false,
     });
 
-    // Update URL
     startClearTransition(() => {
       router.push("/inventory?tab=inventory&page=1");
     });
@@ -113,23 +130,75 @@ function InventoryItems({
 
   return (
     <section>
-      <header className="flex flex-col  gap-5 mb-4 text-muted-foreground text-sm py-1">
-        <div className="flex flex-col gap-4 md:flex-row md:gap-2 pr-5">
+      <header className="mb-4 flex flex-col gap-5 py-1 text-sm text-muted-foreground">
+        <div className="flex flex-col gap-4 pr-5 md:flex-row md:gap-2">
           {/* Search Bar */}
           <div className="relative flex-1 md:flex-2">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
             <Input
               placeholder="Search inventory by name . . ."
               value={filters.search}
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, search: e.target.value }))
               }
-              className="pl-10 text-black w-full"
+              className="w-full pl-10 text-black"
               disabled={isPending}
             />
           </div>
 
-          {/* Select Filters */}
+          {/* Property — inventory is property-scoped, so each store filters separately */}
+          <Select
+            value={filters.propertyId}
+            onValueChange={(value) =>
+              setFilters((prev) => ({ ...prev, propertyId: value }))
+            }
+            disabled={isPending}
+          >
+            <SelectTrigger className="w-full text-black/70 hover:cursor-pointer md:flex-1">
+              <SelectValue placeholder="All Properties" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="cursor-pointer">
+                All Properties
+              </SelectItem>
+              {properties.map((property) => (
+                <SelectItem
+                  key={property.id}
+                  value={property.id.toString()}
+                  className="cursor-pointer"
+                >
+                  {property.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={filters.category}
+            onValueChange={(value) =>
+              setFilters((prev) => ({ ...prev, category: value }))
+            }
+            disabled={isPending}
+          >
+            <SelectTrigger className="w-full text-black/70 hover:cursor-pointer md:flex-1">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="cursor-pointer">
+                All Categories
+              </SelectItem>
+              {CATEGORY_OPTIONS.map((category) => (
+                <SelectItem
+                  key={category.value}
+                  value={category.value}
+                  className="cursor-pointer"
+                >
+                  {category.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select
             value={filters.status}
             onValueChange={(value) =>
@@ -137,7 +206,7 @@ function InventoryItems({
             }
             disabled={isPending}
           >
-            <SelectTrigger className="w-full md:flex-1 text-black/70 hover:cursor-pointer">
+            <SelectTrigger className="w-full text-black/70 hover:cursor-pointer md:flex-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -152,19 +221,9 @@ function InventoryItems({
               </SelectItem>
             </SelectContent>
           </Select>
-
-          <CategorySelect
-            value={filters.category}
-            onValueChange={(value) =>
-              setFilters((prev) => ({ ...prev, category: value }))
-            }
-            includeAllOption
-            disabled={isPending}
-            className="md:flex-1 text-black/70"
-          />
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-0">
           <div className="flex items-center gap-2">
             <Button
               onClick={applyFilters}
@@ -173,7 +232,7 @@ function InventoryItems({
             >
               {isApplyPending ? (
                 <span className="flex items-center gap-2">
-                  <Loader className="size-4  animate-spin" />
+                  <Loader className="size-4 animate-spin" />
                   Searching
                 </span>
               ) : (
@@ -183,11 +242,11 @@ function InventoryItems({
             <Button
               onClick={clearFilters}
               disabled={isPending}
-              className="cursor-pointer px-12 bg-chart-5 hover:bg-red-600"
+              className="cursor-pointer bg-chart-5 px-12 hover:bg-red-600"
             >
               {isClearPending ? (
                 <span className="flex items-center gap-2">
-                  <Loader className="size-4  animate-spin" />
+                  <Loader className="size-4 animate-spin" />
                   Clearing
                 </span>
               ) : (
@@ -196,27 +255,36 @@ function InventoryItems({
             </Button>
           </div>
 
-          <div className="flex items-center gap-1">
+          {/* Pairs with the restock button in each row */}
+          <div className="flex items-center gap-2">
             <Switch
-              checked={tableMode}
-              onCheckedChange={setTableMode}
+              id="low-stock"
+              checked={filters.lowStock}
+              onCheckedChange={(checked) =>
+                setFilters((prev) => ({ ...prev, lowStock: checked }))
+              }
+              disabled={isPending}
               className="cursor-pointer"
-              aria-label="table mode switch"
             />
-            <span>Table mode</span>
+            <Label htmlFor="low-stock" className="cursor-pointer">
+              Needs restocking only
+            </Label>
           </div>
         </div>
       </header>
 
-      {items.length === 0 && !hasActiveFilters ? (
+      {/*
+        This branch was previously unreachable — it duplicated the early
+        return's condition, so a search with no matches rendered an empty
+        table instead of the not-found card.
+      */}
+      {items.length === 0 && hasActiveFilters ? (
         <SearchNotFound
-          title="No Item matches the search criteria"
+          title="No item matches the search criteria"
           icon={Package}
         />
-      ) : tableMode ? (
-        <InventoryItemsTable items={items} />
       ) : (
-        <InventoryItemsCards items={items} />
+        <InventoryItemsTable items={items} />
       )}
 
       <Footer
@@ -225,7 +293,14 @@ function InventoryItems({
         hasPrev={hasPrev}
         totalPages={totalPages}
         paramName="page"
-        preserveParams={["tab", "search", "status", "category"]}
+        preserveParams={[
+          "tab",
+          "search",
+          "status",
+          "category",
+          "propertyId",
+          "lowStock",
+        ]}
       />
     </section>
   );

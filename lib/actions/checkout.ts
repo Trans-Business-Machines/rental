@@ -2,8 +2,15 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "../check-permissions";
+import { getServerSession, requirePermission } from "../check-permissions";
 import { LIMIT } from "@/lib/utils"
+import { categoryRules } from "@/lib/inventory-categories";
+import { Prisma } from "@/prisma/generated/client";
+import type {
+	InventoryCategory,
+	IssueType,
+	UnitOfMeasure,
+} from "@/prisma/generated/client";
 
 interface GetCheckoutReportsProps {
 	page: number
@@ -11,12 +18,14 @@ interface GetCheckoutReportsProps {
 	sortOrder?: "none" | "asc" | "desc";
 }
 
+/** One row per item still out in the unit, for the inspection checklist. */
 export type AggregatedAssignment = {
-	itemId: number;
+	itemId: string;
 	itemName: string;
-	category: string;
+	category: InventoryCategory;
+	unitOfMeasure: UnitOfMeasure;
+	/** Assigned minus returned, summed across the item's open assignments. */
 	totalQuantity: number;
-	assignmentIds: number[];
 };
 
 type CheckoutData = {
@@ -26,10 +35,57 @@ type CheckoutData = {
 	inspector: string;
 	overallDamageCost: number;
 	notes?: string;
+	/** Per item; anything not flagged damaged or missing is assumed fine. */
 	checkoutItems: {
-		assignmentId: number;
-		condition: "good" | "damaged" | "missing";
+		itemId: string;
+		damagedCount: number;
+		missingCount: number;
 	}[];
+}
+
+/** Statuses where stock is still out in the unit and expected back. */
+const OUTSTANDING_STATUSES = ["active", "partial"] as const;
+
+/**
+ * A problem the inspector can fix (stale page, over-count). Thrown inside
+ * the transaction so it rolls back, then returned as a failure message.
+ */
+class CheckoutError extends Error { }
+
+const REPORT_INCLUDE = {
+	booking: {
+		include: {
+			guest: true,
+			property: true,
+			unit: true,
+		},
+	},
+	guest: true,
+	issues: {
+		select: {
+			id: true,
+			issueType: true,
+			quantityAffected: true,
+			status: true,
+			inventoryItem: {
+				select: { id: true, itemName: true, unitOfMeasure: true },
+			},
+		},
+		orderBy: { reportedAt: "asc" },
+	},
+} satisfies Prisma.CheckoutReportInclude;
+
+type RawReport = Prisma.CheckoutReportGetPayload<{ include: typeof REPORT_INCLUDE }>;
+
+/** Decimals can't cross to client components, so flatten them to numbers. */
+function serializeReport(report: RawReport) {
+	return {
+		...report,
+		issues: report.issues.map((issue) => ({
+			...issue,
+			quantityAffected: issue.quantityAffected.toNumber(),
+		})),
+	};
 }
 
 export async function getCheckoutReports({ page = 1, sortOrder, search }: GetCheckoutReportsProps) {
@@ -61,21 +117,7 @@ export async function getCheckoutReports({ page = 1, sortOrder, search }: GetChe
 
 		const reports = await prisma.checkoutReport.findMany({
 			where,
-			include: {
-				booking: {
-					include: {
-						guest: true,
-						property: true,
-						unit: true,
-					},
-				},
-				guest: true,
-				checkoutItems: {
-					include: {
-						inventoryAssignment: true,
-					},
-				},
-			},
+			include: REPORT_INCLUDE,
 			orderBy: {
 				createdAt: sortOrder === "none" ? "desc" : sortOrder,
 
@@ -96,7 +138,7 @@ export async function getCheckoutReports({ page = 1, sortOrder, search }: GetChe
 
 		return {
 			totalPages,
-			reports,
+			reports: reports.map(serializeReport),
 			currentPage: page,
 			hasNext,
 			hasPrev
@@ -139,36 +181,46 @@ export async function getCheckoutReportById(id: number) {
 	try {
 		const report = await prisma.checkoutReport.findUnique({
 			where: { id },
-			include: {
-				booking: {
-					include: {
-						guest: true,
-						property: true,
-						unit: true,
-					},
-				},
-				guest: true,
-				checkoutItems: {
-					include: {
-						inventoryAssignment: true,
-					},
-				},
-			},
+			include: REPORT_INCLUDE,
 		});
-		return report;
+		return report ? serializeReport(report) : null;
 	} catch (error) {
 		console.error("Error fetching checkout report:", error);
 		return null;
 	}
 }
 
-export async function createCheckoutReport(data: CheckoutData) {
-	// Check if current user can checkout a guest
-	await requirePermission("guest", "check-out");
-
+export async function createCheckoutReport(
+	data: CheckoutData
+): Promise<{ success: boolean; message: string }> {
 	try {
+		// Check if current user can checkout a guest
+		await requirePermission("guest", "check-out");
+
+		// Issues record who raised them.
+		const session = await getServerSession();
+		const userId = session?.user?.id;
+		if (!userId) {
+			throw new Error("Unauthorized: Insufficent permissions.");
+		}
+
 		const { checkoutItems, ...reportData } = data;
 		const actualCheckoutDate = new Date();
+
+		const flaggedItems = checkoutItems.filter(
+			(item) => item.damagedCount > 0 || item.missingCount > 0
+		);
+
+		for (const item of flaggedItems) {
+			if (
+				!Number.isInteger(item.damagedCount) ||
+				!Number.isInteger(item.missingCount) ||
+				item.damagedCount < 0 ||
+				item.missingCount < 0
+			) {
+				throw new CheckoutError("Damaged and missing counts must be whole numbers.");
+			}
+		}
 
 		// Use transaction to ensure atomicity
 		const result = await prisma.$transaction(
@@ -196,57 +248,95 @@ export async function createCheckoutReport(data: CheckoutData) {
 					},
 				});
 
-				// 2. Process each checkout item (only damaged/missing)
-				for (const item of checkoutItems) {
-					// Skip good items entirely — they stay in the unit as-is
-					if (item.condition === "good") continue;
+				const guestName = `${report.guest.firstName} ${report.guest.lastName}`;
+				const unitName = report.booking.unit.name;
 
-					const assignment = await tx.inventoryAssignment.findUnique({
-						where: { id: item.assignmentId },
-						include: { inventoryItem: true },
+				/**
+				 * 2. Raise an issue for each damaged/missing item.
+				 *
+				 * The checklist shows one row per item, but the stock sits in
+				 * one or more assignments. Spread the counts across them,
+				 * oldest first, never exceeding what each still has out.
+				 *
+				 * No stock moves here — same rule as reportItemIssue: assigned
+				 * stock already left the store, and closing the assignment
+				 * settles the write-off.
+				 */
+				for (const item of flaggedItems) {
+					const assignments = await tx.inventoryAssignment.findMany({
+						where: {
+							unitId: report.booking.unitId,
+							inventoryItemId: item.itemId,
+							status: { in: [...OUTSTANDING_STATUSES] },
+						},
+						include: {
+							inventoryItem: {
+								select: { itemName: true, category: true, unitOfMeasure: true },
+							},
+						},
+						orderBy: { assignedAt: "asc" },
 					});
 
-					if (!assignment) {
-						throw new Error(
-							`Assignment with ID ${item.assignmentId} not found`
+					if (assignments.length === 0) {
+						throw new CheckoutError(
+							`One of the flagged items is no longer assigned to ${unitName}. Reload the page and inspect again.`
 						);
 					}
 
-					// Create checkout item record for damaged/missing only
-					await tx.checkoutItem.create({
-						data: {
-							checkoutReportId: report.id,
-							inventoryAssignmentId: item.assignmentId,
-							condition: item.condition,
-							damageCost: 0,
-							notes: null,
-						},
-					});
+					const { itemName, category, unitOfMeasure } = assignments[0].inventoryItem;
 
-					// Deactivate the assignment — item is leaving the unit
-					await tx.inventoryAssignment.update({
-						where: { id: assignment.id },
-						data: {
-							isActive: false,
-							returnedAt: new Date(),
-						},
-					});
+					if (!categoryRules(category).canReportIssue) {
+						throw new CheckoutError(
+							`Issues aren't tracked for ${itemName}, so it can't be flagged at checkout.`
+						);
+					}
 
-					// Create movement record
-					await tx.inventoryMovement.create({
-						data: {
-							inventoryItemId: assignment.inventoryItem.id,
-							fromUnitId: assignment.unitId,
-							toUnitId: null,
-							movedBy: data.inspector,
-							direction: item.condition, // "damaged" or "missing"
-							quantity: 1,
-							notes:
-								item.condition === "damaged"
-									? "Damaged during guest stay"
-									: "Missing after guest stay",
-						},
-					});
+					const capacity = assignments.map((a) => ({
+						id: a.id,
+						remaining: a.quantity.sub(a.returnedQuantity),
+					}));
+
+					const totalOut = capacity.reduce(
+						(sum, c) => sum.add(c.remaining),
+						new Prisma.Decimal(0)
+					);
+
+					if (totalOut.lessThan(item.damagedCount + item.missingCount)) {
+						throw new CheckoutError(
+							`Only ${totalOut} ${unitOfMeasure} of ${itemName} are out in ${unitName}. Reload the page and inspect again.`
+						);
+					}
+
+					const raise = async (issueType: IssueType, count: number) => {
+						let left = new Prisma.Decimal(count);
+
+						for (const slot of capacity) {
+							if (left.lessThanOrEqualTo(0)) break;
+							if (slot.remaining.lessThanOrEqualTo(0)) continue;
+
+							const take = Prisma.Decimal.min(left, slot.remaining);
+
+							await tx.itemIssue.create({
+								data: {
+									inventoryItemId: item.itemId,
+									assignmentId: slot.id,
+									checkoutReportId: report.id,
+									issueType,
+									quantityAffected: take,
+									description: `${issueType === "damaged" ? "Found damaged" : "Found missing"} at checkout of ${guestName} from ${unitName}.`,
+									reportedById: userId,
+									status: "open",
+									resolution: "pending",
+								},
+							});
+
+							slot.remaining = slot.remaining.sub(take);
+							left = left.sub(take);
+						}
+					};
+
+					await raise("damaged", item.damagedCount);
+					await raise("missing", item.missingCount);
 				}
 
 				// 3. Update booking status
@@ -301,22 +391,35 @@ export async function createCheckoutReport(data: CheckoutData) {
 		revalidatePath("/bookings");
 		revalidatePath("/guests");
 
+		const issuesRaised = flaggedItems.length > 0
+			? " Damaged and missing items have been logged as issues in Inventory."
+			: "";
+
 		return {
-			suceess: true,
-			message: `${result.guest.firstName} ${result.guest.lastName} checked out successfully.`
+			success: true,
+			message: `${result.guest.firstName} ${result.guest.lastName} checked out successfully.${issuesRaised}`
 		};
 	} catch (error) {
 		console.error("Error creating checkout report:", error);
 
-
-		if (error instanceof Error && error.message.includes("Unauthorized: Insufficent permissions.")) {
-			throw new Error(error.message);
+		// Returned rather than thrown: Next.js strips thrown error messages
+		// from server actions in production.
+		if (error instanceof CheckoutError) {
+			return { success: false, message: error.message };
 		}
 
-		throw new Error("Failed to checkout guest, please try again.");
+		if (error instanceof Error && error.message.includes("Unauthorized: Insufficent permissions.")) {
+			return { success: false, message: error.message };
+		}
+
+		return { success: false, message: "Failed to checkout guest, please try again." };
 	}
 }
 
+/**
+ * What the inspector needs to check: items still out in the unit that are
+ * expected back. Consumables and laundry are excluded — nothing to return.
+ */
 export async function getInventoryAssignmentsForUnit(
 	unitId: number
 ): Promise<AggregatedAssignment[]> {
@@ -324,53 +427,60 @@ export async function getInventoryAssignmentsForUnit(
 		const assignments = await prisma.inventoryAssignment.findMany({
 			where: {
 				unitId,
-				isActive: true,
-				inventoryItem: {
-					assignableOnBooking: true,
-				},
+				status: { in: [...OUTSTANDING_STATUSES] },
+				inventoryItem: { deletedAt: null },
 			},
 			select: {
-				id: true,
+				quantity: true,
+				returnedQuantity: true,
 				inventoryItem: {
 					select: {
 						id: true,
 						itemName: true,
 						category: true,
+						unitOfMeasure: true,
 					},
-				},
-			},
-			orderBy: {
-				inventoryItem: {
-					category: "asc",
 				},
 			},
 		});
 
-		// Group by inventoryItem.id
-		const grouped = new Map<number, AggregatedAssignment>();
+		// Group by item, summing what's still out rather than counting rows.
+		const grouped = new Map<
+			string,
+			Omit<AggregatedAssignment, "totalQuantity"> & { totalQuantity: Prisma.Decimal }
+		>();
 
 		for (const assignment of assignments) {
-			const { id: itemId, itemName, category } = assignment.inventoryItem;
+			const { id: itemId, itemName, category, unitOfMeasure } = assignment.inventoryItem;
 
-			if (grouped.has(itemId)) {
-				const existing = grouped.get(itemId)!;
-				existing.totalQuantity += 1;
-				existing.assignmentIds.push(assignment.id);
+			if (!categoryRules(category).expectsReturn) continue;
+
+			const outstanding = assignment.quantity.sub(assignment.returnedQuantity);
+			const existing = grouped.get(itemId);
+
+			if (existing) {
+				existing.totalQuantity = existing.totalQuantity.add(outstanding);
 			} else {
 				grouped.set(itemId, {
 					itemId,
 					itemName,
 					category,
-					totalQuantity: 1,
-					assignmentIds: [assignment.id],
+					unitOfMeasure,
+					totalQuantity: outstanding,
 				});
 			}
 		}
 
-		return Array.from(grouped.values());
+		return Array.from(grouped.values())
+			.filter((row) => row.totalQuantity.greaterThan(0))
+			.map((row) => ({ ...row, totalQuantity: row.totalQuantity.toNumber() }))
+			.sort(
+				(a, b) =>
+					a.category.localeCompare(b.category) ||
+					a.itemName.localeCompare(b.itemName)
+			);
 	} catch (error) {
 		console.error("Error fetching inventory for unit:", error);
 		return [];
 	}
 }
-

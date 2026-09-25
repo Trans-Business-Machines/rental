@@ -131,7 +131,7 @@ export const BookingRequestFormSchema = z
 
     checkOutDate: z.date(),
     numberOfGuests: z.number().min(1, "At least 1 guest is required."),
-    priceDuration: z.enum(["one_night", "weekly", "monthly", "custom"]),
+    priceDuration: z.enum(["one_night", "weekly", "monthly"]),
     unitPrice: z.number().min(1, "Price is required."),
     period: z.number().min(1),
     discountRate: z.number().nullable().optional(),
@@ -227,7 +227,7 @@ const bookingDetailsSchema = {
     .min(1, "Check-in date is required."),
   checkOutDate: z.date(),
   numberOfGuests: z.number().min(1, "At least 1 guest is required"),
-  priceDuration: z.enum(["one_night", "weekly", "monthly", "custom"]),
+  priceDuration: z.enum(["one_night", "weekly", "monthly"]),
   unitPrice: z.number().min(1, "Price is required"),
   period: z.number().min(1),
   discountRate: z.number().nullable().optional(),

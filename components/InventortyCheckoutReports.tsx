@@ -46,6 +46,35 @@ interface InventortyCheckoutReportsProps {
   initialFilters: CheckoutReportFilters;
 }
 
+/**
+ * A single flag can span several assignments, so it may be stored as more
+ * than one issue. Merge them back to one line per item and issue type.
+ */
+function summarizeIssues(issues: CheckoutReport["issues"]) {
+  const lines = new Map<
+    string,
+    { itemName: string; issueType: string; quantity: number; uom: string }
+  >();
+
+  for (const issue of issues) {
+    const key = `${issue.inventoryItem.id}:${issue.issueType}`;
+    const existing = lines.get(key);
+
+    if (existing) {
+      existing.quantity += issue.quantityAffected;
+    } else {
+      lines.set(key, {
+        itemName: issue.inventoryItem.itemName,
+        issueType: issue.issueType,
+        quantity: issue.quantityAffected,
+        uom: issue.inventoryItem.unitOfMeasure,
+      });
+    }
+  }
+
+  return Array.from(lines.entries());
+}
+
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("en-KE", {
     style: "currency",
@@ -285,6 +314,36 @@ function InventortyCheckoutReports({
                       </span>
                     </div>
                   </div>
+
+                  {/* Flagged at inspection — each one is an issue in Inventory */}
+                  {report.issues.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-sm text-muted-foreground">
+                        Flagged items
+                      </p>
+                      <ul className="space-y-1">
+                        {summarizeIssues(report.issues).map(([key, line]) => (
+                          <li
+                            key={key}
+                            className="flex items-center justify-between gap-2 text-sm"
+                          >
+                            <span className="capitalize">{line.itemName}</span>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "font-normal capitalize",
+                                line.issueType === "missing"
+                                  ? "border-red-200 text-red-700"
+                                  : "border-amber-200 text-amber-700",
+                              )}
+                            >
+                              {line.issueType} × {line.quantity} {line.uom}
+                            </Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   {/* View Notes Button */}
                   <div className="pt-2">

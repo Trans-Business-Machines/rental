@@ -63,7 +63,7 @@ function InventoryAssignments({
     initialFilters.search !== "" ||
     initialFilters.status !== "all" ||
     initialFilters.propertyId !== "all" ||
-    initialFilters.unitId !== "";
+    initialFilters.unitId !== "all";
 
   const propertyUnits = properties.find(
     (p) => p.id.toString() === filters.propertyId,
@@ -85,7 +85,7 @@ function InventoryAssignments({
       params.set("propertyId", filters.propertyId);
     }
 
-    if (filters.unitId !== "") {
+    if (filters.unitId !== "all") {
       params.set("unitId", filters.unitId);
     }
 
@@ -95,12 +95,7 @@ function InventoryAssignments({
   };
 
   const clearFilters = () => {
-    setFilters({
-      search: "",
-      status: "all",
-      propertyId: "all",
-      unitId: "",
-    });
+    setFilters({ search: "", status: "all", propertyId: "all", unitId: "all" });
 
     startClearTransition(() => {
       router.push("/inventory?tab=assignments&page=1");
@@ -148,8 +143,10 @@ function InventoryAssignments({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Returned</SelectItem>
+                <SelectItem value="outstanding">Outstanding</SelectItem>
+                <SelectItem value="returned">Returned</SelectItem>
+                <SelectItem value="written_off">Written off</SelectItem>
+                <SelectItem value="issued">Consumed</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -160,7 +157,11 @@ function InventoryAssignments({
               defaultValue="all"
               value={filters.propertyId}
               onValueChange={(value) =>
-                setFilters((prev) => ({ ...prev, propertyId: value }))
+                setFilters((prev) => ({
+                  ...prev,
+                  propertyId: value,
+                  unitId: "all",
+                }))
               }
             >
               <SelectTrigger className="w-full">
@@ -190,6 +191,7 @@ function InventoryAssignments({
                 <SelectValue placeholder="All Units" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Units</SelectItem>
                 {propertyUnits?.map((unit) => (
                   <SelectItem key={unit.id} value={unit.id.toString()}>
                     {unit.name}

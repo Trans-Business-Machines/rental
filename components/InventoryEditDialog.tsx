@@ -35,13 +35,25 @@ export function InventoryEditDialog({
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className=" w-11/12  lg:max-w-3xl max-h-[95vh] overflow-y-auto">
+      <DialogContent className="w-11/12 lg:max-w-3xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Inventory Item</DialogTitle>
+          <DialogTitle>Edit {item.itemName}</DialogTitle>
         </DialogHeader>
         <InventoryForm
-          item={item}
-          isEditing={true}
+          // The property select is disabled while editing, so the item's
+          // own property is the only entry the form needs.
+          properties={[item.property]}
+          item={{
+            id: item.id,
+            propertyId: item.propertyId,
+            category: item.category,
+            itemName: item.itemName,
+            description: item.description,
+            unitOfMeasure: item.unitOfMeasure,
+            restockAt: item.restockAt,
+            unitCost: item.unitCost,
+          }}
+          hasHistory={item.hasHistory}
           onSuccess={() => setDialogOpen(false)}
           onCancel={() => setDialogOpen(false)}
         />

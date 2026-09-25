@@ -11,14 +11,20 @@ import {
 } from "@/components/ui/carousel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CategoryItemStats } from "@/lib/types/types";
+import { getCategoryDisplay } from "@/lib/inventory-categories";
 import { cn } from "@/lib/utils";
 
-type AvailabilityStatus = "critical" | "low" | "healthy";
+type AvailabilityStatus = "empty" | "critical" | "low" | "healthy";
 
 function getAvailabilityStatus(
   available: number,
   total: number,
 ): AvailabilityStatus {
+  // Nothing stocked yet isn't a shortage, so don't flag it red.
+  if (total === 0) {
+    return "empty";
+  }
+
   if (available === 0) {
     return "critical";
   }
@@ -34,6 +40,11 @@ const statusStyles: Record<
   AvailabilityStatus,
   { background: string; text: string; progress: string }
 > = {
+  empty: {
+    background: "bg-muted",
+    text: "text-muted-foreground",
+    progress: "bg-muted-foreground",
+  },
   critical: {
     background: "bg-lipstick-red/10",
     text: "text-lipstick-red",
@@ -84,11 +95,12 @@ export function CategoryCarousel({ stats }: { stats: CategoryItemStats }) {
               <Card className="h-full">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-semibold truncate">
-                    {stat.category}
+                    {getCategoryDisplay(stat.category).label}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground">
-                    {stat.totalItems} {stat.totalItems === 1 ? "item" : "items"}{" "}
-                    in this category
+                    {stat.totalItems === 0
+                      ? "No items added yet"
+                      : `${stat.totalItems} ${stat.totalItems === 1 ? "item" : "items"} in this category`}
                   </p>
                 </CardHeader>
                 <CardContent>

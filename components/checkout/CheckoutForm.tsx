@@ -141,41 +141,15 @@ export function CheckoutForm({
     }
 
     try {
-      // Fan out aggregated items back to individual assignments
-      const checkoutItems = data.checkoutItems.flatMap((item) => {
-        const results: Array<{
-          assignmentId: number;
-          condition: "good" | "damaged" | "missing";
-        }> = [];
-
-        let idx = 0;
-
-        // Mark damaged
-        for (let i = 0; i < item.damagedCount; i++) {
-          results.push({
-            assignmentId: item.assignmentIds[idx++],
-            condition: "damaged",
-          });
-        }
-
-        // Mark missing
-        for (let i = 0; i < item.missingCount; i++) {
-          results.push({
-            assignmentId: item.assignmentIds[idx++],
-            condition: "missing",
-          });
-        }
-
-        // Rest are good
-        while (idx < item.assignmentIds.length) {
-          results.push({
-            assignmentId: item.assignmentIds[idx++],
-            condition: "good",
-          });
-        }
-
-        return results;
-      });
+      // Only flagged items; the server raises an issue per affected
+      // assignment and treats everything else as returned in good order.
+      const checkoutItems = data.checkoutItems
+        .filter((item) => item.damagedCount > 0 || item.missingCount > 0)
+        .map((item) => ({
+          itemId: item.itemId,
+          damagedCount: item.damagedCount,
+          missingCount: item.missingCount,
+        }));
 
       // Prepare data for server action
       const checkoutData = {
@@ -190,24 +164,27 @@ export function CheckoutForm({
 
       const result = await createCheckoutReport(checkoutData);
 
-      if (result.suceess) {
-        toast.success(result.message);
-
-        // Invalidate the necessary Queries, ["booking-form-data"]
-        await Promise.all([
-          queryClient.invalidateQueries({
-            queryKey: ["booking-request-form-data"],
-          }),
-          queryClient.invalidateQueries({
-            queryKey: ["guests", "search"],
-          }),
-          queryClient.invalidateQueries({
-            queryKey: ["booking-form-data"],
-          }),
-        ]);
-
-        router.push("/bookings");
+      if (!result.success) {
+        toast.error(result.message, { duration: 5000 });
+        return;
       }
+
+      toast.success(result.message);
+
+      // Invalidate the necessary Queries, ["booking-form-data"]
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["booking-request-form-data"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["guests", "search"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["booking-form-data"],
+        }),
+      ]);
+
+      router.push("/bookings");
     } catch (error) {
       let errMsg = "Failed to complete checkout. Please try again.";
 

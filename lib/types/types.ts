@@ -1,5 +1,5 @@
 import { getBookingById, } from "@/lib/actions/bookings";
-import { getInventoryItems, getInventoryAssignments } from "@/lib/actions/inventory"
+import { getInventoryAssignments } from "@/lib/actions/inventory"
 import {
     getCheckoutReportById,
     getBookingsForCheckout,
@@ -9,6 +9,11 @@ import { getProperties, getPropertyNames, getPropertyById } from "@/lib/actions/
 import { getGuests, } from "@/lib/actions/guests";
 import { getUnitPricingOptions } from "@/lib/actions/pricing"
 import { getBookingRequestById } from "@/lib/actions/booking-requests"
+import type {
+    InventoryCategory,
+    UnitOfMeasure,
+    InventoryItemStatus,
+} from "@/prisma/generated/client";
 
 /* ---------------- Type Definitions ---------------- */
 export type Booking = NonNullable<Awaited<ReturnType<typeof getBookingById>>>
@@ -32,8 +37,6 @@ export type PropertyPricings = NonNullable<Awaited<ReturnType<typeof getProperty
 type AssignmentResponse = Awaited<ReturnType<typeof getInventoryAssignments>>
 export type Assignment = AssignmentResponse["assignments"][number]
 
-type InvetoryItemResponse = Awaited<ReturnType<typeof getInventoryItems>>
-export type InventoryItem = InvetoryItemResponse["items"][number]
 
 export type BookingsForCheckout = NonNullable<Awaited<ReturnType<typeof getBookingsForCheckout>>>
 export type InventoryAssignmentForUnit = NonNullable<Awaited<ReturnType<typeof getInventoryAssignmentsForUnit>>>
@@ -41,7 +44,7 @@ export type UnitTypePricing = NonNullable<Awaited<ReturnType<typeof getUnitPrici
 
 export type BookingStatus = "pending" | "reserved" | "checked_in" | "checked_out" | "cancelled"
 export type UnitStatus = "booked" | "reserved" | "maintenance" | "available" | "occupied"
-export type PriceDuration = "one_night" | "weekly" | "monthly" | "custom"
+export type PriceDuration = "one_night" | "weekly" | "monthly"
 
 export type BadgeVariant = "dashboard" | "listing" | "details";
 
@@ -79,11 +82,12 @@ export type CreateNewGuest = NewGuestBaseFileds & (
 );
 
 export type GroupedAssigments = {
-    inventoryItemId: number;
+    inventoryItemId: string;   
     itemName: string;
-    category: string;
-    quantity: number;
-}[];
+    category: InventoryCategory;
+    unitOfMeasure: UnitOfMeasure;
+    quantity: number;          
+}[]
 
 export type CategoryItemStats = {
     category: string;
@@ -138,6 +142,40 @@ export interface Unit {
     },
     media: Media[],
     pricingOptions: UnitTypePricing[]
+}
+
+export interface InventoryItem {
+    id: string;
+    propertyId: number;
+    property: { id: number; name: string };
+    category: InventoryCategory;
+    itemName: string;
+    description: string | null;
+    unitOfMeasure: UnitOfMeasure;
+    availableQuantity: number;
+    assignedQuantity: number;
+    totalOwned: number;
+    restockAt: number;
+    needsRestock: boolean;
+    openIssueCount: number;
+    hasHistory: boolean;
+    unitCost: number | null;
+    status: InventoryItemStatus;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
+    rules: {
+        canAssign: boolean;
+        expectsReturn: boolean;
+        canLogUsage: boolean;
+        canReportIssue: boolean;
+    };
+    assignments: {
+        id: string;
+        quantity: number;
+        returnedQuantity: number;
+        unit: { id: number; name: string };
+    }[];
 }
 
 export interface User {
@@ -306,8 +344,6 @@ export interface CreatePricingParams {
     duration: PriceDuration;
     price: number;
     nights?: number | null;
-    fromDate?: Date | null;
-    toDate?: Date | null;
     discountRate?: number | null;
     isActive?: boolean;
 }
@@ -318,8 +354,6 @@ export interface UpdatePricingParams {
     duration?: PriceDuration;
     price?: number;
     nights?: number | null;
-    fromDate?: Date | null;
-    toDate?: Date | null;
     discountRate?: number | null;
     isActive?: boolean;
 }
@@ -442,7 +476,7 @@ export interface NotifyAdminsOfBookingRequestParams {
     period: number;
     totalAmount: number;
     requestedByName: string;
-    paymentCode:string
+    paymentCode: string
 }
 
 export interface GuestSearchResult {
