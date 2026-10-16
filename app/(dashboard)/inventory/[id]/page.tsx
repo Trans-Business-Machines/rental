@@ -117,10 +117,7 @@ export default async function InventoryDetailsPage({
         {/* Which actions apply is decided by category, same as the server */}
         <div className="flex flex-wrap gap-2">
           <RestockDialog item={item}>
-            <Button
-              variant={item.needsRestock ? "default" : "outline"}
-              className="cursor-pointer"
-            >
+            <Button className="cursor-pointer bg-green-800 text-white hover:bg-green-900">
               <PackagePlus className="mr-2 size-4" />
               Restock
             </Button>
@@ -128,7 +125,7 @@ export default async function InventoryDetailsPage({
 
           {item.rules.canReportIssue && (
             <ReportIssueDialog item={item} assignments={outstandingAssignments}>
-              <Button variant="outline" className="cursor-pointer">
+              <Button className="cursor-pointer bg-red-700 text-white hover:bg-red-800">
                 <TriangleAlert className="mr-2 size-4" />
                 Report issue
               </Button>
@@ -372,7 +369,7 @@ export default async function InventoryDetailsPage({
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.unit.name}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatQty(a.quantity - a.returnedQuantity)}{" "}
+                      {formatQty(a.outstandingQuantity)}{" "}
                       <span className="text-xs text-muted-foreground">
                         {item.unitOfMeasure}
                       </span>

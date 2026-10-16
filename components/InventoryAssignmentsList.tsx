@@ -28,6 +28,7 @@ import {
   Package,
   AlertTriangle,
   Undo2,
+  Ban,
 } from "lucide-react";
 import { SearchNotFound } from "./SearchNotFound";
 import { ReturnAssignmentDialog } from "@/components/Returnassignmentdialog";
@@ -47,9 +48,9 @@ function formatQty(value: number) {
 /**
  * Four statuses replace the old active/returned boolean:
  *   active  — out in a unit, return expected
- *   partial — some back, remainder still out
+ *   partial — some returned or written off, remainder still out
  *   issued  — consumable, consumed on assignment, never returning
- *   closed  — settled, either fully returned or remainder written off
+ *   closed  — settled, by returns, write-offs or both
  */
 function StatusBadge({ assignment }: { assignment: Assignment }) {
   switch (assignment.status) {
@@ -62,7 +63,9 @@ function StatusBadge({ assignment }: { assignment: Assignment }) {
           variant="secondary"
           className="bg-amber-500 text-white hover:bg-amber-600"
         >
-          Partially returned
+          {assignment.returnedQuantity > 0
+            ? "Partially returned"
+            : "Partly written off"}
         </Badge>
       );
 
@@ -84,7 +87,9 @@ function StatusBadge({ assignment }: { assignment: Assignment }) {
           </TooltipTrigger>
           <TooltipContent>
             {formatQty(assignment.writtenOffQuantity)}{" "}
-            {assignment.inventoryItem.unitOfMeasure} never returned to stock
+            {assignment.inventoryItem.unitOfMeasure} written off
+            {assignment.returnedQuantity > 0 &&
+              `, ${formatQty(assignment.returnedQuantity)} returned`}
           </TooltipContent>
         </Tooltip>
       ) : (
@@ -144,28 +149,39 @@ export function InventoryAssignmentsList({
                   const uom = assignment.inventoryItem.unitOfMeasure;
 
                   return (
-                    <TableRow key={assignment.id}>
+                    <TableRow
+                      key={assignment.id}
+                      className={
+                        assignment.needsAttention
+                          ? "bg-destructive/5"
+                          : undefined
+                      }
+                    >
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium capitalize">
                             {assignment.inventoryItem.itemName}
                           </span>
 
-                          {assignment.openIssueCount > 0 && (
+                          {/* Stays visible until the issue is settled, so
+                              nobody has to remember it after the toast */}
+                          {assignment.needsAttention && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="inline-flex items-center gap-1 text-amber-600">
-                                  <AlertTriangle className="h-3.5 w-3.5" />
-                                  <span className="text-xs font-medium">
-                                    {assignment.openIssueCount}
-                                  </span>
-                                </span>
+                                <Badge
+                                  variant="destructive"
+                                  className="cursor-default gap-1"
+                                >
+                                  <AlertTriangle className="h-3 w-3" />
+                                  {assignment.openIssueCount} open{" "}
+                                  {assignment.openIssueCount === 1
+                                    ? "issue"
+                                    : "issues"}
+                                </Badge>
                               </TooltipTrigger>
                               <TooltipContent>
-                                {assignment.openIssueCount} unresolved{" "}
-                                {assignment.openIssueCount === 1
-                                  ? "issue"
-                                  : "issues"}
+                                Write off what&apos;s gone, or resolve the issue
+                                from the item&apos;s page if it was repaired.
                               </TooltipContent>
                             </Tooltip>
                           )}
@@ -206,6 +222,12 @@ export function InventoryAssignmentsList({
                         {assignment.returnedQuantity > 0 && (
                           <div className="text-xs text-muted-foreground">
                             {formatQty(assignment.returnedQuantity)} returned
+                          </div>
+                        )}
+                        {assignment.writtenOffQuantity > 0 && (
+                          <div className="text-xs text-destructive">
+                            {formatQty(assignment.writtenOffQuantity)} written
+                            off
                           </div>
                         )}
                       </TableCell>
@@ -256,16 +278,33 @@ export function InventoryAssignmentsList({
                       {showReturnButton && (
                         <TableCell className="text-right">
                           {assignment.canReturn ? (
-                            <ReturnAssignmentDialog assignment={assignment}>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="cursor-pointer"
-                              >
-                                <Undo2 className="mr-1.5 h-3.5 w-3.5" />
-                                Return
-                              </Button>
-                            </ReturnAssignmentDialog>
+                            <div className="flex justify-end gap-2">
+                              {assignment.needsAttention && (
+                                <ReturnAssignmentDialog
+                                  assignment={assignment}
+                                  initialMode="writeoff"
+                                >
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="cursor-pointer"
+                                  >
+                                    <Ban className="mr-1.5 h-3.5 w-3.5" />
+                                    Write off
+                                  </Button>
+                                </ReturnAssignmentDialog>
+                              )}
+                              <ReturnAssignmentDialog assignment={assignment}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="cursor-pointer"
+                                >
+                                  <Undo2 className="mr-1.5 h-3.5 w-3.5" />
+                                  Return
+                                </Button>
+                              </ReturnAssignmentDialog>
+                            </div>
                           ) : (
                             <span className="text-sm text-muted-foreground">
                               —

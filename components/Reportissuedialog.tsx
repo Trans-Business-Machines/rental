@@ -21,8 +21,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, TriangleAlert, Info } from "lucide-react";
+import { Loader2, TriangleAlert } from "lucide-react";
 import { reportItemIssue } from "@/lib/actions/inventory";
+import { InfoBanner } from "@/components/InfoBanner";
+import { useRefreshOpenIssueCount } from "@/hooks/useInventory";
 import type { IssueType } from "@/prisma/generated/client";
 
 const ISSUE_TYPES: { value: IssueType; label: string; hint: string }[] = [
@@ -46,8 +48,8 @@ const ISSUE_TYPES: { value: IssueType; label: string; hint: string }[] = [
 /** An assignment the issue can be attached to — items out in a unit. */
 interface IssueAssignmentOption {
   id: string;
-  quantity: number;
-  returnedQuantity: number;
+  /** Still in the unit and not already under an open issue. */
+  reportableQuantity: number;
   unit: { name: string };
 }
 
@@ -85,6 +87,7 @@ export function ReportIssueDialog({
 }: ReportIssueDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const refreshOpenIssueCount = useRefreshOpenIssueCount();
 
   const isControlled = open !== undefined;
   const dialogOpen = isControlled ? open : internalOpen;
@@ -109,10 +112,11 @@ export function ReportIssueDialog({
   /**
    * The cap depends on where the problem is. In the store it's the
    * available balance; in a unit it's what's still out on that
-   * assignment. Both are enforced server-side too.
+   * assignment and not already under an open issue. Both are enforced
+   * server-side too.
    */
   const maxQuantity = selectedAssignment
-    ? selectedAssignment.quantity - selectedAssignment.returnedQuantity
+    ? selectedAssignment.reportableQuantity
     : item.availableQuantity;
 
   const parsedQty = Number(quantity);
@@ -167,6 +171,7 @@ export function ReportIssueDialog({
     }
 
     toast.success(result.message);
+    refreshOpenIssueCount();
     reset();
     setDialogOpen(false);
   };
@@ -211,9 +216,8 @@ export function ReportIssueDialog({
                   </SelectItem>
                   {assignments.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.unit.name} —{" "}
-                      {formatQty(a.quantity - a.returnedQuantity)}{" "}
-                      {item.unitOfMeasure} out
+                      {a.unit.name} — {formatQty(a.reportableQuantity)}{" "}
+                      {item.unitOfMeasure} reportable
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -287,25 +291,23 @@ export function ReportIssueDialog({
                             assignment. Deducting again would double-count.
           */}
           {validQty && !exceeds && (
-            <div className="flex gap-2 rounded-md border border-border bg-muted/50 p-3">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">
-                {selectedAssignment ? (
-                  <>
-                    Store stock is unchanged — these {item.unitOfMeasure} left
-                    when they were assigned to {selectedAssignment.unit.name}.
-                    Closing the assignment settles them.
-                  </>
-                ) : (
-                  <>
-                    {formatQty(parsedQty)} {item.unitOfMeasure} will come out of
-                    the store balance now, leaving{" "}
-                    {formatQty(item.availableQuantity - parsedQty)}. Resolving
-                    as a repair credits it back.
-                  </>
-                )}
-              </p>
-            </div>
+            <InfoBanner>
+              {selectedAssignment ? (
+                <>
+                  Store stock is unchanged — these {item.unitOfMeasure} left
+                  when they were assigned to {selectedAssignment.unit.name}.
+                  Discarding or replacing the issue later writes them off the
+                  assignment.
+                </>
+              ) : (
+                <>
+                  {formatQty(parsedQty)} {item.unitOfMeasure} will come out of
+                  the store balance now, leaving{" "}
+                  {formatQty(item.availableQuantity - parsedQty)}. Resolving as
+                  a repair credits it back.
+                </>
+              )}
+            </InfoBanner>
           )}
 
           <div className="space-y-2">

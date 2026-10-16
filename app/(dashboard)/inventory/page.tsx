@@ -194,11 +194,6 @@ export default async function InventoryPage({
             <InventoryDialog properties={propertiesResponse} />
           )}
         </div>
-        {/* {(userRole === "admin" || userRole === "superAdmin") && (
-          <Button variant="outline" asChild>
-            <Link href="/inventory/reconcile">Reconcile</Link>
-          </Button>
-        )} */}
       </header>
 
       {/* Statistics Cards */}

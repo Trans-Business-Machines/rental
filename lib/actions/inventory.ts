@@ -290,6 +290,75 @@ async function incrementStock(
 	});
 }
 
+/** Still physically in the unit: neither returned nor written off. */
+function outstandingOf(a: {
+	quantity: Prisma.Decimal;
+	returnedQuantity: Prisma.Decimal;
+	writtenOffQuantity: Prisma.Decimal;
+}) {
+	return a.quantity.sub(a.returnedQuantity).sub(a.writtenOffQuantity);
+}
+
+/**
+ * Stock in a unit that open issues have a claim on. It can't be returned
+ * or reported again until those issues are resolved, or the same towel
+ * could be both back in the store and written off.
+ */
+function openIssueQuantity(issues: { quantityAffected: Prisma.Decimal }[]) {
+	return issues.reduce(
+		(sum, i) => sum.add(i.quantityAffected),
+		new Prisma.Decimal(0),
+	);
+}
+
+/** Select for the open issues on an assignment, used with openIssueQuantity. */
+const OPEN_ISSUES_SELECT = {
+	where: { status: "open" },
+	select: { quantityAffected: true },
+} satisfies Prisma.InventoryAssignment$issuesArgs;
+
+/**
+ * Write off part of an assignment. The items are gone from the unit for
+ * good; no stock moves because they already left the store when they
+ * were assigned. Closes the assignment once nothing is left out.
+ *
+ * Only called while resolving an issue — every write-off starts as one.
+ */
+async function writeOffFromAssignment(
+	tx: Prisma.TransactionClient,
+	assignmentId: string,
+	quantity: Prisma.Decimal,
+	note: string,
+) {
+	const assignment = await tx.inventoryAssignment.findUniqueOrThrow({
+		where: { id: assignmentId },
+	});
+
+	// Settled before writtenOffQuantity existed — nothing left to write off.
+	if (assignment.status === "closed" || assignment.status === "issued") {
+		return { writtenOff: new Prisma.Decimal(0), stillOut: new Prisma.Decimal(0) };
+	}
+
+	const outstanding = outstandingOf(assignment);
+	// Older issues weren't capped against other open issues, so never
+	// write off more than is actually still out.
+	const writingOff = Prisma.Decimal.min(quantity, outstanding);
+	const stillOut = outstanding.sub(writingOff);
+	const closing = stillOut.isZero();
+
+	await tx.inventoryAssignment.update({
+		where: { id: assignment.id },
+		data: {
+			writtenOffQuantity: assignment.writtenOffQuantity.add(writingOff),
+			status: closing ? "closed" : "partial",
+			returnedAt: closing ? new Date() : assignment.returnedAt,
+			notes: `${assignment.notes ?? ""}\nWritten off ${writingOff}: ${note}`.trim(),
+		},
+	});
+
+	return { writtenOff: writingOff, stillOut };
+}
+
 const TX_OPTS = {
 	timeout: 30000,
 	maxWait: 5000,
@@ -352,7 +421,9 @@ export async function getInventoryItems({
 							id: true,
 							quantity: true,
 							returnedQuantity: true,
+							writtenOffQuantity: true,
 							unit: { select: { id: true, name: true } },
+							issues: OPEN_ISSUES_SELECT,
 						},
 					},
 					_count: {
@@ -374,9 +445,9 @@ export async function getInventoryItems({
 
 		const items = rows
 			.map((item) => {
-				// Outstanding = still physically in units, not yet returned.
+				// Outstanding = still physically in units.
 				const outstanding = item.assignments.reduce(
-					(sum, a) => sum.add(a.quantity).sub(a.returnedQuantity),
+					(sum, a) => sum.add(outstandingOf(a)),
 					new Prisma.Decimal(0),
 				);
 
@@ -393,10 +464,15 @@ export async function getInventoryItems({
 						item._count.usageLogs > 0,
 					needsRestock: item.availableQuantity.lte(item.restockAt),
 					rules: categoryRules(item.category),
-					assignments: item.assignments.map((a) => ({
+					assignments: item.assignments.map(({ issues, ...a }) => ({
 						...a,
 						quantity: a.quantity.toNumber(),
 						returnedQuantity: a.returnedQuantity.toNumber(),
+						writtenOffQuantity: a.writtenOffQuantity.toNumber(),
+						// What a new issue can still be raised against.
+						reportableQuantity: outstandingOf(a)
+							.sub(openIssueQuantity(issues))
+							.toNumber(),
 					})),
 				};
 			})
@@ -436,6 +512,7 @@ export async function getInventoryItemById(id: string) {
 					include: {
 						unit: { select: { id: true, name: true } },
 						assignedBy: { select: { id: true, name: true } },
+						issues: OPEN_ISSUES_SELECT,
 					},
 					orderBy: { assignedAt: "desc" },
 				},
@@ -469,10 +546,7 @@ export async function getInventoryItemById(id: string) {
 
 		const outstanding = item.assignments
 			.filter((a) => a.status === "active" || a.status === "partial")
-			.reduce(
-				(sum, a) => sum.add(a.quantity).sub(a.returnedQuantity),
-				new Prisma.Decimal(0),
-			);
+			.reduce((sum, a) => sum.add(outstandingOf(a)), new Prisma.Decimal(0));
 
 		return {
 			...serializeItem(item),
@@ -482,7 +556,14 @@ export async function getInventoryItemById(id: string) {
 			totalOwned: item.availableQuantity.add(outstanding).toNumber(),
 			needsRestock: item.availableQuantity.lte(item.restockAt),
 			rules: await getCategoryRules(item.category),
-			assignments: item.assignments.map(serializeItem),
+			assignments: item.assignments.map(({ issues, ...a }) => ({
+				...serializeItem(a),
+				outstandingQuantity: outstandingOf(a).toNumber(),
+				// What a new issue can still be raised against.
+				reportableQuantity: outstandingOf(a)
+					.sub(openIssueQuantity(issues))
+					.toNumber(),
+			})),
 			restocks: item.restocks.map(serializeItem),
 			issues: item.issues.map(serializeItem),
 			usageLogs: item.usageLogs.map(serializeItem),
@@ -582,7 +663,11 @@ export async function getInventoryStatsByCategory(propertyId?: number) {
 				restockAt: true,
 				assignments: {
 					where: { status: { in: ["active", "partial"] } },
-					select: { quantity: true, returnedQuantity: true },
+					select: {
+						quantity: true,
+						returnedQuantity: true,
+						writtenOffQuantity: true,
+					},
 				},
 			},
 		});
@@ -607,7 +692,7 @@ export async function getInventoryStatsByCategory(propertyId?: number) {
 
 		for (const item of items) {
 			const outstanding = item.assignments.reduce(
-				(sum, a) => sum.add(a.quantity).sub(a.returnedQuantity),
+				(sum, a) => sum.add(outstandingOf(a)),
 				new Prisma.Decimal(0),
 			);
 
@@ -666,6 +751,21 @@ export async function getOpenIssues(propertyId?: number) {
 		if (isNextControlFlowError(error)) throw error;
 		console.error("[inventory] fetching open issues:", error);
 		return [];
+	}
+}
+
+/** Feeds the sidebar badge, so it stays a single cheap count. */
+export async function getOpenIssueCount() {
+	try {
+		await requirePermission("inventory", "read");
+
+		return await prisma.itemIssue.count({
+			where: { status: "open", inventoryItem: { deletedAt: null } },
+		});
+	} catch (error) {
+		if (isNextControlFlowError(error)) throw error;
+		// Roles without inventory access just see no badge.
+		return 0;
 	}
 }
 
@@ -1189,7 +1289,11 @@ export async function returnInventoryAssignment(data: {
 		const result = await prisma.$transaction(async (tx) => {
 			const assignment = await tx.inventoryAssignment.findUnique({
 				where: { id: data.assignmentId },
-				include: { inventoryItem: true, unit: true },
+				include: {
+					inventoryItem: true,
+					unit: true,
+					issues: OPEN_ISSUES_SELECT,
+				},
 			});
 
 			if (!assignment) {
@@ -1216,34 +1320,52 @@ export async function returnInventoryAssignment(data: {
 				);
 			}
 
-			const outstanding = assignment.quantity.sub(assignment.returnedQuantity);
+			const { itemName, unitOfMeasure: uom } = assignment.inventoryItem;
+			const outstanding = outstandingOf(assignment);
+			// Items under an open issue stay put until the issue decides
+			// whether they're repaired in place or written off.
+			const underIssue = openIssueQuantity(assignment.issues);
+			const returnable = outstanding.sub(underIssue);
 
 			const returning =
 				data.quantity === undefined
-					? outstanding
+					? returnable
 					: requirePositive(
 						toDecimal(data.quantity, "Return quantity"),
 						"Return quantity",
 						"Enter how many are coming back.",
 					);
 
-			if (returning.greaterThan(outstanding)) {
+			if (returning.greaterThan(returnable)) {
 				throw fail(
-					`Only ${outstanding} ${assignment.inventoryItem.unitOfMeasure} of ${assignment.inventoryItem.itemName} are still out from ${assignment.unit.name}.`,
+					underIssue.isZero()
+						? `Only ${outstanding} ${uom} of ${itemName} are still out from ${assignment.unit.name}.`
+						: `${underIssue} of the ${outstanding} ${uom} of ${itemName} in ${assignment.unit.name} are under an open issue, so only ${returnable} can be returned.`,
 					"validation",
-					`Return ${outstanding} ${assignment.inventoryItem.unitOfMeasure} or fewer.`,
+					underIssue.isZero()
+						? `Return ${outstanding} ${uom} or fewer.`
+						: "Resolve the open issue first, or return fewer.",
+				);
+			}
+
+			if (returning.isZero()) {
+				throw fail(
+					`All ${outstanding} ${uom} of ${itemName} in ${assignment.unit.name} are under an open issue.`,
+					"validation",
+					"Resolve the issue first — discarding it writes them off automatically.",
 				);
 			}
 
 			const newReturned = assignment.returnedQuantity.add(returning);
-			const fullyReturned = newReturned.equals(assignment.quantity);
+			const stillOut = outstanding.sub(returning);
+			const settled = stillOut.isZero();
 
 			const updated = await tx.inventoryAssignment.update({
 				where: { id: assignment.id },
 				data: {
 					returnedQuantity: newReturned,
-					status: fullyReturned ? "closed" : "partial",
-					returnedAt: fullyReturned ? new Date() : assignment.returnedAt,
+					status: settled ? "closed" : "partial",
+					returnedAt: settled ? new Date() : assignment.returnedAt,
 					notes: data.notes
 						? `${assignment.notes ?? ""}\nReturn: ${data.notes}`.trim()
 						: assignment.notes,
@@ -1253,11 +1375,7 @@ export async function returnInventoryAssignment(data: {
 
 			await incrementStock(tx, assignment.inventoryItemId, returning);
 
-			return {
-				updated,
-				returning,
-				stillOut: assignment.quantity.sub(newReturned),
-			};
+			return { updated, returning, stillOut };
 		}, TX_OPTS);
 
 		revalidatePath("/inventory");
@@ -1269,9 +1387,7 @@ export async function returnInventoryAssignment(data: {
 
 		return ok(
 			`${result.returning} ${uom} of ${result.updated.inventoryItem.itemName} returned from ${result.updated.unit.name}` +
-			(stillOut > 0
-				? `. ${stillOut} ${uom} still outstanding — close the assignment if they won't be coming back.`
-				: "."),
+			(stillOut > 0 ? `. ${stillOut} ${uom} still in the unit.` : "."),
 			{
 				id: result.updated.id,
 				status: result.updated.status,
@@ -1280,71 +1396,6 @@ export async function returnInventoryAssignment(data: {
 		);
 	} catch (error) {
 		return handleError(error, "returning assignment");
-	}
-}
-
-/**
- * Close a partially-returned assignment by writing off the remainder.
- * Use when the outstanding items were destroyed or lost and will never
- * come back. No stock movement — they already left on assignment.
- */
-export async function closeAssignment(data: {
-	assignmentId: string;
-	reason: string;
-}): Promise<ActionResult<{ id: string }>> {
-	try {
-		await requirePermission("assignments", "update");
-
-		if (!data.reason?.trim()) {
-			throw fail(
-				"A reason is required to write off the remaining items.",
-				"validation",
-				"Say briefly what happened to them, for example \u201Cdestroyed in the wash\u201D.",
-			);
-		}
-
-		const result = await prisma.$transaction(async (tx) => {
-			const assignment = await tx.inventoryAssignment.findUnique({
-				where: { id: data.assignmentId },
-				include: { inventoryItem: true, unit: true },
-			});
-
-			if (!assignment) {
-				throw fail(
-					"That assignment could not be found.",
-					"not_found",
-					"Refresh the assignments list and try again.",
-				);
-			}
-
-			if (assignment.status === "closed") {
-				throw fail(
-					"This assignment is already closed.",
-					"conflict",
-					"No further action is needed.",
-				);
-			}
-
-			return tx.inventoryAssignment.update({
-				where: { id: assignment.id },
-				data: {
-					status: "closed",
-					returnedAt: new Date(),
-					notes: `${assignment.notes ?? ""}\nWritten off: ${data.reason.trim()}`.trim(),
-				},
-				include: { inventoryItem: true, unit: true },
-			});
-		}, TX_OPTS);
-
-		revalidatePath("/inventory");
-		revalidatePath("/assignments");
-
-		return ok(
-			`Assignment of ${result.inventoryItem.itemName} to ${result.unit.name} closed. The outstanding items are written off and will not return to stock.`,
-			{ id: result.id },
-		);
-	} catch (error) {
-		return handleError(error, "closing assignment");
 	}
 }
 
@@ -1413,9 +1464,12 @@ export async function reportItemIssue(data: {
 					select: {
 						id: true,
 						inventoryItemId: true,
+						status: true,
 						quantity: true,
 						returnedQuantity: true,
+						writtenOffQuantity: true,
 						unit: { select: { name: true } },
+						issues: OPEN_ISSUES_SELECT,
 					},
 				});
 
@@ -1427,12 +1481,29 @@ export async function reportItemIssue(data: {
 					);
 				}
 
-				const outstanding = assignment.quantity.sub(assignment.returnedQuantity);
-				if (quantity.greaterThan(outstanding)) {
+				if (assignment.status !== "active" && assignment.status !== "partial") {
 					throw fail(
-						`Only ${outstanding} ${item.unitOfMeasure} of ${item.itemName} are out at ${assignment.unit.name}.`,
+						`Nothing is still out at ${assignment.unit.name} on that assignment.`,
+						"conflict",
+						"Refresh the page and pick a unit that still has the item.",
+					);
+				}
+
+				// Items already under an open issue can't be reported twice,
+				// or discarding both would write off more than is there.
+				const outstanding = outstandingOf(assignment);
+				const underIssue = openIssueQuantity(assignment.issues);
+				const reportable = outstanding.sub(underIssue);
+
+				if (quantity.greaterThan(reportable)) {
+					throw fail(
+						underIssue.isZero()
+							? `Only ${outstanding} ${item.unitOfMeasure} of ${item.itemName} are out at ${assignment.unit.name}.`
+							: `${underIssue} of the ${outstanding} ${item.unitOfMeasure} of ${item.itemName} at ${assignment.unit.name} are already under an open issue.`,
 						"validation",
-						`Report ${outstanding} ${item.unitOfMeasure} or fewer.`,
+						reportable.isZero()
+							? "Resolve the existing issue instead of reporting a new one."
+							: `Report ${reportable} ${item.unitOfMeasure} or fewer.`,
 					);
 				}
 			}
@@ -1458,8 +1529,8 @@ export async function reportItemIssue(data: {
 			 *
 			 * Assigned issue (assignmentId set): those units already left
 			 * availableQuantity when they were assigned. Deducting again
-			 * would double-count. The write-off happens implicitly when the
-			 * assignment closes with returnedQuantity < quantity.
+			 * would double-count. If the issue is resolved as discard or
+			 * replace, resolveItemIssue writes them off the assignment.
 			 */
 			if (!data.assignmentId) {
 				await decrementStock(tx, item.id, quantity);
@@ -1485,108 +1556,278 @@ export async function reportItemIssue(data: {
  * WRITE PATH 8 — RESOLVE ISSUE
  * ------------------------------------------------------------------ */
 
-export async function resolveItemIssue(data: {
+type ResolveIssueInput = {
 	issueId: string;
 	resolution: Exclude<IssueResolution, "pending">;
 	resolutionNotes?: string;
 	cost?: number;
-	/** For `replace`: log the replacement as incoming stock. */
+	/** For `replace`: the replacement has arrived — receive it into stock. */
 	logReplacementAsRestock?: boolean;
-}): Promise<ActionResult<{ id: string }>> {
+};
+
+/**
+ * Resolve one issue and apply its stock effects. Shared by
+ * resolveItemIssue and writeOffAssignmentIssues so both settle an issue
+ * the same way. Runs inside the caller's transaction.
+ *
+ * Store issue — deducted at report time, so:
+ *   repair  -> back in service, credit it
+ *   discard -> permanent, no change
+ *   replace -> credit only if the replacement actually arrived
+ *
+ * Unit issue — never moved stock, the items are still on the assignment:
+ *   repair  -> stays in the unit, nothing moves
+ *   discard -> written off the assignment (closes it if nothing is left)
+ *   replace -> broken ones written off; if the replacement arrived it is
+ *              received into stock and assigned straight to the same
+ *              unit, so the store count nets to zero
+ */
+async function resolveIssueInTx(
+	tx: Prisma.TransactionClient,
+	data: ResolveIssueInput,
+	userId: string,
+) {
+	const issue = await tx.itemIssue.findUnique({
+		where: { id: data.issueId },
+		include: {
+			inventoryItem: true,
+			assignment: { select: { unitId: true, unit: { select: { name: true } } } },
+		},
+	});
+
+	if (!issue) {
+		throw fail(
+			"That issue could not be found.",
+			"not_found",
+			"Refresh the issues list and try again.",
+		);
+	}
+
+	if (issue.status === "resolved") {
+		throw fail(
+			`This issue for ${issue.inventoryItem.itemName} was already resolved.`,
+			"conflict",
+			"Report a new issue if the problem has recurred.",
+		);
+	}
+
+	const updated = await tx.itemIssue.update({
+		where: { id: issue.id },
+		data: {
+			status: "resolved",
+			resolution: data.resolution,
+			resolutionNotes: data.resolutionNotes,
+			cost: data.cost ?? 0,
+			resolvedById: userId,
+			resolvedAt: new Date(),
+		},
+		include: { inventoryItem: true },
+	});
+
+	const replacementArrived =
+		data.resolution === "replace" && Boolean(data.logReplacementAsRestock);
+
+	if (replacementArrived) {
+		await tx.restockLog.create({
+			data: {
+				inventoryItemId: issue.inventoryItemId,
+				quantity: issue.quantityAffected,
+				unitCost: data.cost,
+				receivedById: userId,
+				notes: `Replacement for issue: ${issue.description}`,
+			},
+		});
+		await incrementStock(tx, issue.inventoryItemId, issue.quantityAffected);
+	}
+
+	if (!issue.assignmentId || !issue.assignment) {
+		if (data.resolution === "repair") {
+			await incrementStock(tx, issue.inventoryItemId, issue.quantityAffected);
+		}
+
+		return {
+			updated,
+			isStoreIssue: true as const,
+			stockReturned: data.resolution === "repair" || replacementArrived,
+		};
+	}
+
+	const unitName = issue.assignment.unit.name;
+
+	if (data.resolution === "repair") {
+		return { updated, isStoreIssue: false as const, unitName, writeOff: null };
+	}
+
+	const writeOff = await writeOffFromAssignment(
+		tx,
+		issue.assignmentId,
+		issue.quantityAffected,
+		`${data.resolution === "replace" ? "replaced" : "discarded"} (${issue.issueType}) — ${issue.description}`,
+	);
+
+	if (replacementArrived) {
+		// Straight from the delivery to the unit: out of the store again.
+		await decrementStock(tx, issue.inventoryItemId, issue.quantityAffected);
+		await tx.inventoryAssignment.create({
+			data: {
+				inventoryItemId: issue.inventoryItemId,
+				unitId: issue.assignment.unitId,
+				quantity: issue.quantityAffected,
+				status: "active",
+				assignedById: userId,
+				notes: `Replacement for issue: ${issue.description}`,
+			},
+		});
+	}
+
+	return {
+		updated,
+		isStoreIssue: false as const,
+		unitName,
+		writeOff,
+		replacementAssigned: replacementArrived,
+	};
+}
+
+/** The toast text for a resolved issue, so both callers say the same thing. */
+function describeResolution(
+	outcome: Awaited<ReturnType<typeof resolveIssueInTx>>,
+) {
+	const uom = outcome.updated.inventoryItem.unitOfMeasure;
+
+	if (outcome.isStoreIssue) {
+		return outcome.stockReturned
+			? "Stock has been credited back to the store."
+			: "The affected stock stays written off.";
+	}
+
+	const { unitName, writeOff } = outcome;
+	if (!writeOff) return `The items stay in ${unitName}.`;
+
+	const parts = [`${writeOff.writtenOff} ${uom} written off from ${unitName}.`];
+
+	if ("replacementAssigned" in outcome && outcome.replacementAssigned) {
+		parts.push(`The replacement was received and assigned to ${unitName}.`);
+	} else if (outcome.updated.resolution === "replace") {
+		parts.push(`Restock and assign the replacement to ${unitName} when it arrives.`);
+	}
+
+	parts.push(
+		writeOff.stillOut.isZero()
+			? "Nothing else is out on that assignment, so it's closed."
+			: `${writeOff.stillOut} ${uom} still in the unit.`,
+	);
+
+	return parts.join(" ");
+}
+
+function revalidateIssuePaths(inventoryItemId: string) {
+	revalidatePath("/inventory");
+	revalidatePath(`/inventory/${inventoryItemId}`);
+	revalidatePath("/dashboard");
+}
+
+export async function resolveItemIssue(
+	data: ResolveIssueInput,
+): Promise<ActionResult<{ id: string }>> {
 	try {
 		await requirePermission("inventory", "update");
 		const userId = await requireUserId();
 
-		const result = await prisma.$transaction(async (tx) => {
-			const issue = await tx.itemIssue.findUnique({
-				where: { id: data.issueId },
-				include: { inventoryItem: true },
-			});
+		const outcome = await prisma.$transaction(
+			(tx) => resolveIssueInTx(tx, data, userId),
+			TX_OPTS,
+		);
 
-			if (!issue) {
-				throw fail(
-					"That issue could not be found.",
-					"not_found",
-					"Refresh the issues list and try again.",
-				);
-			}
+		revalidateIssuePaths(outcome.updated.inventoryItemId);
 
-			if (issue.status === "resolved") {
-				throw fail(
-					`This issue for ${issue.inventoryItem.itemName} was already resolved.`,
-					"conflict",
-					"Report a new issue if the problem has recurred.",
-				);
-			}
-
-			const updated = await tx.itemIssue.update({
-				where: { id: issue.id },
-				data: {
-					status: "resolved",
-					resolution: data.resolution,
-					resolutionNotes: data.resolutionNotes,
-					cost: data.cost ?? 0,
-					resolvedById: userId,
-					resolvedAt: new Date(),
-				},
-				include: { inventoryItem: true },
-			});
-
-			const isStoreIssue = issue.assignmentId === null;
-			let stockReturned = false;
-
-			/**
-			 * Stock effects, mirroring the deduction rule above.
-			 *
-			 * Store issue was deducted at report time, so:
-			 *   repair  -> back in service, credit it
-			 *   discard -> permanent, no change
-			 *   replace -> credit only if the replacement actually arrived
-			 *
-			 * Assigned issue never moved stock, so nothing moves now. The
-			 * item is still out in the unit; closing the assignment settles it.
-			 */
-			if (isStoreIssue) {
-				if (data.resolution === "repair") {
-					await incrementStock(tx, issue.inventoryItemId, issue.quantityAffected);
-					stockReturned = true;
-				} else if (
-					data.resolution === "replace" &&
-					data.logReplacementAsRestock
-				) {
-					await tx.restockLog.create({
-						data: {
-							inventoryItemId: issue.inventoryItemId,
-							quantity: issue.quantityAffected,
-							unitCost: data.cost,
-							receivedById: userId,
-							notes: `Replacement for issue: ${issue.description}`,
-						},
-					});
-					await incrementStock(tx, issue.inventoryItemId, issue.quantityAffected);
-					stockReturned = true;
-				}
-			}
-
-			return { updated, isStoreIssue, stockReturned };
-		}, TX_OPTS);
-
-		revalidatePath("/inventory");
-		revalidatePath(`/inventory/${result.updated.inventoryItemId}`);
-		revalidatePath("/issues");
-
-		const name = result.updated.inventoryItem.itemName;
-		const detail = result.stockReturned
-			? " Stock has been credited back to the store."
-			: result.isStoreIssue
-				? " The affected stock stays written off."
-				: " The items are still out in the unit — close the assignment to settle them.";
-
-		return ok(`Issue for ${name} resolved.${detail}`, {
-			id: result.updated.id,
-		});
+		return ok(
+			`Issue for ${outcome.updated.inventoryItem.itemName} resolved. ${describeResolution(outcome)}`,
+			{ id: outcome.updated.id },
+		);
 	} catch (error) {
 		return handleError(error, "resolving issue");
+	}
+}
+
+/**
+ * Write off items from an assignment. Every write-off starts as a
+ * reported issue, so this discards the chosen open issues on the
+ * assignment in one go — the good items stay in the unit.
+ */
+export async function writeOffAssignmentIssues(data: {
+	assignmentId: string;
+	issueIds: string[];
+	notes?: string;
+}): Promise<ActionResult<{ id: string; stillOut: number }>> {
+	try {
+		await requirePermission("inventory", "update");
+		const userId = await requireUserId();
+
+		if (data.issueIds.length === 0) {
+			throw fail(
+				"Pick at least one issue to write off.",
+				"validation",
+				"Tick the issues for the items that are gone.",
+			);
+		}
+
+		const result = await prisma.$transaction(async (tx) => {
+			const issues = await tx.itemIssue.findMany({
+				where: { id: { in: data.issueIds } },
+				select: { id: true, assignmentId: true },
+			});
+
+			if (
+				issues.length !== data.issueIds.length ||
+				issues.some((i) => i.assignmentId !== data.assignmentId)
+			) {
+				throw fail(
+					"Some of those issues don't belong to this assignment.",
+					"validation",
+					"Refresh the page and try again.",
+				);
+			}
+
+			const outcomes = [];
+			for (const issueId of data.issueIds) {
+				outcomes.push(
+					await resolveIssueInTx(
+						tx,
+						{ issueId, resolution: "discard", resolutionNotes: data.notes },
+						userId,
+					),
+				);
+			}
+
+			const assignment = await tx.inventoryAssignment.findUniqueOrThrow({
+				where: { id: data.assignmentId },
+				include: { inventoryItem: true, unit: true },
+			});
+
+			const writtenOff = outcomes.reduce(
+				(sum, o) =>
+					!o.isStoreIssue && o.writeOff ? sum.add(o.writeOff.writtenOff) : sum,
+				new Prisma.Decimal(0),
+			);
+
+			return { assignment, writtenOff, stillOut: outstandingOf(assignment) };
+		}, TX_OPTS);
+
+		revalidateIssuePaths(result.assignment.inventoryItemId);
+
+		const { assignment, writtenOff, stillOut } = result;
+		const uom = assignment.inventoryItem.unitOfMeasure;
+
+		return ok(
+			`${writtenOff} ${uom} of ${assignment.inventoryItem.itemName} written off from ${assignment.unit.name}. ` +
+				(stillOut.isZero()
+					? "The assignment is now closed."
+					: `${stillOut} ${uom} still in the unit.`),
+			{ id: assignment.id, stillOut: stillOut.toNumber() },
+		);
+	} catch (error) {
+		return handleError(error, "writing off items");
 	}
 }
 
@@ -1693,6 +1934,7 @@ const OUTSTANDING_STATUSES = ["active", "partial"] as const;
 export type AssignmentFilter =
 	| "all"
 	| "outstanding"
+	| "needs_attention"
 	| "returned"
 	| "issued"
 	| "written_off";
@@ -1711,18 +1953,19 @@ function assignmentStatusWhere(
 	switch (status) {
 		case "outstanding":
 			return { status: { in: [...OUTSTANDING_STATUSES] } };
-		case "returned":
+		// Still out with an unresolved issue — the rows someone has to act on.
+		case "needs_attention":
 			return {
-				status: "closed",
-				returnedQuantity: { equals: prisma.inventoryAssignment.fields.quantity },
+				status: { in: [...OUTSTANDING_STATUSES] },
+				issues: { some: { status: "open" } },
 			};
+		case "returned":
+			return { status: "closed", writtenOffQuantity: 0 };
 		case "issued":
 			return { status: "issued" };
+		// Anything written off, including assignments with good items still out.
 		case "written_off":
-			return {
-				status: "closed",
-				returnedQuantity: { lt: prisma.inventoryAssignment.fields.quantity },
-			};
+			return { writtenOffQuantity: { gt: 0 } };
 		default:
 			return {};
 	}
@@ -1774,7 +2017,17 @@ export async function getInventoryAssignments({
 						},
 					},
 					assignedBy: { select: { id: true, name: true } },
-					_count: { select: { issues: { where: { status: "open" } } } },
+					issues: {
+						where: { status: "open" },
+						select: {
+							id: true,
+							issueType: true,
+							quantityAffected: true,
+							description: true,
+							reportedAt: true,
+						},
+						orderBy: { reportedAt: "asc" },
+					},
 				},
 				orderBy: { assignedAt: "desc" },
 				take: LIMIT,
@@ -1783,22 +2036,21 @@ export async function getInventoryAssignments({
 			prisma.inventoryAssignment.count({ where }),
 		]);
 
-		const assignments = rows.map((a) => {
-			const outstanding = a.quantity.sub(a.returnedQuantity);
+		const assignments = rows.map(({ issues, ...a }) => {
+			const outstanding = outstandingOf(a);
+			const underIssue = openIssueQuantity(issues);
 			const isOutstanding =
 				a.status === "active" || a.status === "partial";
 
 			return {
 				...serializeItem(a),
-				quantity: a.quantity.toNumber(),
-				returnedQuantity: a.returnedQuantity.toNumber(),
 				outstandingQuantity: outstanding.toNumber(),
-				// Closed with a shortfall means the remainder was written off.
-				writtenOffQuantity:
-					a.status === "closed" ? outstanding.toNumber() : 0,
+				// Open issues hold their items until resolved.
+				returnableQuantity: outstanding.sub(underIssue).toNumber(),
+				openIssues: issues.map(serializeItem),
+				openIssueCount: issues.length,
 				canReturn: isOutstanding,
-				canClose: isOutstanding,
-				openIssueCount: a._count.issues,
+				needsAttention: isOutstanding && issues.length > 0,
 			};
 		});
 
@@ -1859,9 +2111,7 @@ export async function getAssignmentsByUnit(unitId: number) {
 
 		return rows.map((a) => ({
 			...serializeItem(a),
-			quantity: a.quantity.toNumber(),
-			returnedQuantity: a.returnedQuantity.toNumber(),
-			outstandingQuantity: a.quantity.sub(a.returnedQuantity).toNumber(),
+			outstandingQuantity: outstandingOf(a).toNumber(),
 		}));
 	} catch (error) {
 		if (isNextControlFlowError(error)) throw error;
@@ -2012,6 +2262,7 @@ export async function getAggregatedAssignmentsForUnit(
 				inventoryItemId: true,
 				quantity: true,
 				returnedQuantity: true,
+				writtenOffQuantity: true,
 				inventoryItem: {
 					select: {
 						id: true,
@@ -2036,7 +2287,7 @@ export async function getAggregatedAssignmentsForUnit(
 
 		for (const a of assignments) {
 			// What's actually still in the unit, not how many rows exist.
-			const outstanding = a.quantity.sub(a.returnedQuantity);
+			const outstanding = outstandingOf(a);
 			const existing = aggregated.get(a.inventoryItemId);
 
 			if (existing) {
@@ -2218,190 +2469,3 @@ export async function getIssueStats(propertyId?: number) {
 	}
 }
 
-
-
-/* ==================================================================
- * LEDGER RECALCULATION
- *
- * Append to lib/actions/inventory.ts, next to reconcileStock.
- *
- * Every movement is logged, so availableQuantity is derivable. When
- * the two disagree the logs are the source of truth — the balance is a
- * cache, and a cache can be rebuilt.
- * ================================================================== */
-
-/** Shared with reconcileStock so both compute the balance identically. */
-function expectedBalance(item: {
-	restocks: { quantity: Prisma.Decimal }[];
-	assignments: { quantity: Prisma.Decimal; returnedQuantity: Prisma.Decimal }[];
-	issues: {
-		quantityAffected: Prisma.Decimal;
-		assignmentId: string | null;
-		status: string;
-		resolution: string;
-	}[];
-	usageLogs: { quantityUsed: Prisma.Decimal }[];
-}) {
-	const zero = new Prisma.Decimal(0);
-
-	const restocked = item.restocks.reduce((s, r) => s.add(r.quantity), zero);
-
-	// Not yet back in the store: still out in a unit, consumed, or
-	// written off out there.
-	const outAtUnits = item.assignments.reduce(
-		(s, a) => s.add(a.quantity).sub(a.returnedQuantity),
-		zero,
-	);
-
-	// Store-side only — assigned issues never moved stock. `repair` is
-	// excluded because resolving it credits the quantity back.
-	const writtenOff = item.issues.reduce((s, i) => {
-		if (i.assignmentId !== null) return s;
-		if (i.status === "open") return s.add(i.quantityAffected);
-		if (i.resolution === "discard" || i.resolution === "replace") {
-			return s.add(i.quantityAffected);
-		}
-		return s;
-	}, zero);
-
-	const used = item.usageLogs.reduce((s, u) => s.add(u.quantityUsed), zero);
-
-	return restocked.sub(outAtUnits).sub(writtenOff).sub(used);
-}
-
-const RECONCILE_INCLUDE = {
-	restocks: { select: { quantity: true } },
-	assignments: { select: { quantity: true, returnedQuantity: true } },
-	issues: {
-		select: {
-			quantityAffected: true,
-			assignmentId: true,
-			status: true,
-			resolution: true,
-		},
-	},
-	usageLogs: { select: { quantityUsed: true } },
-} satisfies Prisma.InventoryItemInclude;
-
-/**
- * Rewrite one item's balance to match its ledger.
- *
- * No RestockLog is written: this corrects the cached balance to agree
- * with the logs, it doesn't add or remove physical stock. Writing a
- * log row here would change the expected value too and the drift would
- * never close.
- */
-export async function recalculateItemBalance(
-	itemId: string,
-): Promise<
-	ActionResult<{ id: string; previous: number; corrected: number }>
-> {
-	try {
-		await requirePermission("inventory", "update");
-
-		const result = await prisma.$transaction(async (tx) => {
-			const item = await tx.inventoryItem.findUnique({
-				where: { id: itemId },
-				include: RECONCILE_INCLUDE,
-			});
-
-			if (!item || item.deletedAt) {
-				throw fail(
-					"That inventory item could not be found.",
-					"not_found",
-					"Refresh the page and try again.",
-				);
-			}
-
-			const expected = expectedBalance(item);
-
-			if (expected.isNegative()) {
-				throw fail(
-					`The ledger for ${item.itemName} sums to ${expected}, which is impossible.`,
-					"validation",
-					"A movement record is missing or wrong. Check the item's history before correcting the balance.",
-				);
-			}
-
-			if (expected.equals(item.availableQuantity)) {
-				throw fail(
-					`${item.itemName} already matches its ledger.`,
-					"conflict",
-					"No correction is needed.",
-				);
-			}
-
-			const updated = await tx.inventoryItem.update({
-				where: { id: item.id },
-				data: { availableQuantity: expected },
-				select: {
-					id: true,
-					itemName: true,
-					unitOfMeasure: true,
-					availableQuantity: true,
-				},
-			});
-
-			return { updated, previous: item.availableQuantity };
-		}, TX_OPTS);
-
-		revalidatePath("/inventory");
-		revalidatePath(`/inventory/${itemId}`);
-
-		return ok(
-			`${result.updated.itemName} corrected from ${result.previous} to ${result.updated.availableQuantity} ${result.updated.unitOfMeasure}.`,
-			{
-				id: result.updated.id,
-				previous: result.previous.toNumber(),
-				corrected: result.updated.availableQuantity.toNumber(),
-			},
-		);
-	} catch (error) {
-		return handleError(error, "recalculating balance");
-	}
-}
-
-/**
- * Replacement for the existing reconcileStock — same shape, but it
- * shares expectedBalance() so the check and the fix can never drift
- * apart, and it counts `replace` resolutions correctly.
- */
-export async function reconcileStock(propertyId?: number) {
-	try {
-		await requirePermission("inventory", "read");
-
-		const items = await prisma.inventoryItem.findMany({
-			where: { deletedAt: null, ...(propertyId && { propertyId }) },
-			include: {
-				...RECONCILE_INCLUDE,
-				property: { select: { id: true, name: true } },
-			},
-		});
-
-		return items
-			.map((item) => {
-				const expected = expectedBalance(item);
-				const drift = item.availableQuantity.sub(expected);
-
-				return {
-					id: item.id,
-					itemName: item.itemName,
-					category: item.category,
-					unitOfMeasure: item.unitOfMeasure,
-					property: item.property,
-					recorded: item.availableQuantity.toNumber(),
-					expected: expected.toNumber(),
-					drift: drift.toNumber(),
-					reconciled: drift.isZero(),
-					// A negative expected value means the ledger itself is
-					// broken, not just the cached balance.
-					ledgerInvalid: expected.isNegative(),
-				};
-			})
-			.sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift));
-	} catch (error) {
-		if (isNextControlFlowError(error)) throw error;
-		console.error("[inventory] reconciling stock:", error);
-		return [];
-	}
-}

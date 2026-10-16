@@ -78,8 +78,9 @@ function InventoryAssignments({
     if (filters.search) {
       params.set("search", filters.search);
     }
+    // Not "status" — the items tab owns that param on the same page.
     if (filters.status !== "all") {
-      params.set("status", filters.status);
+      params.set("assignmentStatus", filters.status);
     }
     if (filters.propertyId !== "all") {
       params.set("propertyId", filters.propertyId);
@@ -144,6 +145,7 @@ function InventoryAssignments({
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="outstanding">Outstanding</SelectItem>
+                <SelectItem value="needs_attention">Needs attention</SelectItem>
                 <SelectItem value="returned">Returned</SelectItem>
                 <SelectItem value="written_off">Written off</SelectItem>
                 <SelectItem value="issued">Consumed</SelectItem>
@@ -247,7 +249,13 @@ function InventoryAssignments({
         hasPrev={hasPrev}
         totalPages={totalPages}
         paramName="page"
-        preserveParams={["tab", "search", "status", "propertyId", "unitId"]}
+        preserveParams={[
+          "tab",
+          "search",
+          "assignmentStatus",
+          "propertyId",
+          "unitId",
+        ]}
       />
     </section>
   );

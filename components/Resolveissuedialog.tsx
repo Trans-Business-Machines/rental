@@ -23,8 +23,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, CheckCircle2, Info } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { resolveItemIssue } from "@/lib/actions/inventory";
+import { InfoBanner } from "@/components/InfoBanner";
+import { useRefreshOpenIssueCount } from "@/hooks/useInventory";
 import type { IssueResolution } from "@/prisma/generated/client";
 
 type Resolution = Exclude<IssueResolution, "pending">;
@@ -82,6 +84,7 @@ export function ResolveIssueDialog({
 }: ResolveIssueDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const refreshOpenIssueCount = useRefreshOpenIssueCount();
 
   const isControlled = open !== undefined;
   const dialogOpen = isControlled ? open : internalOpen;
@@ -103,16 +106,28 @@ export function ResolveIssueDialog({
    *
    * A store issue was deducted when it was reported, so repairing
    * credits it back and discarding leaves it written off. A unit issue
-   * never moved stock, so nothing moves now either — the assignment is
-   * what settles it.
+   * never moved stock; discarding or replacing writes it off the
+   * assignment, and the good items stay in the unit.
    */
   const stockEffect = (() => {
     if (!resolution) return null;
 
     if (!isStoreIssue) {
-      return `Store stock is unchanged. These ${uom} are still out at ${
-        issue.assignment?.unit.name ?? "the unit"
-      } — close the assignment to settle them.`;
+      const unitName = issue.assignment?.unit.name ?? "the unit";
+      const qty = `${formatQty(issue.quantityAffected)} ${uom}`;
+
+      switch (resolution) {
+        case "repair":
+          return `The ${uom} stay in ${unitName}. Store stock is unchanged.`;
+        case "replace":
+          return logReplacement
+            ? `The broken ${qty} will be written off from ${unitName}, and the replacement received and assigned straight to ${unitName}. Store stock nets to zero.`
+            : `The broken ${qty} will be written off from ${unitName}. Restock and assign the replacement when it arrives.`;
+        case "discard":
+          return `${qty} will be written off from ${unitName}. Store stock is unchanged, and anything else in the unit stays there.`;
+        default:
+          return null;
+      }
     }
 
     switch (resolution) {
@@ -163,6 +178,7 @@ export function ResolveIssueDialog({
     }
 
     toast.success(result.message);
+    refreshOpenIssueCount();
     reset();
     setDialogOpen(false);
   };
@@ -177,7 +193,7 @@ export function ResolveIssueDialog({
     >
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
 
-      <DialogContent className="w-11/12 sm:max-w-md">
+      <DialogContent className="flex h-[90vh] w-11/12 flex-col sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             Resolve issue — {issue.inventoryItem.itemName}
@@ -187,113 +203,116 @@ export function ResolveIssueDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* The original report, so it doesn't have to be remembered */}
-          <div className="space-y-1.5 rounded-md border border-border bg-muted/50 p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="destructive" className="capitalize">
-                {issue.issueType.replace(/_/g, " ")}
-              </Badge>
-              <span className="text-sm font-medium">
-                {formatQty(issue.quantityAffected)} {uom}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {isStoreIssue
-                  ? "in the store"
-                  : `at ${issue.assignment?.unit.name ?? "a unit"}`}
-              </span>
-            </div>
-            <p className="text-sm">{issue.description}</p>
-            <p className="text-xs text-muted-foreground">
-              Reported by {issue.reportedBy.name}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="resolution">How was it resolved? *</Label>
-            <Select
-              value={resolution}
-              onValueChange={(v) => setResolution(v as Resolution)}
-              disabled={loading}
-            >
-              <SelectTrigger id="resolution" className="w-full">
-                <SelectValue placeholder="Select a resolution" />
-              </SelectTrigger>
-              <SelectContent>
-                {RESOLUTIONS.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
-                    {r.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selected && (
-              <p className="text-xs text-muted-foreground">{selected.hint}</p>
-            )}
-          </div>
-
-          {/* Only meaningful for a store-side replacement */}
-          {resolution === "replace" && isStoreIssue && (
-            <div className="flex items-start gap-2 rounded-md border border-border p-3">
-              <Checkbox
-                id="log-replacement"
-                checked={logReplacement}
-                onCheckedChange={(checked) =>
-                  setLogReplacement(checked === true)
-                }
-                disabled={loading}
-                className="mt-0.5 cursor-pointer"
-              />
-              <Label
-                htmlFor="log-replacement"
-                className="cursor-pointer text-sm font-normal leading-snug"
-              >
-                The replacement has arrived — add it to stock and record a
-                receipt.
-                <span className="mt-0.5 block text-xs text-muted-foreground">
-                  Leave unticked if it&apos;s still on order.
+        <form
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col gap-4"
+        >
+          {/* Fields scroll; the action row below stays pinned in view */}
+          <div className="-mx-1 min-h-0 flex-1 space-y-4 overflow-y-auto px-1">
+            {/* The original report, so it doesn't have to be remembered */}
+            <div className="space-y-1.5 rounded-md border border-border bg-muted/50 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="destructive" className="capitalize">
+                  {issue.issueType.replace(/_/g, " ")}
+                </Badge>
+                <span className="text-sm font-medium">
+                  {formatQty(issue.quantityAffected)} {uom}
                 </span>
-              </Label>
+                <span className="text-xs text-muted-foreground">
+                  {isStoreIssue
+                    ? "in the store"
+                    : `at ${issue.assignment?.unit.name ?? "a unit"}`}
+                </span>
+              </div>
+              <p className="text-sm">{issue.description}</p>
+              <p className="text-xs text-muted-foreground">
+                Reported by {issue.reportedBy.name}
+              </p>
             </div>
-          )}
 
-          {stockEffect && (
-            <div className="flex gap-2 rounded-md border border-border bg-muted/50 p-3">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">{stockEffect}</p>
+            <div className="space-y-2">
+              <Label htmlFor="resolution">How was it resolved? *</Label>
+              <Select
+                value={resolution}
+                onValueChange={(v) => setResolution(v as Resolution)}
+                disabled={loading}
+              >
+                <SelectTrigger id="resolution" className="w-full">
+                  <SelectValue placeholder="Select a resolution" />
+                </SelectTrigger>
+                <SelectContent>
+                  {RESOLUTIONS.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selected && (
+                <p className="text-xs text-muted-foreground">{selected.hint}</p>
+              )}
             </div>
-          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="resolution-cost">Cost incurred (KES)</Label>
-            <Input
-              id="resolution-cost"
-              type="number"
-              min="0"
-              value={cost}
-              onChange={(e) => setCost(e.target.value)}
-              placeholder="0"
-              disabled={loading}
-            />
-            <p className="text-xs text-muted-foreground">
-              What the repair or replacement cost. Leave blank if nothing was
-              spent.
-            </p>
+            {resolution === "replace" && (
+              <div className="flex items-start gap-2 rounded-md border border-border p-3">
+                <Checkbox
+                  id="log-replacement"
+                  checked={logReplacement}
+                  onCheckedChange={(checked) =>
+                    setLogReplacement(checked === true)
+                  }
+                  disabled={loading}
+                  className="mt-0.5 cursor-pointer"
+                />
+                <Label
+                  htmlFor="log-replacement"
+                  className="cursor-pointer text-sm font-normal leading-snug"
+                >
+                  {isStoreIssue
+                    ? "The replacement has arrived — add it to stock and record a receipt."
+                    : `The replacement has arrived — record a receipt and put it in ${
+                        issue.assignment?.unit.name ?? "the unit"
+                      }.`}
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    Leave unticked if it&apos;s still on order.
+                  </span>
+                </Label>
+              </div>
+            )}
+
+            {stockEffect && <InfoBanner>{stockEffect}</InfoBanner>}
+
+            <div className="space-y-2">
+              <Label htmlFor="resolution-cost">Cost incurred (KES)</Label>
+              <Input
+                id="resolution-cost"
+                type="number"
+                min="0"
+                value={cost}
+                onChange={(e) => setCost(e.target.value)}
+                placeholder="0"
+                disabled={loading}
+              />
+              <p className="text-xs text-muted-foreground">
+                What the repair or replacement cost. Leave blank if nothing was
+                spent.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="resolution-notes">Resolution notes</Label>
+              <Textarea
+                id="resolution-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="e.g. Screen replaced by Hotpoint under warranty"
+                rows={2}
+                disabled={loading}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="resolution-notes">Resolution notes</Label>
-            <Textarea
-              id="resolution-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Screen replaced by Hotpoint under warranty"
-              rows={2}
-              disabled={loading}
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-1">
+          <div className="flex shrink-0 justify-end gap-2 pt-1">
             <Button
               type="button"
               variant="outline"

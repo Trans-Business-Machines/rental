@@ -259,8 +259,8 @@ export async function createCheckoutReport(
 				 * oldest first, never exceeding what each still has out.
 				 *
 				 * No stock moves here — same rule as reportItemIssue: assigned
-				 * stock already left the store, and closing the assignment
-				 * settles the write-off.
+				 * stock already left the store. Resolving the issue as discard
+				 * or replace writes it off the assignment.
 				 */
 				for (const item of flaggedItems) {
 					const assignments = await tx.inventoryAssignment.findMany({
@@ -272,6 +272,10 @@ export async function createCheckoutReport(
 						include: {
 							inventoryItem: {
 								select: { itemName: true, category: true, unitOfMeasure: true },
+							},
+							issues: {
+								where: { status: "open" },
+								select: { quantityAffected: true },
 							},
 						},
 						orderBy: { assignedAt: "asc" },
@@ -291,9 +295,14 @@ export async function createCheckoutReport(
 						);
 					}
 
+					// Items already under an open issue can't be flagged again,
+					// or resolving both would write off more than is there.
 					const capacity = assignments.map((a) => ({
 						id: a.id,
-						remaining: a.quantity.sub(a.returnedQuantity),
+						remaining: a.issues.reduce(
+							(left, i) => left.sub(i.quantityAffected),
+							a.quantity.sub(a.returnedQuantity).sub(a.writtenOffQuantity),
+						),
 					}));
 
 					const totalOut = capacity.reduce(
@@ -303,7 +312,7 @@ export async function createCheckoutReport(
 
 					if (totalOut.lessThan(item.damagedCount + item.missingCount)) {
 						throw new CheckoutError(
-							`Only ${totalOut} ${unitOfMeasure} of ${itemName} are out in ${unitName}. Reload the page and inspect again.`
+							`Only ${totalOut} ${unitOfMeasure} of ${itemName} in ${unitName} can be flagged — the rest are returned or already under an open issue. Reload the page and inspect again.`
 						);
 					}
 
@@ -391,6 +400,8 @@ export async function createCheckoutReport(
 		revalidatePath("/bookings");
 		revalidatePath("/guests");
 
+		revalidatePath("/inventory");
+
 		const issuesRaised = flaggedItems.length > 0
 			? " Damaged and missing items have been logged as issues in Inventory."
 			: "";
@@ -433,6 +444,7 @@ export async function getInventoryAssignmentsForUnit(
 			select: {
 				quantity: true,
 				returnedQuantity: true,
+				writtenOffQuantity: true,
 				inventoryItem: {
 					select: {
 						id: true,
@@ -455,7 +467,9 @@ export async function getInventoryAssignmentsForUnit(
 
 			if (!categoryRules(category).expectsReturn) continue;
 
-			const outstanding = assignment.quantity.sub(assignment.returnedQuantity);
+			const outstanding = assignment.quantity
+				.sub(assignment.returnedQuantity)
+				.sub(assignment.writtenOffQuantity);
 			const existing = grouped.get(itemId);
 
 			if (existing) {

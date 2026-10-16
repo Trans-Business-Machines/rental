@@ -17,6 +17,7 @@ import { Loader } from "lucide-react";
 import type { BookingsForCheckout } from "@/lib/types/types";
 import type { AggregatedAssignment } from "@/lib/actions/checkout";
 import { useQueryClient } from "@tanstack/react-query";
+import { inventoryKeys } from "@/hooks/useInventory";
 
 interface CheckoutFormProps {
   bookings: BookingsForCheckout;
@@ -173,6 +174,9 @@ export function CheckoutForm({
 
       // Invalidate the necessary Queries, ["booking-form-data"]
       await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: inventoryKeys.openIssueCount,
+        }),
         queryClient.invalidateQueries({
           queryKey: ["booking-request-form-data"],
         }),

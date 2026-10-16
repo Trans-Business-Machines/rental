@@ -16,8 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Info, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { createInventoryAssignment } from "@/lib/actions/inventory";
+import { InfoBanner } from "@/components/InfoBanner";
 import { unitKeys } from "@/hooks/useUnitDetails";
 
 interface AssignableItem {
@@ -310,14 +311,11 @@ export function InventoryAssignmentForm({
 
           {/* Consumables never come back — say so before it's committed */}
           {!selectedItem.expectsReturn && (
-            <div className="flex gap-2 rounded-md border border-border bg-muted/50 p-3">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">
-                {selectedItem.itemName} is a kitchen consumable. It will be
-                marked as consumed on assignment and won&apos;t appear in the
-                outstanding list or be returnable.
-              </p>
-            </div>
+            <InfoBanner>
+              {selectedItem.itemName} is a kitchen consumable. It will be marked
+              as consumed on assignment and won&apos;t appear in the outstanding
+              list or be returnable.
+            </InfoBanner>
           )}
 
           {showSerial && (

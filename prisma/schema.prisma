@@ -411,9 +411,11 @@ model InventoryAssignment {
   unitId          Int
   unit            Unit          @relation(fields: [unitId], references: [id], onDelete: Restrict)
 
-  quantity         Decimal @db.Decimal(12, 2)
-  returnedQuantity Decimal @default(0) @db.Decimal(12, 2)
-  serialNumber     String?
+  quantity           Decimal @db.Decimal(12, 2)
+  returnedQuantity   Decimal @default(0) @db.Decimal(12, 2)
+  // Gone from the unit for good (discarded/replaced issues). Never credited to stock.
+  writtenOffQuantity Decimal @default(0) @db.Decimal(12, 2)
+  serialNumber       String?
 
   status AssignmentStatus @default(active)
 

@@ -174,6 +174,8 @@ export interface InventoryItem {
         id: string;
         quantity: number;
         returnedQuantity: number;
+        writtenOffQuantity: number;
+        reportableQuantity: number;
         unit: { id: number; name: string };
     }[];
 }
