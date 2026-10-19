@@ -93,6 +93,7 @@ export function RejectRequestDialog({
             variant="outline"
             onClick={handleClose}
             disabled={mutation.isPending}
+            className="flex-0"
           >
             Cancel
           </Button>
@@ -100,6 +101,7 @@ export function RejectRequestDialog({
             variant="destructive"
             onClick={handleReject}
             disabled={mutation.isPending || !reason.trim()}
+            className="flex-1"
           >
             {mutation.isPending ? (
               <span className="flex items-center gap-2">

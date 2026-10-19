@@ -39,7 +39,7 @@ export function GuestDialog() {
           <span>Add Guest</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-11/12 lg:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Add New Guest</DialogTitle>
         </DialogHeader>

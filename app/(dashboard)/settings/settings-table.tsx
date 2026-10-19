@@ -27,7 +27,6 @@ import {
   formatDiscount,
   getDurationLabel,
   hasDiscount,
-  formatDate,
   calculateDiscountedPrice,
 } from "@/lib/utils";
 import { PricingEditDialog } from "@/components/PricingEditDialog";
@@ -142,14 +141,6 @@ function SettingsTable() {
                     <TableCell>
                       <div>
                         <p>{getDurationLabel(pricing.duration)}</p>
-                        {pricing.duration === "custom" &&
-                          pricing.fromDate &&
-                          pricing.toDate && (
-                            <p className="text-xs text-muted-foreground">
-                              {formatDate(pricing.fromDate)} -{" "}
-                              {formatDate(pricing.toDate)}
-                            </p>
-                          )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -243,14 +234,17 @@ function SettingsTable() {
               cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletePricingMutation.isPending}>
+          <AlertDialogFooter className="flex-row">
+            <AlertDialogCancel
+              disabled={deletePricingMutation.isPending}
+              className="flex-0"
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={deletePricingMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deletePricingMutation.isPending ? (
                 <span className="flex items-center gap-2">

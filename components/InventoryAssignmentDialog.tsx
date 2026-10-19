@@ -9,12 +9,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { InventoryAssignmentForm } from "./InventoryAssignmentForm";
+import {
+  getAssignableItems,
+  getAllUnitsForAssignment,
+} from "@/lib/actions/inventory";
 
 interface InventoryAssignmentDialogProps {
-  preselectedItemId?: number;
+  preselectedItemId?: string;
   preselectedUnitId?: number;
   preselectedPropertyId?: number;
   trigger?: React.ReactNode;
@@ -36,17 +41,32 @@ export function InventoryAssignmentDialog({
 }: InventoryAssignmentDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
 
-  // Use controlled state if provided, otherwise use internal state
   const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
+
+  /**
+   * Fetched here rather than in the form so nothing loads until the
+   * dialog opens. Scoped to one property when we already know it.
+   */
+  const { data: items = [], isLoading: itemsLoading } = useQuery({
+    queryKey: ["assignable-items", preselectedPropertyId ?? "all"],
+    queryFn: () => getAssignableItems(preselectedPropertyId),
+    enabled: isOpen,
+    staleTime: 30_000,
+  });
+
+  const { data: units = [], isLoading: unitsLoading } = useQuery({
+    queryKey: ["assignment-units"],
+    queryFn: () => getAllUnitsForAssignment(),
+    enabled: isOpen,
+    staleTime: 5 * 60_000,
+  });
+
+  const loading = itemsLoading || unitsLoading;
 
   const handleSuccess = () => {
     setOpen(false);
     onSuccess?.();
-  };
-
-  const handleCancel = () => {
-    setOpen(false);
   };
 
   const defaultTrigger = (
@@ -56,26 +76,41 @@ export function InventoryAssignmentDialog({
     </Button>
   );
 
+  // Controlled callers (e.g. a row's dropdown menu) open it themselves,
+  // so only fall back to the default button when uncontrolled.
+  const triggerNode =
+    trigger ?? children ?? (controlledOpen === undefined ? defaultTrigger : null);
+
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
-      {(trigger || children) && (
-        <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
-      )}
-      <DialogContent className="max-h-[90vh] w-9/12 md:w-[40rem] overflow-y-auto">
+      {triggerNode && <DialogTrigger asChild>{triggerNode}</DialogTrigger>}
+
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Assign Inventory Item</DialogTitle>
           <DialogDescription>
-            Assign inventory items from the store to a specific unit. Supports
-            bulk assignments with individual serial numbers and notes.
+            Send stock from a property&apos;s store to one of its units.
+            Laundry, housekeeping and office supplies aren&apos;t listed here because they&apos;re tracked
+            with usage logs instead.
           </DialogDescription>
         </DialogHeader>
-        <InventoryAssignmentForm
-          preselectedUnitId={preselectedUnitId}
-          preselectedPropertyId={preselectedPropertyId}
-          preselectedItemId={preselectedItemId}
-          onSuccess={handleSuccess}
-          onCancel={handleCancel}
-        />
+
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading available stock…
+          </div>
+        ) : (
+          <InventoryAssignmentForm
+            items={items}
+            units={units}
+            preselectedUnitId={preselectedUnitId}
+            preselectedPropertyId={preselectedPropertyId}
+            preselectedItemId={preselectedItemId}
+            onSuccess={handleSuccess}
+            onCancel={() => setOpen(false)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

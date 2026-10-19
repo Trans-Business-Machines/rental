@@ -48,7 +48,6 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
     register,
     control,
     watch,
-    setValue,
     handleSubmit,
     reset,
     formState: { errors },
@@ -59,14 +58,11 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
       duration: "one_night",
       price: 0,
       nights: null,
-      fromDate: null,
-      toDate: null,
       discountRate: null,
       isActive: true,
     },
   });
 
-  const watchedDuration = watch("duration");
   const watchedPrice = watch("price");
   const watchedDiscountPercent = watch("discountRate");
 
@@ -83,21 +79,11 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
         duration: "one_night",
         price: 0,
         nights: null,
-        fromDate: null,
-        toDate: null,
         discountRate: null,
         isActive: true,
       });
     }
   }, [open, reset]);
-
-  // Clear custom date fields when duration changes
-  useEffect(() => {
-    if (watchedDuration !== "custom") {
-      setValue("fromDate", null);
-      setValue("toDate", null);
-    }
-  }, [watchedDuration, setValue]);
 
   const onSubmit = async (data: PricingFormData) => {
     createPricingMutation.mutate(
@@ -106,8 +92,6 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
         duration: data.duration,
         // The form takes USD; KES is the stored base unit.
         price: usdToKes(data.price),
-        fromDate: data.fromDate,
-        toDate: data.toDate,
         discountRate: data.discountRate ? data.discountRate / 100 : null,
         isActive: data.isActive,
       },
@@ -127,7 +111,7 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg md:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Add New Pricing
@@ -201,7 +185,6 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
                     </SelectItem>
                     <SelectItem value="weekly">Weekly (7 nights)</SelectItem>
                     <SelectItem value="monthly">Monthly (30 nights)</SelectItem>
-                    {/* <SelectItem value="custom">Custom (Date Range)</SelectItem> */}
                   </SelectContent>
                 </Select>
               )}
@@ -345,7 +328,7 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
 
             <Button
               type="button"
-              className="px-6 bg-lipstick-red hover:bg-crimson-red cursor-pointer"
+              className="flex-0 px-6 bg-lipstick-red hover:bg-crimson-red cursor-pointer"
               onClick={() => onOpenChange(false)}
               disabled={createPricingMutation.isPending}
             >

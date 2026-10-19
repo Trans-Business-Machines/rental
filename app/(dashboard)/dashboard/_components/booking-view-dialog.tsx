@@ -36,9 +36,9 @@ export function BookingViewDialog({
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
       
-      <DialogContent className="max-w-md">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Booking Details - #{booking.id}</DialogTitle>
+          <DialogTitle>Booking Details #{booking.id}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>

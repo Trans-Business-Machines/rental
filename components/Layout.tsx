@@ -38,6 +38,7 @@ import { useState } from "react";
 import { AppSkeleton } from "./AppSkeleton";
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { usePendingBookingRequestCount } from "@/hooks/useBookingRequests";
+import { useOpenIssueCount } from "@/hooks/useInventory";
 import type { Role } from "@/lib/types/types";
 
 /* ------------------   INTERFACES  ------------------*/
@@ -92,6 +93,9 @@ export function Layout({ children }: LayoutProps) {
   const isAdminOrSuper = userRole === "admin" || userRole === "superAdmin";
   const { data: pendingCount = 0 } =
     usePendingBookingRequestCount(isAdminOrSuper);
+  // Agents never see the Inventory link, so don't poll for them.
+  const canSeeInventory = !!session && userRole !== "agent";
+  const { data: openIssueCount = 0 } = useOpenIssueCount(canSeeInventory);
 
   if (session === undefined) {
     return <AppSkeleton />;
@@ -214,6 +218,14 @@ export function Layout({ children }: LayoutProps) {
               {pendingCount > 99 ? "99+" : pendingCount}
             </span>
           )}
+        {item.id === "inventory" && canSeeInventory && openIssueCount > 0 && (
+          <span
+            className="flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full"
+            title={`${openIssueCount} open inventory ${openIssueCount === 1 ? "issue" : "issues"}`}
+          >
+            {openIssueCount > 99 ? "99+" : openIssueCount}
+          </span>
+        )}
       </button>
     );
   };

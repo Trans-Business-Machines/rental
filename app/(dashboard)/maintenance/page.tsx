@@ -352,7 +352,7 @@ export default function MaintenancePage() {
               <span>Add Request</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Maintenance Request</DialogTitle>
             </DialogHeader>
@@ -372,10 +372,10 @@ export default function MaintenancePage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="sarah">
-                      Sarah Johnson - Apt 2A
+                      Sarah Johnson (Apt 2A)
                     </SelectItem>
-                    <SelectItem value="mike">Mike Wilson - Condo 3B</SelectItem>
-                    <SelectItem value="emma">Emma Davis - Studio 1C</SelectItem>
+                    <SelectItem value="mike">Mike Wilson (Condo 3B)</SelectItem>
+                    <SelectItem value="emma">Emma Davis (Studio 1C)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

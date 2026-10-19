@@ -1,14 +1,14 @@
- generator client {
+generator client {
   provider = "prisma-client-js"
   output   = "./generated/client"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("NEW_DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
-/**     
+/**
  * ------------------------ ENUMS ------------------------
  */
 
@@ -16,7 +16,6 @@ enum PriceDuration {
   one_night
   weekly
   monthly
-  custom
 }
 
 enum Unit_Status {
@@ -46,17 +45,68 @@ enum Guest_Verification {
   rejected
 }
 
-enum CheckoutItemStatus {
-  good
-  damaged
-  missing
-}
-
 enum BookingRequestStatus {
   pending
   approved
   rejected
   cancelled
+}
+
+enum InventoryCategory {
+  electronics
+  furniture
+  bedroom
+  cutlery
+  linens
+  kitchen_consumables
+  laundry
+  office
+  amenities
+  bathroom
+  utensils
+  housekeeping
+}
+
+enum UnitOfMeasure {
+  pieces
+  pairs
+  sets
+  kg
+  litres
+  sachets
+  packets
+  bottles
+  rolls
+}
+
+enum InventoryItemStatus {
+  active
+  discontinued
+}
+
+enum AssignmentStatus {
+  active // out in a unit, return expected
+  issued // out and consumed, no return expected (terminal at creation)
+  partial // some returned, remainder still outstanding
+  closed // fully resolved — returned, or written off
+}
+
+enum IssueType {
+  damaged
+  missing
+  worn_out
+}
+
+enum IssueResolution {
+  pending
+  repair
+  replace
+  discard
+}
+
+enum IssueStatus {
+  open
+  resolved
 }
 
 /**
@@ -76,8 +126,17 @@ model User {
   createdAt     DateTime
   updatedAt     DateTime
 
-  sessions    Session[]
-  accounts    Account[]
+  sessions Session[]
+  accounts Account[]
+
+  // Inventory related relations
+  assignments    InventoryAssignment[] @relation("ItemsAssigned")
+  stockReceived  RestockLog[]          @relation("StockReceived")
+  issuesReported ItemIssue[]           @relation("IssuesReported")
+  issuesResolved ItemIssue[]           @relation("IssuesResolved")
+  usageLogged    UsageLog[]            @relation("UsageLogged")
+
+  // Invitation relations
   invitations Invitation[] @relation("UserInvitations")
   invitedBy   Invitation[] @relation("InvitedBy")
 
@@ -159,9 +218,9 @@ model Property {
   maxBathrooms Int?
 
   amenities       Amenity[]
+  inventoryItems  InventoryItem[]
   bookings        Booking[]
   units           Unit[]
-  assignments     InventoryAssignment[]
   media           Media[]
   bookingRequests BookingRequest[]
 
@@ -182,12 +241,10 @@ model Unit {
   bathrooms  Int?
   maxGuests  Int?
 
-  bookings        Booking[]
-  fromMovements   InventoryMovement[]   @relation("FromUnit")
-  toMovements     InventoryMovement[]   @relation("ToUnit")
-  assignments     InventoryAssignment[]
-  media           Media[]
-  bookingRequests BookingRequest[]
+  bookings             Booking[]
+  media                Media[]
+  bookingRequests      BookingRequest[]
+  inventoryAssignments InventoryAssignment[]
 
   @@map("units")
 }
@@ -301,62 +358,144 @@ model Booking {
 }
 
 model InventoryItem {
-  id                  Int       @id @default(autoincrement())
-  category            String // Furniture, Electronics, Appliances, etc.
-  itemName            String
-  description         String
-  quantity            Int // Store quantity available for assignment
-  purchasePrice       Int?
-  currentValue        Int?
-  supplier            String?
-  warrantyExpiry      DateTime?
-  status              String    @default("active") // active, discontinued
-  assignableOnBooking Boolean   @default(true) // true = can be assigned to guests, false = fixed in room
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id         String   @id @default(cuid(2))
+  propertyId Int
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
 
-  movements   InventoryMovement[]
+  category    InventoryCategory
+  itemName    String
+  description String?
+
+  unitOfMeasure     UnitOfMeasure @default(pieces)
+  availableQuantity Decimal       @default(0) @db.Decimal(12, 2)
+  restockAt         Decimal       @default(0) @db.Decimal(12, 2)
+
+  unitCost Int?
+  status   InventoryItemStatus @default(active)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  restocks    RestockLog[]
   assignments InventoryAssignment[]
+  issues      ItemIssue[]
+  usageLogs   UsageLog[]
 
+  @@unique([propertyId, itemName])
+  @@index([propertyId, category])
+  @@index([propertyId, status])
   @@map("inventory_items")
 }
 
-model InventoryMovement {
-  id              Int           @id @default(autoincrement())
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
-  inventoryItemId Int
-  fromUnitId      Int?
-  fromUnit        Unit?         @relation("FromUnit", fields: [fromUnitId], references: [id])
-  toUnitId        Int?
-  toUnit          Unit?         @relation("ToUnit", fields: [toUnitId], references: [id])
-  movedBy         String
-  movedAt         DateTime      @default(now())
-  direction       String // "to_unit", "to_store"
-  quantity        Int
-  notes           String?
+model RestockLog {
+  id              String        @id @default(cuid(2))
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
 
-  @@map("inventory_movements")
+  quantity Decimal @db.Decimal(12, 2)
+  unitCost Int?
+
+  receivedById String
+  receivedBy   User   @relation("StockReceived", fields: [receivedById], references: [id], onDelete: Restrict)
+
+  receivedAt DateTime @default(now())
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@index([inventoryItemId, receivedAt])
+  @@index([receivedById])
+  @@map("restock_logs")
 }
 
 model InventoryAssignment {
-  id              Int           @id @default(autoincrement())
-  inventoryItemId Int // Required - links to the inventory item
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
-  unitId          Int? // Optional - which unit it's assigned to
-  unit            Unit?         @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  propertyId      Int? // Optional - which property it's assigned to
-  property        Property?     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  serialNumber    String? // Optional - unique identifier for this instance
-  notes           String? // Optional - additional notes
-  isActive        Boolean       @default(true) // Boolean to track if assignment is active
-  assignedAt      DateTime      @default(now())
-  returnedAt      DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id              String        @id @default(cuid(2))
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  unitId          Int
+  unit            Unit          @relation(fields: [unitId], references: [id], onDelete: Restrict)
 
-  checkoutItems CheckoutItem[]
+  quantity           Decimal @db.Decimal(12, 2)
+  returnedQuantity   Decimal @default(0) @db.Decimal(12, 2)
+  // Gone from the unit for good (discarded/replaced issues). Never credited to stock.
+  writtenOffQuantity Decimal @default(0) @db.Decimal(12, 2)
+  serialNumber       String?
 
+  status AssignmentStatus @default(active)
+
+  assignedBy   User   @relation("ItemsAssigned", fields: [assignedById], references: [id])
+  assignedById String
+
+  assignedAt DateTime  @default(now())
+  returnedAt DateTime?
+  notes      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  issues ItemIssue[]
+
+  @@index([inventoryItemId, status])
+  @@index([unitId, status])
   @@map("inventory_assignments")
+}
+
+model ItemIssue {
+  id              String               @id @default(cuid(2))
+  inventoryItemId String
+  inventoryItem   InventoryItem        @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  assignmentId    String?
+  assignment      InventoryAssignment? @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+
+  // Set when the issue was raised during a guest checkout inspection.
+  checkoutReportId Int?
+  checkoutReport   CheckoutReport? @relation(fields: [checkoutReportId], references: [id], onDelete: SetNull)
+
+  issueType        IssueType
+  quantityAffected Decimal   @default(1) @db.Decimal(12, 2)
+  description      String
+
+  reportedById String
+  reportedBy   User     @relation("IssuesReported", fields: [reportedById], references: [id], onDelete: Restrict)
+  reportedAt   DateTime @default(now())
+
+  status          IssueStatus     @default(open)
+  resolution      IssueResolution @default(pending)
+  resolutionNotes String?
+  cost            Int             @default(0)
+
+  resolvedById String?
+  resolvedBy   User?     @relation("IssuesResolved", fields: [resolvedById], references: [id], onDelete: Restrict)
+  resolvedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, reportedAt])
+  @@index([inventoryItemId, reportedAt])
+  @@index([assignmentId])
+  @@index([checkoutReportId])
+  @@index([reportedById])
+  @@map("item_issues")
+}
+
+model UsageLog {
+  id              String        @id @default(cuid(2))
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  quantityUsed Decimal @db.Decimal(12, 2)
+
+  usedById String
+  usedBy   User   @relation("UsageLogged", fields: [usedById], references: [id], onDelete: Restrict)
+
+  usedAt    DateTime @default(now())
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([inventoryItemId, usedAt])
+  @@index([usedById])
+  @@map("usage_logs")
 }
 
 model CheckoutReport {
@@ -368,31 +507,14 @@ model CheckoutReport {
   checkoutDate    DateTime
   inspector       String
   totalDamageCost Int      @default(0)
-  status          String   @default("completed") // completed, pending
+  status          String   @default("completed")
   notes           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  checkoutItems CheckoutItem[]
+  issues ItemIssue[]
 
   @@map("checkout_reports")
-}
-
-model CheckoutItem {
-  id Int @id @default(autoincrement())
-
-  checkoutReportId Int
-  checkoutReport   CheckoutReport @relation(fields: [checkoutReportId], references: [id], onDelete: Cascade)
-
-  inventoryAssignmentId Int
-  inventoryAssignment   InventoryAssignment @relation(fields: [inventoryAssignmentId], references: [id], onDelete: Cascade)
-
-  condition  CheckoutItemStatus @default(good)
-  damageCost Int?               @default(0)
-  notes      String?
-  createdAt  DateTime           @default(now())
-
-  @@map("checkout_items")
 }
 
 model Invitation {

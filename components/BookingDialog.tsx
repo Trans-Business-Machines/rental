@@ -44,7 +44,7 @@ export function BookingDialog({
         )}
       </DialogTrigger>
 
-      <DialogContent className="w-11/12 lg:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New Booking</DialogTitle>
         </DialogHeader>

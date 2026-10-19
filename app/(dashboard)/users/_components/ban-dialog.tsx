@@ -111,7 +111,7 @@ function BanDialog({
               variant="outline"
               onClick={() => setBanDialogOpen(false)}
               disabled={banUserMutation.isPending}
-               className="w-1/3 cursor-pointer"
+              className="flex-0 cursor-pointer"
             >
               Cancel
             </Button>
@@ -119,7 +119,7 @@ function BanDialog({
               type="submit"
               variant="destructive"
               disabled={banUserMutation.isPending}
-              className="w-1/3 cursor-pointer"
+              className="flex-1 cursor-pointer"
             >
               {banUserMutation.isPending ? (
                 <span className="flex items-center gap-2">

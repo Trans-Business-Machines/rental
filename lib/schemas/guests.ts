@@ -45,6 +45,9 @@ const baseGuestFields = {
     dateOfBirth: dateOfBirthSchema,
     nationality: z.string().min(1, "Nationality is required."),
     notes: z.string().max(1000, "At most 1000 characters allowed.").optional(),
+    // Only admins and super admins see this field; the server forces
+    // "pending" for anyone else.
+    verificationStatus: z.enum(["pending", "verified"]).optional(),
 };
 
 export const GuestSchema = z.discriminatedUnion("idType", [

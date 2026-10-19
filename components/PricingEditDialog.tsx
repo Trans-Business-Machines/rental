@@ -56,7 +56,6 @@ export function PricingEditDialog({
     register,
     control,
     watch,
-    setValue,
     handleSubmit,
     reset,
     formState: { errors },
@@ -67,8 +66,6 @@ export function PricingEditDialog({
       duration: pricing.duration as PriceDuration,
       price: kesToUsd(pricing.price),
       nights: pricing.nights,
-      fromDate: pricing.fromDate ? new Date(pricing.fromDate) : null,
-      toDate: pricing.toDate ? new Date(pricing.toDate) : null,
       discountRate: pricing.discountRate
         ? Math.round(pricing.discountRate * 100)
         : null,
@@ -76,7 +73,6 @@ export function PricingEditDialog({
     },
   });
 
-  const watchedDuration = watch("duration");
   const watchedPrice = watch("price");
   const watchedDiscountPercent = watch("discountRate"); // This is now an integer (10, 15, etc.)
 
@@ -93,8 +89,6 @@ export function PricingEditDialog({
         duration: pricing.duration as PriceDuration,
         price: kesToUsd(pricing.price),
         nights: pricing.nights,
-        fromDate: pricing.fromDate ? new Date(pricing.fromDate) : null,
-        toDate: pricing.toDate ? new Date(pricing.toDate) : null,
         discountRate: pricing.discountRate
           ? Math.round(pricing.discountRate * 100)
           : null,
@@ -102,14 +96,6 @@ export function PricingEditDialog({
       });
     }
   }, [open, pricing, reset]);
-
-  // Clear custom date fields when duration changes
-  useEffect(() => {
-    if (watchedDuration !== "custom") {
-      setValue("fromDate", null);
-      setValue("toDate", null);
-    }
-  }, [watchedDuration, setValue]);
 
   const onSubmit = async (data: PricingEditFormData) => {
     updatePricingMutation.mutate(
@@ -119,8 +105,6 @@ export function PricingEditDialog({
         duration: data.duration,
         // The form takes USD; KES is the stored base unit.
         price: usdToKes(data.price),
-        fromDate: data.fromDate,
-        toDate: data.toDate,
         discountRate: data.discountRate ? data.discountRate / 100 : null,
         isActive: data.isActive,
       },
@@ -139,7 +123,7 @@ export function PricingEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Edit Pricing
@@ -216,7 +200,6 @@ export function PricingEditDialog({
                     </SelectItem>
                     <SelectItem value="weekly">Weekly (7 nights)</SelectItem>
                     <SelectItem value="monthly">Monthly (30 nights)</SelectItem>
-                    <SelectItem value="custom">Custom (Date Range)</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -225,73 +208,6 @@ export function PricingEditDialog({
               <p className="text-sm text-red-400">{errors.duration.message}</p>
             )}
           </div>
-
-          {/* Custom Date Range */}
-          {watchedDuration === "custom" && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="fromDate">From Date</Label>
-                <Controller
-                  name="fromDate"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="date"
-                      disabled={updatePricingMutation.isPending}
-                      className={cn(errors.fromDate && "border-red-400")}
-                      value={
-                        field.value
-                          ? new Date(field.value).toISOString().split("T")[0]
-                          : ""
-                      }
-                      onChange={(e) => {
-                        const date = e.target.value
-                          ? new Date(e.target.value)
-                          : null;
-                        field.onChange(date);
-                      }}
-                    />
-                  )}
-                />
-                {errors.fromDate && (
-                  <p className="text-sm text-red-400">
-                    {errors.fromDate.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="toDate">To Date</Label>
-                <Controller
-                  name="toDate"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="date"
-                      disabled={updatePricingMutation.isPending}
-                      className={cn(errors.toDate && "border-red-400")}
-                      value={
-                        field.value
-                          ? new Date(field.value).toISOString().split("T")[0]
-                          : ""
-                      }
-                      onChange={(e) => {
-                        const date = e.target.value
-                          ? new Date(e.target.value)
-                          : null;
-                        field.onChange(date);
-                      }}
-                    />
-                  )}
-                />
-                {errors.toDate && (
-                  <p className="text-sm text-red-400">
-                    {errors.toDate.message}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Price */}
           <div className="space-y-2">
@@ -427,7 +343,7 @@ export function PricingEditDialog({
 
             <Button
               type="button"
-              className="px-6 bg-lipstick-red hover:bg-crimson-red cursor-pointer"
+              className="flex-0 px-6 bg-lipstick-red hover:bg-crimson-red cursor-pointer"
               onClick={() => onOpenChange(false)}
               disabled={updatePricingMutation.isPending}
             >

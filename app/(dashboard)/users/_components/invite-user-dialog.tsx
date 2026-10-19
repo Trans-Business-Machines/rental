@@ -224,12 +224,12 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
             </div>
 
             {/* Action buttons */}
-            <div className="flex  w-full  gap-2 pt-3">
+            <div className="flex w-full gap-2 pt-3">
               <Button
                 type="submit"
                 variant="default"
                 disabled={isSubmitting}
-                className="w-9/12 bg-chart-1 hover:bg-chart-1/90 px-5 cursor-pointer"
+                className="flex-1 bg-chart-1 hover:bg-chart-1/90 px-5 cursor-pointer"
               >
                 {isSubmitting ? (
                   <span className="inline-flex gap-2 items-center">
@@ -243,7 +243,7 @@ function InviteUserDialog({ children }: InviteUserDialogProps) {
               <Button
                 type="button"
                 variant="default"
-                className="w-3/12 bg-chart-5 hover:bg-chart-5/90 px-3 cursor-pointer"
+                className="flex-0 bg-chart-5 hover:bg-chart-5/90 px-3 cursor-pointer"
                 onClick={() => {
                   reset();
                   setInviteDialogOpen(false);

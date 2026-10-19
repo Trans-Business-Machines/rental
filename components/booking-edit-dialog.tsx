@@ -30,7 +30,6 @@ import {
   Moon,
   Calendar,
   CalendarDays,
-  CalendarRange,
   Minus,
   Plus,
   Loader,
@@ -40,7 +39,6 @@ import { getUnitPricingOptions } from "@/lib/actions/pricing";
 import {
   cn,
   formatDiscount,
-  formatDate,
   hasDiscount,
   getDurationLabel,
   getPeriodLabel,
@@ -69,7 +67,6 @@ const durationIcons: Record<PriceDuration, React.ElementType> = {
   one_night: Moon,
   weekly: Calendar,
   monthly: CalendarDays,
-  custom: CalendarRange,
 };
 
 export function BookingEditDialog({
@@ -135,15 +132,11 @@ export function BookingEditDialog({
   useEffect(() => {
     if (selectedPricing && formData.checkInDate) {
       const checkIn = new Date(formData.checkInDate);
-      const actualPeriod =
-        selectedPricing.duration === "custom" ? 1 : formData.period;
 
       const checkOut = calculateCheckoutDate(
         checkIn,
         selectedPricing.duration as PriceDuration,
-        actualPeriod,
-        selectedPricing.fromDate,
-        selectedPricing.toDate,
+        formData.period,
       );
 
       const discountedPrice = calculateDiscountedPrice(
@@ -151,7 +144,7 @@ export function BookingEditDialog({
         selectedPricing.discountRate,
       );
 
-      const total = calculateTotalAmount(discountedPrice, actualPeriod);
+      const total = calculateTotalAmount(discountedPrice, formData.period);
 
       setFormData((prev) => ({
         ...prev,
@@ -195,8 +188,6 @@ export function BookingEditDialog({
 
   const handlePeriodChange = (newPeriod: number) => {
     if (newPeriod < 1) return;
-    // For custom pricing, period is always 1
-    if (selectedPricing?.duration === "custom") return;
     setFormData((prev) => ({
       ...prev,
       period: newPeriod,
@@ -221,8 +212,6 @@ export function BookingEditDialog({
   };
 
   const isCheckedIn = booking.status === "checked_in";
-  const isCustomDuration = selectedPricing?.duration === "custom";
-
 
   // Calculate display values
   const discountedPrice = selectedPricing
@@ -232,11 +221,9 @@ export function BookingEditDialog({
       )
     : 0;
 
-  const actualPeriod = isCustomDuration ? 1 : formData.period;
-
   const savings = selectedPricing
-    ? calculateTotalAmount(selectedPricing.price, actualPeriod) -
-      calculateTotalAmount(discountedPrice, actualPeriod)
+    ? calculateTotalAmount(selectedPricing.price, formData.period) -
+      calculateTotalAmount(discountedPrice, formData.period)
     : 0;
 
   return (
@@ -252,7 +239,7 @@ export function BookingEditDialog({
         </DialogTrigger>
       )}
 
-      <DialogContent className="w-11/12 lg:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Booking</DialogTitle>
           <DialogDescription>
@@ -350,21 +337,8 @@ export function BookingEditDialog({
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                {pricing.duration === "custom" &&
-                                pricing.fromDate &&
-                                pricing.toDate ? (
-                                  <>
-                                    {formatDate(pricing.fromDate)} -{" "}
-                                    {formatDate(pricing.toDate)} (
-                                    {pricing.nights} nights)
-                                  </>
-                                ) : (
-                                  <>
-                                    {pricing.nights}{" "}
-                                    {pricing.nights === 1 ? "night" : "nights"}{" "}
-                                    stay
-                                  </>
-                                )}
+                                {pricing.nights}{" "}
+                                {pricing.nights === 1 ? "night" : "nights"} stay
                               </p>
                             </div>
 
@@ -391,8 +365,8 @@ export function BookingEditDialog({
                   })}
                 </RadioGroup>
 
-                {/* Period Selector (not for custom) */}
-                {selectedPricing && !isCustomDuration && (
+                {/* Period Selector */}
+                {selectedPricing && (
                   <div className="space-y-3">
                     <Label>
                       How many {getPeriodLabel(formData.priceDuration)}?
@@ -446,15 +420,13 @@ export function BookingEditDialog({
                   <div className="p-4 rounded-lg bg-muted">
                     <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
                       <span>
-                        <Price kes={discountedPrice} /> × {actualPeriod}{" "}
+                        <Price kes={discountedPrice} /> × {formData.period}{" "}
                         {getPeriodLabel(formData.priceDuration)}
                       </span>
                       <span>
                         {calculateTotalNights(
                           formData.priceDuration,
-                          actualPeriod,
-                          selectedPricing.fromDate,
-                          selectedPricing.toDate,
+                          formData.period,
                         )}{" "}
                         nights total
                       </span>
@@ -493,16 +465,9 @@ export function BookingEditDialog({
                   type="date"
                   value={formData.checkInDate}
                   onChange={handleChange}
-                  disabled={isCheckedIn || isCustomDuration}
-                  className={cn(isCustomDuration && "bg-muted")}
+                  disabled={isCheckedIn}
                   required
                 />
-
-                {isCustomDuration && (
-                  <p className="text-xs text-muted-foreground">
-                    Fixed dates for custom pricing period
-                  </p>
-                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="checkOutDate">Check-out Date</Label>
@@ -653,7 +618,7 @@ export function BookingEditDialog({
               type="button"
               onClick={() => setOpen(false)}
               disabled={isSubmitting}
-              className="bg-chart-5 px-10 hover:bg-chart-5/90 cursor-pointer"
+              className="flex-0 bg-chart-5 px-10 hover:bg-chart-5/90 cursor-pointer"
             >
               Cancel
             </Button>

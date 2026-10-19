@@ -6,8 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { NationalityCombobox } from "@/components/NationalityCombobox";
 import { useCreateGuest } from "@/hooks/useGuests";
+import { usePermissions } from "@/hooks/usePermissions";
 import { deleteGuestImages } from "@/lib/actions/guests";
 import { ClientMediaService } from "@/lib/services/clientMediaService";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
@@ -36,6 +44,8 @@ export function GuestForm({
   userId,
 }: GuestFormProps) {
   const createGuestMutation = useCreateGuest();
+  const { isAdmin, isSuperAdmin } = usePermissions();
+  const canVerify = isAdmin || isSuperAdmin;
 
   // Refs for file inputs
   const frontInputRef = useRef<HTMLInputElement>(null);
@@ -63,6 +73,7 @@ export function GuestForm({
     resolver: zodResolver(GuestSchema),
     defaultValues: {
       idType: "national_id",
+      verificationStatus: "pending",
     },
   });
 
@@ -413,6 +424,28 @@ export function GuestForm({
         {uploadError && <p className="text-sm text-red-400">{uploadError}</p>}
       </article>
 
+      {/* Guest Status */}
+      {canVerify && (
+        <article className="space-y-2">
+          <Label htmlFor="verificationStatus">Guest Status</Label>
+          <Controller
+            name="verificationStatus"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="verificationStatus" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="verified">Verified</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </article>
+      )}
+
       {/* Notes */}
       <article className="space-y-2">
         <Label htmlFor="notes">Notes (optional)</Label>
@@ -448,7 +481,7 @@ export function GuestForm({
         {onCancel && (
           <Button
             type="button"
-            className="bg-chart-5 w-1/4 hover:bg-chart-5/90 cursor-pointer"
+            className="flex-0 bg-chart-5 hover:bg-chart-5/90 cursor-pointer"
             onClick={onCancel}
             disabled={isSubmitting}
           >

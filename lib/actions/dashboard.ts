@@ -18,10 +18,6 @@ interface GetUnitsParams {
     status?: string;
 }
 
-interface GetInventoryItemsParams {
-    page?: number;
-    search?: string;
-}
 
 export async function getDashboardStats() {
     // count all units in the DB
@@ -211,65 +207,3 @@ export async function getRecentBookings(
         hasPrev,
     };
 }
-
-
-
-export async function getInventoryItems({
-    page = 1,
-    search = "",
-}: GetInventoryItemsParams = {}) {
-    const where = {
-        // Search by item name
-        ...(search && {
-            itemName: { contains: search, mode: "insensitive" as const },
-        }),
-    };
-
-    const [items, totalItems] = await Promise.all([
-        prisma.inventoryItem.findMany({
-            where,
-            include: {
-                assignments: {
-                    where: {
-                        isActive: true,
-                    },
-                    select: {
-                        id: true,
-                        unit: { select: { id: true, name: true } },
-                        property: { select: { id: true, name: true } },
-                        assignedAt: true,
-                        serialNumber: true,
-                    },
-                },
-            },
-            orderBy: {
-                createdAt: "desc",
-            },
-            take: LIMIT,
-            skip: (page - 1) * LIMIT,
-        }),
-        prisma.inventoryItem.count({ where }),
-    ]);
-
-    // Add availability info to each item
-    const inventoryItems = items.map((item) => ({
-        ...item,
-        availableQuantity: item.quantity, // Store quantity is available quantity
-        assignedQuantity: item.assignments.length, // Count of active assignments
-        isAvailable: item.quantity > 0, // Can be assigned if quantity > 0
-    }));
-
-    const totalPages = Math.ceil(totalItems / LIMIT) || 1;
-
-    const hasNext = page < totalPages;
-    const hasPrev = page > 1 && page <= totalPages;
-
-    return {
-        totalPages,
-        inventoryItems,
-        currentPage: page,
-        hasPrev,
-        hasNext,
-    };
-}
-

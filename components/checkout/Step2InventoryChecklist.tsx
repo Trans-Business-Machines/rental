@@ -13,6 +13,7 @@ import type { CheckoutFormData } from "@/lib/schemas/checkout";
 import { useEffect } from "react";
 import type { AggregatedAssignment } from "@/lib/actions/checkout";
 import { Package, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
+import { getCategoryDisplay } from "@/lib/inventory-categories";
 
 interface Step2Props {
   assignments: AggregatedAssignment[];
@@ -42,7 +43,6 @@ export function Step2InventoryChecklist({
         totalQuantity: item.totalQuantity,
         damagedCount: 0,
         missingCount: 0,
-        assignmentIds: item.assignmentIds,
       }));
       replace(initialItems);
     }
@@ -110,11 +110,12 @@ export function Step2InventoryChecklist({
                             {item.itemName}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {item.category}
+                            {getCategoryDisplay(item.category).label}
                           </p>
                         </div>
                         <span className="text-sm font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
-                          {item.totalQuantity} assigned
+                          {item.totalQuantity}{" "}
+                          {assignments[index]?.unitOfMeasure ?? ""} in unit
                         </span>
                       </div>
 

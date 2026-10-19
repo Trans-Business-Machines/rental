@@ -10,10 +10,10 @@ import {
   getDashboardStats,
   getUnits,
   getRecentBookings,
-  getInventoryItems,
 } from "@/lib/actions/dashboard";
 import { getServerSession } from "@/lib/check-permissions";
 import type { Role } from "@/lib/types/types";
+import { getInventoryItems } from "@/lib/actions/inventory";
 import { redirect } from "next/navigation";
 
 interface DashboardSearchParamsProps {
@@ -24,6 +24,15 @@ interface DashboardSearchParamsProps {
     status?: string;
   }>;
 }
+
+type ItemsResponse = Awaited<ReturnType<typeof getInventoryItems>>;
+const EMPTY_ITEMS: ItemsResponse = {
+  items: [],
+  totalPages: 0,
+  currentPage: 1,
+  hasNext: false,
+  hasPrev: false,
+};
 
 export default async function DashboardPage({
   searchParams,
@@ -54,10 +63,10 @@ export default async function DashboardPage({
       ? getRecentBookings({ page, search, status })
       : getRecentBookings({ page: 1 });
 
-  const itemsPromise =
+  const itemsPromise: Promise<ItemsResponse> =
     tab === "inventory" && userRole !== "agent"
       ? getInventoryItems({ page, search })
-      : getInventoryItems({ page: 1 });
+      : Promise.resolve(EMPTY_ITEMS);
 
   const unitsStatsPromise = getDashboardStats();
 
@@ -200,7 +209,7 @@ export default async function DashboardPage({
         {userRole !== "agent" && (
           <TabsContent value="inventory" className="space-y-4">
             <InventoryTable
-              items={inventoryItemsResponse.inventoryItems}
+              items={inventoryItemsResponse.items}
               totalPages={inventoryItemsResponse.totalPages}
               hasNext={inventoryItemsResponse.hasNext}
               hasPrev={inventoryItemsResponse.hasPrev}
