@@ -9,6 +9,7 @@ import {
 	CONSUMABLE_CATEGORIES,
 	USAGE_TRACKED_CATEGORIES,
 	categoryRules,
+	getCategoryDisplay,
 } from "@/lib/inventory-categories";
 import type {
 	InventoryCategory,
@@ -372,116 +373,128 @@ const TX_OPTS = {
  * unwrap a result object just to render a list.
  * ------------------------------------------------------------------ */
 
-interface GetInventoryItemsProps {
-	page?: number;
+interface InventoryItemFilters {
 	search?: string;
 	status?: string;
 	category?: string;
 	propertyId?: number;
-	lowStockOnly?: boolean;
 }
 
-export async function getInventoryItems({
-	page = 1,
-	category = "all",
+interface GetInventoryItemsProps extends InventoryItemFilters {
+	page?: number;
+}
+
+/** Rows per infinite scroll batch on the inventory page. */
+const BATCH_SIZE = 30;
+
+function inventoryItemsWhere({
 	search = "",
 	status = "all",
+	category = "all",
 	propertyId,
-	lowStockOnly = false,
+}: InventoryItemFilters): Prisma.InventoryItemWhereInput {
+	return {
+		deletedAt: null,
+		...(propertyId && { propertyId }),
+		...(search && {
+			itemName: { contains: search, mode: "insensitive" as const },
+		}),
+		...(status !== "all" && {
+			status: status as Prisma.EnumInventoryItemStatusFilter["equals"],
+		}),
+		...(category !== "all" && { category: category as InventoryCategory }),
+	};
+}
+
+const INVENTORY_ITEM_INCLUDE = {
+	property: { select: { id: true, name: true } },
+	assignments: {
+		where: { status: { in: ["active", "partial"] } },
+		select: {
+			id: true,
+			quantity: true,
+			returnedQuantity: true,
+			writtenOffQuantity: true,
+			unit: { select: { id: true, name: true } },
+			issues: OPEN_ISSUES_SELECT,
+		},
+	},
+	_count: {
+		select: {
+			issues: { where: { status: "open" } },
+			restocks: true,
+			assignments: true,
+			usageLogs: true,
+		},
+	},
+} satisfies Prisma.InventoryItemInclude;
+
+// Newest first; id breaks ties so pagination stays stable.
+const INVENTORY_ITEM_ORDER = [
+	{ createdAt: "desc" },
+	{ id: "desc" },
+] satisfies Prisma.InventoryItemOrderByWithRelationInput[];
+
+function toInventoryItemRow(
+	item: Prisma.InventoryItemGetPayload<{ include: typeof INVENTORY_ITEM_INCLUDE }>,
+) {
+	// Outstanding = still physically in units.
+	const outstanding = item.assignments.reduce(
+		(sum, a) => sum.add(outstandingOf(a)),
+		new Prisma.Decimal(0),
+	);
+
+	return {
+		...serializeItem(item),
+		availableQuantity: item.availableQuantity.toNumber(),
+		restockAt: item.restockAt.toNumber(),
+		assignedQuantity: outstanding.toNumber(),
+		totalOwned: item.availableQuantity.add(outstanding).toNumber(),
+		openIssueCount: item._count.issues,
+		hasHistory:
+			item._count.restocks > 0 ||
+			item._count.assignments > 0 ||
+			item._count.usageLogs > 0,
+		needsRestock: item.availableQuantity.lte(item.restockAt),
+		rules: categoryRules(item.category),
+		assignments: item.assignments.map(({ issues, ...a }) => ({
+			...a,
+			quantity: a.quantity.toNumber(),
+			returnedQuantity: a.returnedQuantity.toNumber(),
+			writtenOffQuantity: a.writtenOffQuantity.toNumber(),
+			// What a new issue can still be raised against.
+			reportableQuantity: outstandingOf(a)
+				.sub(openIssueQuantity(issues))
+				.toNumber(),
+		})),
+	};
+}
+
+/** Page based; the dashboard's inventory tab still paginates. */
+export async function getInventoryItems({
+	page = 1,
+	...filters
 }: GetInventoryItemsProps) {
 	try {
-
-
 		await requirePermission("inventory", "read");
 
-		const where: Prisma.InventoryItemWhereInput = {
-			deletedAt: null,
-			...(propertyId && { propertyId }),
-			...(search && {
-				itemName: { contains: search, mode: "insensitive" as const },
-			}),
-			...(status !== "all" && {
-				status: status as Prisma.EnumInventoryItemStatusFilter["equals"],
-			}),
-			...(category !== "all" && { category: category as InventoryCategory }),
-			// Compares two columns on the same row — Prisma field reference.
-			...(lowStockOnly && {
-				availableQuantity: { lte: prisma.inventoryItem.fields.restockAt },
-			}),
-		};
+		const where = inventoryItemsWhere(filters);
 
 		const [rows, totalItems] = await Promise.all([
 			prisma.inventoryItem.findMany({
 				where,
-				include: {
-					property: { select: { id: true, name: true } },
-					assignments: {
-						where: { status: { in: ["active", "partial"] } },
-						select: {
-							id: true,
-							quantity: true,
-							returnedQuantity: true,
-							writtenOffQuantity: true,
-							unit: { select: { id: true, name: true } },
-							issues: OPEN_ISSUES_SELECT,
-						},
-					},
-					_count: {
-						select: {
-							issues: { where: { status: "open" } },
-							restocks: true,
-							assignments: true,
-							usageLogs: true,
-						},
-					},
-				},
-				// Newest first; id breaks ties so pagination stays stable.
-				orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+				include: INVENTORY_ITEM_INCLUDE,
+				orderBy: INVENTORY_ITEM_ORDER,
 				take: LIMIT,
 				skip: (page - 1) * LIMIT,
 			}),
 			prisma.inventoryItem.count({ where }),
 		]);
 
-		const items = rows
-			.map((item) => {
-				// Outstanding = still physically in units.
-				const outstanding = item.assignments.reduce(
-					(sum, a) => sum.add(outstandingOf(a)),
-					new Prisma.Decimal(0),
-				);
-
-				return {
-					...serializeItem(item),
-					availableQuantity: item.availableQuantity.toNumber(),
-					restockAt: item.restockAt.toNumber(),
-					assignedQuantity: outstanding.toNumber(),
-					totalOwned: item.availableQuantity.add(outstanding).toNumber(),
-					openIssueCount: item._count.issues,
-					hasHistory:
-						item._count.restocks > 0 ||
-						item._count.assignments > 0 ||
-						item._count.usageLogs > 0,
-					needsRestock: item.availableQuantity.lte(item.restockAt),
-					rules: categoryRules(item.category),
-					assignments: item.assignments.map(({ issues, ...a }) => ({
-						...a,
-						quantity: a.quantity.toNumber(),
-						returnedQuantity: a.returnedQuantity.toNumber(),
-						writtenOffQuantity: a.writtenOffQuantity.toNumber(),
-						// What a new issue can still be raised against.
-						reportableQuantity: outstandingOf(a)
-							.sub(openIssueQuantity(issues))
-							.toNumber(),
-					})),
-				};
-			})
-
-
 		const totalPages = Math.ceil(totalItems / LIMIT);
 
 		return {
-			items,
+			items: rows.map(toInventoryItemRow),
 			totalPages,
 			currentPage: page,
 			hasNext: page < totalPages,
@@ -498,6 +511,45 @@ export async function getInventoryItems({
 			hasPrev: false,
 		};
 	}
+}
+
+export type InventoryItemsBatchProps = InventoryItemFilters & {
+	cursor?: string;
+};
+
+/**
+ * Cursor based batch for the inventory page's infinite scroll. Cursors
+ * don't shift when items are added mid scroll, which offsets would.
+ * The total is only counted for the first batch.
+ */
+export async function getInventoryItemsBatch({
+	cursor,
+	...filters
+}: InventoryItemsBatchProps) {
+	await requirePermission("inventory", "read");
+
+	const where = inventoryItemsWhere(filters);
+
+	const [rows, total] = await Promise.all([
+		prisma.inventoryItem.findMany({
+			where,
+			include: INVENTORY_ITEM_INCLUDE,
+			orderBy: INVENTORY_ITEM_ORDER,
+			// One extra row tells us whether another batch exists.
+			take: BATCH_SIZE + 1,
+			...(cursor && { cursor: { id: cursor }, skip: 1 }),
+		}),
+		cursor ? Promise.resolve(null) : prisma.inventoryItem.count({ where }),
+	]);
+
+	const hasMore = rows.length > BATCH_SIZE;
+	const batch = hasMore ? rows.slice(0, BATCH_SIZE) : rows;
+
+	return {
+		items: batch.map(toInventoryItemRow),
+		nextCursor: hasMore ? batch[batch.length - 1].id : null,
+		total,
+	};
 }
 
 export async function getInventoryItemById(id: string) {
@@ -1205,7 +1257,7 @@ export async function createInventoryAssignment(data: {
 			const rules = await getCategoryRules(item.category);
 			if (!rules.canAssign) {
 				throw fail(
-					`${item.itemName} is a laundry commodity, which is used centrally rather than assigned to a unit.`,
+					`${item.itemName} is a ${getCategoryDisplay(item.category).label.toLowerCase()} item, which is used centrally rather than assigned to a unit.`,
 					"not_permitted_for_category",
 					`Use \u201CLog usage\u201D to record how much ${item.itemName} housekeeping consumed.`,
 				);
@@ -1874,7 +1926,7 @@ export async function logItemUsage(data: {
 			const rules = await getCategoryRules(item.category);
 			if (!rules.canLogUsage) {
 				throw fail(
-					`Usage logging is only for laundry commodities. ${item.itemName} is a ${item.category.replace(/_/g, " ")} item.`,
+					`Usage logging is only for laundry, housekeeping and office supplies. ${item.itemName} is a ${getCategoryDisplay(item.category).label.toLowerCase()} item.`,
 					"not_permitted_for_category",
 					`Assign ${item.itemName} to a unit instead.`,
 				);
@@ -1939,8 +1991,8 @@ export type AssignmentFilter =
 	| "issued"
 	| "written_off";
 
-interface GetInventoryAssignmentsProps {
-	page?: number;
+export interface GetInventoryAssignmentsProps {
+	cursor?: string;
 	propertyId?: string;
 	unitId?: string;
 	search?: string;
@@ -1972,110 +2024,99 @@ function assignmentStatusWhere(
 }
 
 export async function getInventoryAssignments({
-	page = 1,
+	cursor,
 	propertyId = "all",
 	unitId = "",
 	search = "",
-	status = "all",
+	status = "outstanding",
 }: GetInventoryAssignmentsProps) {
-	try {
-		await requirePermission("assignments", "read");
+	await requirePermission("assignments", "read");
 
-		const where: Prisma.InventoryAssignmentWhereInput = {
-			// Archived items shouldn't surface their old assignments.
-			inventoryItem: {
-				deletedAt: null,
-				...(search && {
-					itemName: { contains: search, mode: "insensitive" as const },
-				}),
-			},
-			...(propertyId !== "all" &&
-				propertyId !== "" && {
-				unit: { propertyId: Number(propertyId) },
+	const where: Prisma.InventoryAssignmentWhereInput = {
+		// Archived items shouldn't surface their old assignments.
+		inventoryItem: {
+			deletedAt: null,
+			...(search && {
+				itemName: { contains: search, mode: "insensitive" as const },
 			}),
-			...(unitId !== "" && unitId !== "all" && { unitId: Number(unitId) }),
-			...assignmentStatusWhere(status),
-		};
+		},
+		...(propertyId !== "all" &&
+			propertyId !== "" && {
+			unit: { propertyId: Number(propertyId) },
+		}),
+		...(unitId !== "" && unitId !== "all" && { unitId: Number(unitId) }),
+		...assignmentStatusWhere(status),
+	};
 
-		const [rows, totalAssignments] = await Promise.all([
-			prisma.inventoryAssignment.findMany({
-				where,
-				include: {
-					inventoryItem: {
-						select: {
-							id: true,
-							itemName: true,
-							category: true,
-							unitOfMeasure: true,
-						},
-					},
-					unit: {
-						select: {
-							id: true,
-							name: true,
-							property: { select: { id: true, name: true } },
-						},
-					},
-					assignedBy: { select: { id: true, name: true } },
-					issues: {
-						where: { status: "open" },
-						select: {
-							id: true,
-							issueType: true,
-							quantityAffected: true,
-							description: true,
-							reportedAt: true,
-						},
-						orderBy: { reportedAt: "asc" },
+	const [rows, total] = await Promise.all([
+		prisma.inventoryAssignment.findMany({
+			where,
+			include: {
+				inventoryItem: {
+					select: {
+						id: true,
+						itemName: true,
+						category: true,
+						unitOfMeasure: true,
 					},
 				},
-				orderBy: { assignedAt: "desc" },
-				take: LIMIT,
-				skip: (page - 1) * LIMIT,
-			}),
-			prisma.inventoryAssignment.count({ where }),
-		]);
+				unit: {
+					select: {
+						id: true,
+						name: true,
+						property: { select: { id: true, name: true } },
+					},
+				},
+				assignedBy: { select: { id: true, name: true } },
+				issues: {
+					where: { status: "open" },
+					select: {
+						id: true,
+						issueType: true,
+						quantityAffected: true,
+						description: true,
+						reportedAt: true,
+					},
+					orderBy: { reportedAt: "asc" },
+				},
+			},
+			// id breaks ties so the cursor stays stable.
+			orderBy: [{ assignedAt: "desc" }, { id: "desc" }],
+			// One extra row tells us whether another batch exists.
+			take: BATCH_SIZE + 1,
+			...(cursor && { cursor: { id: cursor }, skip: 1 }),
+		}),
+		cursor
+			? Promise.resolve(null)
+			: prisma.inventoryAssignment.count({ where }),
+	]);
 
-		const assignments = rows.map(({ issues, ...a }) => {
-			const outstanding = outstandingOf(a);
-			const underIssue = openIssueQuantity(issues);
-			const isOutstanding =
-				a.status === "active" || a.status === "partial";
+	const hasMore = rows.length > BATCH_SIZE;
+	const batch = hasMore ? rows.slice(0, BATCH_SIZE) : rows;
 
-			return {
-				...serializeItem(a),
-				outstandingQuantity: outstanding.toNumber(),
-				// Open issues hold their items until resolved.
-				returnableQuantity: outstanding.sub(underIssue).toNumber(),
-				openIssues: issues.map(serializeItem),
-				openIssueCount: issues.length,
-				canReturn: isOutstanding,
-				needsAttention: isOutstanding && issues.length > 0,
-			};
-		});
-
-		const totalPages = Math.ceil(totalAssignments / LIMIT);
+	const assignments = batch.map(({ issues, ...a }) => {
+		const outstanding = outstandingOf(a);
+		const underIssue = openIssueQuantity(issues);
+		const isOutstanding =
+			a.status === "active" || a.status === "partial";
 
 		return {
-			assignments,
-			totalAssignments,
-			totalPages,
-			currentPage: page,
-			hasNext: page < totalPages,
-			hasPrev: page > 1 && page <= totalPages,
+			...serializeItem(a),
+			outstandingQuantity: outstanding.toNumber(),
+			// Open issues hold their items until resolved.
+			returnableQuantity: outstanding.sub(underIssue).toNumber(),
+			openIssues: issues.map(serializeItem),
+			openIssueCount: issues.length,
+			canReturn: isOutstanding,
+			needsAttention: isOutstanding && issues.length > 0,
 		};
-	} catch (error) {
-		if (isNextControlFlowError(error)) throw error;
-		console.error("[inventory] fetching assignments:", error);
-		return {
-			assignments: [],
-			totalAssignments: 0,
-			totalPages: 0,
-			currentPage: 0,
-			hasNext: false,
-			hasPrev: false,
-		};
-	}
+	});
+
+	return {
+		assignments,
+		nextCursor: hasMore ? batch[batch.length - 1].id : null,
+		total,
+	};
 }
 
 export async function getAssignmentsByUnit(unitId: number) {

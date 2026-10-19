@@ -35,6 +35,7 @@ import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import type { InventoryItem } from "@/lib/types/types";
+import { USAGE_TRACKED_CATEGORIES } from "@/lib/inventory-categories";
 
 interface InventoryFilters {
   search: string;
@@ -49,8 +50,8 @@ interface InventoryTableProps {
   initialFilters: InventoryFilters;
 }
 
-/** Laundry is used centrally, so an "assigned" figure is always zero. */
-const NEVER_ASSIGNED = new Set(["laundry"]);
+/** Usage tracked stock is used centrally, so "assigned" is always zero. */
+const NEVER_ASSIGNED = new Set<string>(USAGE_TRACKED_CATEGORIES);
 
 /** Trim trailing zeros: 2.50 -> 2.5, 40.00 -> 40 */
 function formatQty(value: number) {

@@ -61,6 +61,10 @@ enum InventoryCategory {
   kitchen_consumables
   laundry
   office
+  amenities
+  bathroom
+  utensils
+  housekeeping
 }
 
 enum UnitOfMeasure {

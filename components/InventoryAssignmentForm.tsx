@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { createInventoryAssignment } from "@/lib/actions/inventory";
+import { useRefreshInventoryLists } from "@/hooks/useInventory";
 import { InfoBanner } from "@/components/InfoBanner";
 import { unitKeys } from "@/hooks/useUnitDetails";
 
@@ -68,6 +69,7 @@ export function InventoryAssignmentForm({
 }: InventoryAssignmentFormProps) {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
+  const refreshInventoryLists = useRefreshInventoryLists();
 
   const [unitId, setUnitId] = useState(
     preselectedUnitId ? String(preselectedUnitId) : "",
@@ -197,6 +199,7 @@ export function InventoryAssignmentForm({
     }
 
     toast.success(result.message);
+    refreshInventoryLists();
     onSuccess?.();
   };
 
@@ -271,7 +274,7 @@ export function InventoryAssignmentForm({
         {!preselectedItemId && selectedUnit && availableItems.length === 0 && (
           <p className="text-xs text-muted-foreground">
             Nothing in stock at {selectedUnit.propertyName}. Restock an item
-            first, or check that it isn&apos;t a laundry commodity, since those are
+            first, or check that it isn&apos;t a laundry, housekeeping or office supply, since those are
             tracked with usage logs rather than assignments.
           </p>
         )}

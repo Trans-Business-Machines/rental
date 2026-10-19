@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { InventoryAssignmentsList } from "@/components/InventoryAssignmentsList";
 import {
   Select,
@@ -10,76 +10,115 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Search, CircleX, Loader } from "lucide-react";
+import { Search, Loader } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ItemsNotFound } from "./ItemsNotFound";
-import { Footer } from "@/components/Footer";
-import { useRouter } from "next/navigation";
-import type { Assignment, PropertyNames } from "@/lib/types/types";
+import { InfiniteScrollSentinel } from "@/components/InfiniteScrollSentinel";
+import { useSearchParams } from "next/navigation";
+import { useAssignmentsInfinite } from "@/hooks/useInventory";
+import type {
+  AssignmentFilter,
+  getInventoryAssignments,
+} from "@/lib/actions/inventory";
+import type { PropertyNames } from "@/lib/types/types";
 
-interface InventoryAssignmentsFilters {
+export interface InventoryAssignmentsFilters {
   search: string;
   propertyId: string;
   unitId: string;
-  status: string;
+  status: AssignmentFilter;
+}
+
+// Opens on what's out in units right now; history is one filter away.
+const DEFAULT_FILTERS: InventoryAssignmentsFilters = {
+  search: "",
+  propertyId: "all",
+  unitId: "all",
+  status: "outstanding",
+};
+
+/** The URL is the source of truth for applied filters, so they're shareable. */
+function filtersFromParams(
+  params: URLSearchParams,
+): InventoryAssignmentsFilters {
+  return {
+    search: params.get("search") || DEFAULT_FILTERS.search,
+    propertyId: params.get("propertyId") || DEFAULT_FILTERS.propertyId,
+    unitId: params.get("unitId") || DEFAULT_FILTERS.unitId,
+    // Not "status": the items tab owns that param on the same page.
+    status:
+      (params.get("assignmentStatus") as AssignmentFilter) ||
+      DEFAULT_FILTERS.status,
+  };
 }
 
 interface InventoryAssignmentsProps {
-  assignments: Assignment[];
   properties: PropertyNames;
-  totalPages: string | number;
-  hasNext: boolean;
-  hasPrev: boolean;
-  totalAssignments: number;
-  currentPage: number;
+  /** First batch the server rendered for `initialFilters`. */
+  initialBatch: Awaited<ReturnType<typeof getInventoryAssignments>> | null;
   initialFilters: InventoryAssignmentsFilters;
 }
 
 function InventoryAssignments({
-  assignments,
   properties,
-  hasNext,
-  hasPrev,
-  totalPages,
-  totalAssignments,
-  currentPage,
+  initialBatch,
   initialFilters,
 }: InventoryAssignmentsProps) {
-  // Get the router object
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const applied = filtersFromParams(searchParams);
+  const appliedKey = JSON.stringify(applied);
 
-  const [isApplyPending, startApplyTransition] = useTransition();
-  const [isClearPending, startClearTransition] = useTransition();
+  const {
+    data,
+    isPending: isLoading,
+    isError,
+    isPlaceholderData,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    refetch,
+  } = useAssignmentsInfinite(
+    applied,
+    // Only valid for the filters the server rendered with.
+    appliedKey === JSON.stringify(initialFilters) ? initialBatch : null,
+  );
 
-  // Combined pending state for disabling inputs
-  const isPending = isApplyPending || isClearPending;
+  const assignments = data?.pages.flatMap((batch) => batch.assignments) ?? [];
+  const total = data?.pages[0]?.total ?? null;
 
-  // Local state for filter inputs (before Apply is clicked)
-  const [filters, setFilters] =
-    useState<InventoryAssignmentsFilters>(initialFilters);
+  // Filter inputs before Apply is clicked
+  const [filters, setFilters] = useState<InventoryAssignmentsFilters>(applied);
+  const [lastAction, setLastAction] = useState<"apply" | "clear">("apply");
 
-  // Check if there are any active filters in the URL
-  const hasActiveFilters =
-    initialFilters.search !== "" ||
-    initialFilters.status !== "all" ||
-    initialFilters.propertyId !== "all" ||
-    initialFilters.unitId !== "all";
+  // Back and forward change the URL, so pull the inputs along with it.
+  useEffect(() => {
+    setFilters(JSON.parse(appliedKey));
+  }, [appliedKey]);
+
+  const isPending = isPlaceholderData;
+  const isApplyPending = isPending && lastAction === "apply";
+  const isClearPending = isPending && lastAction === "clear";
+
+  const hasActiveFilters = appliedKey !== JSON.stringify(DEFAULT_FILTERS);
 
   const propertyUnits = properties.find(
     (p) => p.id.toString() === filters.propertyId,
   )?.units;
 
   // ----------- URL handlers -----------
+  // pushState updates useSearchParams without a server round trip; the
+  // query refetches because its key follows the URL.
+  const pushParams = (params: URLSearchParams) => {
+    window.history.pushState(null, "", `?${params.toString()}`);
+  };
+
   const applyFilters = () => {
     const params = new URLSearchParams();
     params.set("tab", "assignments");
-    params.set("page", "1");
 
     if (filters.search) {
       params.set("search", filters.search);
     }
-    // Not "status" — the items tab owns that param on the same page.
-    if (filters.status !== "all") {
+    if (filters.status !== DEFAULT_FILTERS.status) {
       params.set("assignmentStatus", filters.status);
     }
     if (filters.propertyId !== "all") {
@@ -90,26 +129,37 @@ function InventoryAssignments({
       params.set("unitId", filters.unitId);
     }
 
-    startApplyTransition(() => {
-      router.push(`/inventory?${params.toString()}`);
-    });
+    setLastAction("apply");
+    pushParams(params);
   };
 
   const clearFilters = () => {
-    setFilters({ search: "", status: "all", propertyId: "all", unitId: "all" });
-
-    startClearTransition(() => {
-      router.push("/inventory?tab=assignments&page=1");
-    });
+    setFilters(DEFAULT_FILTERS);
+    setLastAction("clear");
+    pushParams(new URLSearchParams({ tab: "assignments" }));
   };
 
-  if (assignments.length === 0 && !hasActiveFilters) {
+  if (isLoading) {
     return (
-      <ItemsNotFound
-        title="No item assignments found!"
-        message="Get started by making your first assignment."
-        icon={CircleX}
-      />
+      <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+        <Loader className="size-4 animate-spin" />
+        Loading assignments
+      </div>
+    );
+  }
+
+  if (isError && !data) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-16 text-sm text-muted-foreground">
+        Couldn&apos;t load assignments.
+        <Button
+          variant="outline"
+          className="cursor-pointer"
+          onClick={() => refetch()}
+        >
+          Try again
+        </Button>
+      </div>
     );
   }
 
@@ -135,7 +185,7 @@ function InventoryAssignments({
           <div className="md:flex-1">
             <Select
               value={filters.status}
-              onValueChange={(value) =>
+              onValueChange={(value: AssignmentFilter) =>
                 setFilters((prev) => ({ ...prev, status: value }))
               }
             >
@@ -143,12 +193,12 @@ function InventoryAssignments({
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="outstanding">Outstanding</SelectItem>
+                <SelectItem value="outstanding">Active (in units)</SelectItem>
                 <SelectItem value="needs_attention">Needs attention</SelectItem>
                 <SelectItem value="returned">Returned</SelectItem>
                 <SelectItem value="written_off">Written off</SelectItem>
                 <SelectItem value="issued">Consumed</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -239,24 +289,26 @@ function InventoryAssignments({
       {/* Assignments List */}
       <InventoryAssignmentsList
         assignments={assignments}
-        totalAssignments={totalAssignments}
+        totalAssignments={total ?? assignments.length}
+        emptyTitle={
+          hasActiveFilters
+            ? undefined
+            : "Nothing is out in units right now. Set the status to All Status to see past assignments."
+        }
       />
 
-      {/*Footer and  Pagination */}
-      <Footer
-        currentPage={currentPage}
-        hasNext={hasNext}
-        hasPrev={hasPrev}
-        totalPages={totalPages}
-        paramName="page"
-        preserveParams={[
-          "tab",
-          "search",
-          "assignmentStatus",
-          "propertyId",
-          "unitId",
-        ]}
-      />
+      {assignments.length > 0 && (
+        <InfiniteScrollSentinel
+          loaded={assignments.length}
+          total={total}
+          noun="assignments"
+          // Placeholder rows belong to the previous filters.
+          hasNextPage={hasNextPage && !isPlaceholderData}
+          isFetchingNextPage={isFetchingNextPage}
+          isError={isError}
+          fetchNextPage={fetchNextPage}
+        />
+      )}
     </section>
   );
 }

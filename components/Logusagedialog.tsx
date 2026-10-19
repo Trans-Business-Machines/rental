@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Droplets, TrendingDown, TriangleAlert } from "lucide-react";
 import { logItemUsage } from "@/lib/actions/inventory";
+import { useRefreshInventoryLists } from "@/hooks/useInventory";
 
 interface LogUsageDialogItem {
   id: string;
@@ -44,6 +45,7 @@ export function LogUsageDialog({
 }: LogUsageDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const refreshInventoryLists = useRefreshInventoryLists();
 
   const isControlled = open !== undefined;
   const dialogOpen = isControlled ? open : internalOpen;
@@ -98,6 +100,7 @@ export function LogUsageDialog({
     }
 
     toast.success(result.message);
+    refreshInventoryLists();
     reset();
     setDialogOpen(false);
   };
@@ -116,8 +119,7 @@ export function LogUsageDialog({
         <DialogHeader>
           <DialogTitle>Log usage for {item.itemName}</DialogTitle>
           <DialogDescription>
-            Records what housekeeping consumed and takes it out of the store
-            balance.
+            Records how much was used and takes it out of the store balance.
           </DialogDescription>
         </DialogHeader>
 

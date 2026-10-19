@@ -90,7 +90,7 @@ export function InventoryAssignmentDialog({
           <DialogTitle>Assign Inventory Item</DialogTitle>
           <DialogDescription>
             Send stock from a property&apos;s store to one of its units.
-            Laundry commodities aren&apos;t listed here because they&apos;re tracked
+            Laundry, housekeeping and office supplies aren&apos;t listed here because they&apos;re tracked
             with usage logs instead.
           </DialogDescription>
         </DialogHeader>

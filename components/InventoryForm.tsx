@@ -18,6 +18,7 @@ import {
   createInventoryItem,
   updateInventoryItem,
 } from "@/lib/actions/inventory";
+import { useRefreshInventoryLists } from "@/hooks/useInventory";
 import type {
   InventoryCategory,
   UnitOfMeasure,
@@ -27,58 +28,93 @@ import type {
  * OPTIONS
  *
  * Category drives behaviour everywhere else in the system, so the
- * helper text spells out what each one means operationally.
+ * helper text spells out what each one means operationally. Sorted A to Z
+ * by label so new categories land in order.
  * ------------------------------------------------------------------ */
 
-const CATEGORY_OPTIONS: {
+interface CategoryOption {
   value: InventoryCategory;
   label: string;
   hint: string;
   defaultUom: UnitOfMeasure;
-}[] = [
-  {
-    value: "electronics",
-    label: "Electronics",
-    hint: "Assigned to units and expected back. Issues can be reported.",
-    defaultUom: "pieces",
-  },
-  {
-    value: "furniture",
-    label: "Furniture",
-    hint: "Assigned to units and expected back. Issues can be reported.",
-    defaultUom: "pieces",
-  },
-  {
-    value: "bedroom",
-    label: "Bedroom items",
-    hint: "Assigned to units and expected back. Issues can be reported.",
-    defaultUom: "pieces",
-  },
-  {
-    value: "cutlery",
-    label: "Cutlery",
-    hint: "Assigned to units and expected back. Issues can be reported.",
-    defaultUom: "pieces",
-  },
-  {
-    value: "linens",
-    label: "Linens",
-    hint: "Assigned to units and expected back. Issues can be reported.",
-    defaultUom: "pieces",
-  },
-  {
-    value: "kitchen_consumables",
-    label: "Kitchen consumables",
-    hint: "Assigned to units and consumed there, never returned.",
-    defaultUom: "sachets",
-  },
-  {
-    value: "laundry",
-    label: "Laundry commodities",
-    hint: "Used centrally by housekeeping. Tracked with usage logs, not assignments.",
-    defaultUom: "kg",
-  },
-];
+}
+
+const CATEGORY_OPTIONS: CategoryOption[] = (
+  [
+    {
+      value: "electronics",
+      label: "Electronics",
+      hint: "Assigned to units and expected back. Issues can be reported.",
+      defaultUom: "pieces",
+    },
+    {
+      value: "furniture",
+      label: "Furniture",
+      hint: "Assigned to units and expected back. Issues can be reported.",
+      defaultUom: "pieces",
+    },
+    {
+      value: "bedroom",
+      label: "Bedroom items",
+      hint: "Assigned to units and expected back. Issues can be reported.",
+      defaultUom: "pieces",
+    },
+    {
+      value: "cutlery",
+      label: "Cutlery",
+      hint: "Assigned to units and expected back. Issues can be reported.",
+      defaultUom: "pieces",
+    },
+    {
+      value: "linens",
+      label: "Linens",
+      hint: "Assigned to units and expected back. Issues can be reported.",
+      defaultUom: "pieces",
+    },
+    {
+      value: "kitchen_consumables",
+      label: "Kitchen consumables",
+      hint: "Assigned to units and consumed there, never returned.",
+      defaultUom: "sachets",
+    },
+    {
+      value: "office",
+      label: "Office supplies",
+      hint: "Used centrally, not in units. Tracked with usage logs, not assignments.",
+      defaultUom: "pieces",
+    },
+    {
+      value: "bathroom",
+      label: "Bathroom",
+      hint: "Assigned to units and expected back. Issues can be reported.",
+      defaultUom: "pieces",
+    },
+    {
+      value: "utensils",
+      label: "Utensils",
+      hint: "Assigned to units and expected back. Issues can be reported.",
+      defaultUom: "pieces",
+    },
+    {
+      value: "amenities",
+      label: "Amenities",
+      hint: "Assigned to units and consumed there, never returned.",
+      defaultUom: "pieces",
+    },
+    {
+      value: "laundry",
+      label: "Laundry commodities",
+      hint: "Used centrally by housekeeping. Tracked with usage logs, not assignments.",
+      defaultUom: "kg",
+    },
+    {
+      value: "housekeeping",
+      label: "Housekeeping supplies",
+      hint: "Used centrally by housekeeping. Tracked with usage logs, not assignments.",
+      defaultUom: "litres",
+    },
+  ] satisfies CategoryOption[]
+).sort((a, b) => a.label.localeCompare(b.label));
 
 const UOM_OPTIONS: { value: UnitOfMeasure; label: string }[] = [
   { value: "pieces", label: "Pieces" },
@@ -132,6 +168,7 @@ export function InventoryForm({
 }: InventoryFormProps) {
   const isEditing = Boolean(item);
   const [loading, setLoading] = useState(false);
+  const refreshInventoryLists = useRefreshInventoryLists();
 
   const [form, setForm] = useState({
     propertyId: item?.propertyId ? String(item.propertyId) : "",
@@ -223,6 +260,7 @@ export function InventoryForm({
     }
 
     toast.success(result.message);
+    refreshInventoryLists();
     onSuccess?.();
   };
 
@@ -312,9 +350,7 @@ export function InventoryForm({
       {selectedCategory && (
         <div className="flex gap-2 rounded-md border border-blue-700 bg-blue-500/10 p-3">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
-          <p className="text-xs text-blue-600">
-            {selectedCategory.hint}
-          </p>
+          <p className="text-xs text-blue-600">{selectedCategory.hint}</p>
         </div>
       )}
 
@@ -404,7 +440,11 @@ export function InventoryForm({
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={loading} className="flex-1 cursor-pointer">
+        <Button
+          type="submit"
+          disabled={loading}
+          className="flex-1 cursor-pointer"
+        >
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isEditing ? "Save changes" : "Add item"}
         </Button>

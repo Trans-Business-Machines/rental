@@ -429,7 +429,7 @@ export async function createCheckoutReport(
 
 /**
  * What the inspector needs to check: items still out in the unit that are
- * expected back. Consumables and laundry are excluded — nothing to return.
+ * expected back. Consumables and usage tracked supplies are excluded — nothing to return.
  */
 export async function getInventoryAssignmentsForUnit(
 	unitId: number

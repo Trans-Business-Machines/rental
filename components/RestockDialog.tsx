@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, PackagePlus, TrendingUp } from "lucide-react";
 import { restockItem } from "@/lib/actions/inventory";
+import { useRefreshInventoryLists } from "@/hooks/useInventory";
 
 interface RestockDialogItem {
   id: string;
@@ -46,6 +47,7 @@ export function RestockDialog({
 }: RestockDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const refreshInventoryLists = useRefreshInventoryLists();
 
   const isControlled = open !== undefined;
   const dialogOpen = isControlled ? open : internalOpen;
@@ -103,6 +105,7 @@ export function RestockDialog({
     }
 
     toast.success(result.message);
+    refreshInventoryLists();
     reset();
     setDialogOpen(false);
   };

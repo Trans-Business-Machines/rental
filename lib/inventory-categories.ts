@@ -48,6 +48,26 @@ export const CATEGORY_DISPLAY: Record<
     badgeClassName:
       "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
   },
+  amenities: {
+    label: "Amenities",
+    badgeClassName:
+      "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300",
+  },
+  bathroom: {
+    label: "Bathroom",
+    badgeClassName:
+      "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-300",
+  },
+  utensils: {
+    label: "Utensils",
+    badgeClassName:
+      "border-stone-300 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300",
+  },
+  housekeeping: {
+    label: "Housekeeping",
+    badgeClassName:
+      "border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-950 dark:text-teal-300",
+  },
 };
 
 export const INVENTORY_CATEGORIES = Object.keys(
@@ -73,10 +93,17 @@ export function getCategoryDisplay(category: string) {
  * ------------------------------------------------------------------ */
 
 /** Consumed on issue, assigned to a unit but never returned. */
-export const CONSUMABLE_CATEGORIES: InventoryCategory[] = ["kitchen_consumables"];
+export const CONSUMABLE_CATEGORIES: InventoryCategory[] = [
+  "kitchen_consumables",
+  "amenities",
+];
 
-/** Used centrally by housekeeping — never assigned to a unit. */
-export const USAGE_TRACKED_CATEGORIES: InventoryCategory[] = ["laundry"];
+/** Used centrally by housekeeping, never assigned to a unit. */
+export const USAGE_TRACKED_CATEGORIES: InventoryCategory[] = [
+  "laundry",
+  "housekeeping",
+  "office",
+];
 
 /** Issues can be reported against these. You don't repair a sachet. */
 export const ISSUE_TRACKED_CATEGORIES: InventoryCategory[] = [
@@ -85,7 +112,8 @@ export const ISSUE_TRACKED_CATEGORIES: InventoryCategory[] = [
   "bedroom",
   "cutlery",
   "linens",
-  "office",
+  "bathroom",
+  "utensils",
 ];
 
 export function categoryRules(category: InventoryCategory) {

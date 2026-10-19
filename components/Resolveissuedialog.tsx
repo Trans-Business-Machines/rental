@@ -26,7 +26,10 @@ import {
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { resolveItemIssue } from "@/lib/actions/inventory";
 import { InfoBanner } from "@/components/InfoBanner";
-import { useRefreshOpenIssueCount } from "@/hooks/useInventory";
+import {
+  useRefreshInventoryLists,
+  useRefreshOpenIssueCount,
+} from "@/hooks/useInventory";
 import type { IssueResolution } from "@/prisma/generated/client";
 
 type Resolution = Exclude<IssueResolution, "pending">;
@@ -85,6 +88,7 @@ export function ResolveIssueDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const refreshOpenIssueCount = useRefreshOpenIssueCount();
+  const refreshInventoryLists = useRefreshInventoryLists();
 
   const isControlled = open !== undefined;
   const dialogOpen = isControlled ? open : internalOpen;
@@ -179,6 +183,7 @@ export function ResolveIssueDialog({
 
     toast.success(result.message);
     refreshOpenIssueCount();
+    refreshInventoryLists();
     reset();
     setDialogOpen(false);
   };

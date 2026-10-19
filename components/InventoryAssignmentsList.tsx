@@ -39,6 +39,7 @@ interface InventoryAssignmentsListProps {
   assignments: Assignment[];
   showReturnButton?: boolean;
   totalAssignments: number;
+  emptyTitle?: string;
 }
 
 function formatQty(value: number) {
@@ -105,6 +106,7 @@ export function InventoryAssignmentsList({
   assignments,
   showReturnButton = true,
   totalAssignments,
+  emptyTitle = "No assignment matches the search criteria.",
 }: InventoryAssignmentsListProps) {
   return (
     <div className="space-y-2">
@@ -123,10 +125,7 @@ export function InventoryAssignmentsList({
         </CardHeader>
 
         {assignments.length === 0 ? (
-          <SearchNotFound
-            title="No assignment matches the search criteria."
-            icon={Package}
-          />
+          <SearchNotFound title={emptyTitle} icon={Package} />
         ) : (
           <CardContent>
             <Table>

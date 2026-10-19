@@ -19,12 +19,13 @@ import { InventoryActions } from "@/components/InventoryActions";
 import { getCategoryDisplay } from "@/lib/inventory-categories";
 import type { InventoryItem } from "@/lib/types/types";
 import { cn } from "@/lib/utils";
+import { USAGE_TRACKED_CATEGORIES } from "@/lib/inventory-categories";
 
 /**
- * Laundry is used centrally and never assigned, so an "assigned" figure
- * for it is always zero and reads as missing data rather than a fact.
+ * Usage tracked supplies (laundry, housekeeping, office) are never assigned,
+ * so an "assigned" figure is always zero and reads as missing data.
  */
-const NEVER_ASSIGNED = new Set(["laundry"]);
+const NEVER_ASSIGNED = new Set<string>(USAGE_TRACKED_CATEGORIES);
 
 /** Trim trailing zeros: 2.50 -> 2.5, 40.00 -> 40 */
 function formatQty(value: number) {

@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 import { UnauthorizedUI } from "./unauthorized-ui";
 import {
   getInventoryAssignments,
-  getInventoryItems,
+  getInventoryItemsBatch,
   getInventoryStatsByCategory,
   getItemIssues,
   getIssueStats,
@@ -35,37 +35,19 @@ interface InventoryPageSearchParams {
     category?: string;
     propertyId?: string;
     unitId?: string;
-    lowStock?: string;
     sortOrder?: "none" | "asc" | "desc";
   }>;
 }
 
 /* Fallbacks so a tab that isn't rendered costs nothing to query. */
-type ItemsResponse = Awaited<ReturnType<typeof getInventoryItems>>;
-type AssignmentsResponse = Awaited<ReturnType<typeof getInventoryAssignments>>;
+type ItemsBatch = Awaited<ReturnType<typeof getInventoryItemsBatch>>;
+type AssignmentsBatch = Awaited<ReturnType<typeof getInventoryAssignments>>;
 type ReportsResponse = Awaited<ReturnType<typeof getCheckoutReports>>;
 type IssuesResponse = Awaited<ReturnType<typeof getItemIssues>>;
 
 const EMPTY_ISSUES: IssuesResponse = {
   issues: [],
   totalIssues: 0,
-  totalPages: 0,
-  currentPage: 1,
-  hasNext: false,
-  hasPrev: false,
-};
-
-const EMPTY_ITEMS: ItemsResponse = {
-  items: [],
-  totalPages: 0,
-  currentPage: 1,
-  hasNext: false,
-  hasPrev: false,
-};
-
-const EMPTY_ASSIGNMENTS: AssignmentsResponse = {
-  assignments: [],
-  totalAssignments: 0,
   totalPages: 0,
   currentPage: 1,
   hasNext: false,
@@ -94,40 +76,39 @@ export default async function InventoryPage({
   const page = Number(params.page) || 1;
   const search = params.search || "";
   const status = params.status || "all";
+  // Assignments open on what's out in units; "all" has to be asked for.
   const assignmentStatus = (params.assignmentStatus ||
-    "all") as AssignmentFilter;
+    "outstanding") as AssignmentFilter;
   const category = params.category || "all";
   const propertyId = params.propertyId || "all";
   const unitId = params.unitId || "all";
-  const lowStock = params.lowStock === "true";
   const sortOrder = params.sortOrder || "none";
   const issueStatus = (params.issueStatus || "open") as IssueFilter;
   const issueType = params.issueType || "all";
 
-  // Only the visible tab hits the database.
-  const inventoryItemsPromise: Promise<ItemsResponse> =
+  // Only the visible tab hits the database. Items and assignments scroll
+  // infinitely; the server renders the first batch and the client fetches
+  // the rest. On failure the client retries instead of the page erroring.
+  const inventoryItemsPromise: Promise<ItemsBatch | null> =
     tab === "inventory"
-      ? getInventoryItems({
-          page,
+      ? getInventoryItemsBatch({
           search,
           status,
           category,
           // Items are property-scoped now, so this filter applies here too.
           propertyId: propertyId !== "all" ? Number(propertyId) : undefined,
-          lowStockOnly: lowStock,
-        })
-      : Promise.resolve(EMPTY_ITEMS);
+        }).catch(() => null)
+      : Promise.resolve(null);
 
-  const assignmentsPromise: Promise<AssignmentsResponse> =
+  const assignmentsPromise: Promise<AssignmentsBatch | null> =
     tab === "assignments"
       ? getInventoryAssignments({
-          page,
           search,
           propertyId,
           unitId,
           status: assignmentStatus,
-        })
-      : Promise.resolve(EMPTY_ASSIGNMENTS);
+        }).catch(() => null)
+      : Promise.resolve(null);
 
   const checkoutReportsPromise: Promise<ReportsResponse> =
     tab === "checkout"
@@ -205,10 +186,10 @@ export default async function InventoryPage({
       <Tabs value={tab} className="space-y-2">
         <TabsList className="md:w-xl lg:w-3xl">
           <TabsTrigger value="inventory" className="cursor-pointer" asChild>
-            <Link href="/inventory?tab=inventory&page=1">Inventory Items</Link>
+            <Link href="/inventory?tab=inventory">Inventory Items</Link>
           </TabsTrigger>
           <TabsTrigger value="assignments" className="cursor-pointer" asChild>
-            <Link href="/inventory?tab=assignments&page=1">Assignments</Link>
+            <Link href="/inventory?tab=assignments">Assignments</Link>
           </TabsTrigger>
 
           <TabsTrigger value="issues" className="cursor-pointer" asChild>
@@ -228,31 +209,21 @@ export default async function InventoryPage({
 
         <TabsContent value="inventory" className="space-y-4">
           <InventoryItems
-            items={inventoryItemsResponse.items}
             properties={propertiesResponse}
-            totalPages={inventoryItemsResponse.totalPages}
-            hasNext={inventoryItemsResponse.hasNext}
-            hasPrev={inventoryItemsResponse.hasPrev}
-            currentPage={page}
+            initialBatch={inventoryItemsResponse}
             initialFilters={{
               search,
               status,
               category,
               propertyId,
-              lowStock,
             }}
           />
         </TabsContent>
 
         <TabsContent value="assignments" className="space-y-4">
           <InventoryAssignments
-            assignments={assignmentsResponse.assignments}
             properties={propertiesResponse}
-            hasNext={assignmentsResponse.hasNext}
-            hasPrev={assignmentsResponse.hasPrev}
-            totalAssignments={assignmentsResponse.totalAssignments}
-            totalPages={assignmentsResponse.totalPages}
-            currentPage={page}
+            initialBatch={assignmentsResponse}
             initialFilters={{
               search,
               propertyId,

@@ -24,7 +24,10 @@ import {
 import { Loader2, TriangleAlert } from "lucide-react";
 import { reportItemIssue } from "@/lib/actions/inventory";
 import { InfoBanner } from "@/components/InfoBanner";
-import { useRefreshOpenIssueCount } from "@/hooks/useInventory";
+import {
+  useRefreshInventoryLists,
+  useRefreshOpenIssueCount,
+} from "@/hooks/useInventory";
 import type { IssueType } from "@/prisma/generated/client";
 
 const ISSUE_TYPES: { value: IssueType; label: string; hint: string }[] = [
@@ -88,6 +91,7 @@ export function ReportIssueDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const refreshOpenIssueCount = useRefreshOpenIssueCount();
+  const refreshInventoryLists = useRefreshInventoryLists();
 
   const isControlled = open !== undefined;
   const dialogOpen = isControlled ? open : internalOpen;
@@ -172,6 +176,7 @@ export function ReportIssueDialog({
 
     toast.success(result.message);
     refreshOpenIssueCount();
+    refreshInventoryLists();
     reset();
     setDialogOpen(false);
   };

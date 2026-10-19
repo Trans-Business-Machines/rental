@@ -23,7 +23,10 @@ import {
   writeOffAssignmentIssues,
 } from "@/lib/actions/inventory";
 import { InfoBanner } from "@/components/InfoBanner";
-import { useRefreshOpenIssueCount } from "@/hooks/useInventory";
+import {
+  useRefreshInventoryLists,
+  useRefreshOpenIssueCount,
+} from "@/hooks/useInventory";
 
 interface OpenIssue {
   id: string;
@@ -74,6 +77,7 @@ export function ReturnAssignmentDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const refreshOpenIssueCount = useRefreshOpenIssueCount();
+  const refreshInventoryLists = useRefreshInventoryLists();
 
   /**
    * Two distinct outcomes, not two flavours of the same one:
@@ -148,6 +152,7 @@ export function ReturnAssignmentDialog({
     }
 
     toast.success(result.message);
+    refreshInventoryLists();
     reset();
     setDialogOpen(false);
   };
@@ -172,6 +177,7 @@ export function ReturnAssignmentDialog({
     }
 
     toast.success(result.message);
+    refreshInventoryLists();
     refreshOpenIssueCount();
     reset();
     setDialogOpen(false);
