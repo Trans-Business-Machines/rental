@@ -123,7 +123,7 @@ export function PricingEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Edit Pricing
@@ -343,7 +343,7 @@ export function PricingEditDialog({
 
             <Button
               type="button"
-              className="px-6 bg-lipstick-red hover:bg-crimson-red cursor-pointer"
+              className="flex-0 px-6 bg-lipstick-red hover:bg-crimson-red cursor-pointer"
               onClick={() => onOpenChange(false)}
               disabled={updatePricingMutation.isPending}
             >

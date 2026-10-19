@@ -187,7 +187,7 @@ export function ReturnAssignmentDialog({
     >
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
 
-      <DialogContent className="max-h-[90vh] w-11/12 overflow-y-auto sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>
             {mode === "return" ? "Return" : "Write off"}{" "}
@@ -362,7 +362,7 @@ export function ReturnAssignmentDialog({
           ) : (
             <InfoBanner>
               Nothing here is under an open issue. Every write-off starts as a
-              reported issue —{" "}
+              reported issue, so{" "}
               <Link
                 href={`/inventory/${assignment.inventoryItem.id}`}
                 className="font-medium underline"
@@ -401,6 +401,7 @@ export function ReturnAssignmentDialog({
               variant="outline"
               onClick={() => setDialogOpen(false)}
               disabled={loading}
+              className="flex-0"
             >
               Cancel
             </Button>
@@ -409,6 +410,7 @@ export function ReturnAssignmentDialog({
               <Button
                 type="button"
                 onClick={handleReturn}
+                className="flex-1"
                 disabled={loading || returnable <= 0 || !validQty || exceeds}
               >
                 {loading ? (
@@ -423,6 +425,7 @@ export function ReturnAssignmentDialog({
                 type="button"
                 variant="destructive"
                 onClick={handleWriteOff}
+                className="flex-1"
                 disabled={loading || selectedIds.length === 0}
               >
                 {loading ? (

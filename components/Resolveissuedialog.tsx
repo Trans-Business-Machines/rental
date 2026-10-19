@@ -45,7 +45,7 @@ const RESOLUTIONS: { value: Resolution; label: string; hint: string }[] = [
   {
     value: "discard",
     label: "Discarded",
-    hint: "Written off permanently — not repaired, not replaced.",
+    hint: "Written off permanently. Not repaired, not replaced.",
   },
 ];
 
@@ -193,10 +193,10 @@ export function ResolveIssueDialog({
     >
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
 
-      <DialogContent className="flex h-[90vh] w-11/12 flex-col sm:max-w-md">
+      <DialogContent className="flex h-[90vh] flex-col">
         <DialogHeader>
           <DialogTitle>
-            Resolve issue — {issue.inventoryItem.itemName}
+            Resolve issue for {issue.inventoryItem.itemName}
           </DialogTitle>
           <DialogDescription>
             Closing this issue records what was done and who did it.
@@ -269,8 +269,8 @@ export function ResolveIssueDialog({
                   className="cursor-pointer text-sm font-normal leading-snug"
                 >
                   {isStoreIssue
-                    ? "The replacement has arrived — add it to stock and record a receipt."
-                    : `The replacement has arrived — record a receipt and put it in ${
+                    ? "The replacement has arrived. Add it to stock and record a receipt."
+                    : `The replacement has arrived. Record a receipt and put it in ${
                         issue.assignment?.unit.name ?? "the unit"
                       }.`}
                   <span className="mt-0.5 block text-xs text-muted-foreground">
@@ -318,10 +318,15 @@ export function ResolveIssueDialog({
               variant="outline"
               onClick={() => setDialogOpen(false)}
               disabled={loading}
+              className="flex-0"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !resolution}>
+            <Button
+              type="submit"
+              disabled={loading || !resolution}
+              className="flex-1"
+            >
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (

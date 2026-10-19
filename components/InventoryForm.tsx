@@ -69,7 +69,7 @@ const CATEGORY_OPTIONS: {
   {
     value: "kitchen_consumables",
     label: "Kitchen consumables",
-    hint: "Assigned to units and consumed there — never returned.",
+    hint: "Assigned to units and consumed there, never returned.",
     defaultUom: "sachets",
   },
   {
@@ -399,6 +399,7 @@ export function InventoryForm({
             variant="outline"
             onClick={onCancel}
             disabled={loading}
+            className="flex-0"
           >
             Cancel
           </Button>

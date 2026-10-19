@@ -400,7 +400,7 @@ export function BookingForm({
                               "cursor-not-allowed opacity-50",
                           )}
                         >
-                          {unit.name} - {getUnitTypeLabel(unit.type)}
+                          {unit.name}, {getUnitTypeLabel(unit.type)}
                           {unit.status !== "available" && ` (${unit.status})`}
                         </SelectItem>
                       ))}
@@ -760,7 +760,7 @@ export function BookingForm({
             <Button
               type="button"
               variant="outline"
-              className="cursor-pointer"
+              className="flex-0 cursor-pointer"
               onClick={onCancel}
             >
               Cancel

@@ -78,7 +78,7 @@ function AlertDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md md:max-w-2xl p-0 gap-0 overflow-hidden">
+      <DialogContent className="p-0 gap-0">
         {/* Header */}
         <DialogHeader className="px-4 py-4 sm:px-6 sm:py-5">
           <DialogTitle className="text-base sm:text-lg font-semibold">
@@ -119,11 +119,11 @@ function AlertDialog({
         <Separator className="w-full" />
 
         {/* Footer */}
-        <DialogFooter className="px-4 py-3 sm:px-6 sm:py-4 flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+        <DialogFooter className="px-4 py-3 sm:px-6 sm:py-4 flex-row gap-2 sm:gap-3">
           <DialogClose asChild>
             <Button
               variant="outline"
-              className="w-full sm:w-auto cursor-pointer"
+              className="flex-0 cursor-pointer"
               disabled={isLoading}
             >
               Cancel
@@ -133,7 +133,7 @@ function AlertDialog({
             onClick={() => actionFn()}
             disabled={isLoading}
             className={cn(
-              "w-full sm:w-auto capitalize cursor-pointer",
+              "flex-1 capitalize cursor-pointer",
               colors.button
             )}
           >

@@ -35,7 +35,7 @@ export function InventoryEditDialog({
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="w-11/12 lg:max-w-3xl max-h-[95vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit {item.itemName}</DialogTitle>
         </DialogHeader>

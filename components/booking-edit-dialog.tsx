@@ -239,7 +239,7 @@ export function BookingEditDialog({
         </DialogTrigger>
       )}
 
-      <DialogContent className="w-11/12 lg:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Booking</DialogTitle>
           <DialogDescription>
@@ -618,7 +618,7 @@ export function BookingEditDialog({
               type="button"
               onClick={() => setOpen(false)}
               disabled={isSubmitting}
-              className="bg-chart-5 px-10 hover:bg-chart-5/90 cursor-pointer"
+              className="flex-0 bg-chart-5 px-10 hover:bg-chart-5/90 cursor-pointer"
             >
               Cancel
             </Button>

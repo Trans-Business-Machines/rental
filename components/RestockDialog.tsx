@@ -117,7 +117,7 @@ export function RestockDialog({
     >
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
 
-      <DialogContent className="w-11/12 sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Restock {item.itemName}</DialogTitle>
           <DialogDescription>
@@ -165,7 +165,7 @@ export function RestockDialog({
                 {clearsThreshold && (
                   <span className="text-muted-foreground">
                     {" "}
-                    — above the restock threshold
+                    (above the restock threshold)
                   </span>
                 )}
               </span>
@@ -209,10 +209,15 @@ export function RestockDialog({
               variant="outline"
               onClick={() => setDialogOpen(false)}
               disabled={loading}
+              className="flex-0"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !validQty}>
+            <Button
+              type="submit"
+              disabled={loading || !validQty}
+              className="flex-1"
+            >
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (

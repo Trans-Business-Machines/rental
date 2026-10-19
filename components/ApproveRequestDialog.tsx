@@ -54,14 +54,14 @@ export function ApproveRequestDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <AlertDialogFooter className="mt-3 gap-3">
+        <AlertDialogFooter className="mt-3 flex-row gap-3">
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
               handleApprove();
             }}
             disabled={mutation.isPending}
-            className="bg-green-600 cursor-pointer w-full sm:w-auto hover:bg-green-700"
+            className="flex-1 bg-green-600 cursor-pointer hover:bg-green-700"
           >
             {mutation.isPending ? (
               <span className="flex items-center gap-2">
@@ -75,7 +75,7 @@ export function ApproveRequestDialog({
 
           <Button
             disabled={mutation.isPending}
-            className="cursor-pointer bg-lipstick-red hover:bg-crimson-red w-full sm:w-auto sm:px-10"
+            className="flex-0 cursor-pointer bg-lipstick-red hover:bg-crimson-red sm:px-10"
             onClick={() => onOpenChange(false)}
           >
             Cancel

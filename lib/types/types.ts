@@ -60,6 +60,7 @@ type NewGuestBaseFileds = {
     nationality: string;
     notes?: string;
     registeredBy?: string;
+    verificationStatus?: Exclude<VerificationStatus, "rejected">;
 }
 
 export type CreateNewGuest = NewGuestBaseFileds & (

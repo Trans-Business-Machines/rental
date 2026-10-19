@@ -233,7 +233,7 @@ export function GuestEditDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       {!isControlled && <DialogTrigger asChild>{children}</DialogTrigger>}
 
-      <DialogContent className="w-11/12 lg:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Guest Information</DialogTitle>
           <DialogDescription>
@@ -562,7 +562,7 @@ export function GuestEditDialog({
             <Button
               type="button"
               variant="outline"
-              className="w-1/4 cursor-pointer"
+              className="flex-0 cursor-pointer"
               onClick={() => setOpen(false)}
               disabled={isSubmitting}
             >

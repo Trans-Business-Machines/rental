@@ -234,14 +234,17 @@ function SettingsTable() {
               cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletePricingMutation.isPending}>
+          <AlertDialogFooter className="flex-row">
+            <AlertDialogCancel
+              disabled={deletePricingMutation.isPending}
+              className="flex-0"
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={deletePricingMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deletePricingMutation.isPending ? (
                 <span className="flex items-center gap-2">

@@ -22,7 +22,7 @@ export function UnitViewDialog({ unit, children }: UnitViewDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{unit.name} Details</DialogTitle>
         </DialogHeader>

@@ -112,9 +112,9 @@ export function LogUsageDialog({
     >
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
 
-      <DialogContent className="w-11/12 sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Log usage — {item.itemName}</DialogTitle>
+          <DialogTitle>Log usage for {item.itemName}</DialogTitle>
           <DialogDescription>
             Records what housekeeping consumed and takes it out of the store
             balance.
@@ -168,7 +168,7 @@ export function LogUsageDialog({
                 {dropsBelowThreshold && (
                   <span className="text-amber-600">
                     {" "}
-                    — at or below the restock threshold
+                    (at or below the restock threshold)
                   </span>
                 )}
               </span>
@@ -197,10 +197,15 @@ export function LogUsageDialog({
               variant="outline"
               onClick={() => setDialogOpen(false)}
               disabled={loading}
+              className="flex-0"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !validQty || exceeds}>
+            <Button
+              type="submit"
+              disabled={loading || !validQty || exceeds}
+              className="flex-1"
+            >
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (

@@ -111,7 +111,7 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg md:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Add New Pricing
@@ -328,7 +328,7 @@ export function PricingCreateDialog({ children }: PricingCreateDialogProps) {
 
             <Button
               type="button"
-              className="px-6 bg-lipstick-red hover:bg-crimson-red cursor-pointer"
+              className="flex-0 px-6 bg-lipstick-red hover:bg-crimson-red cursor-pointer"
               onClick={() => onOpenChange(false)}
               disabled={createPricingMutation.isPending}
             >

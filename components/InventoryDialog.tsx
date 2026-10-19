@@ -30,7 +30,7 @@ export function InventoryDialog({ properties, children }: InventoryDialogProps) 
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="w-11/12 lg:max-w-3xl max-h-[95vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Inventory Item</DialogTitle>
         </DialogHeader>

@@ -285,7 +285,12 @@ export async function createGuest(data: CreateNewGuest) {
 		// Confirm that the current session user has permission to create a guest
 		await requirePermission("guest", "create");
 
-		const { registeredBy, ...guestData } = data;
+		const session = await getServerSession();
+		const canVerify =
+			session?.user.role === "admin" || session?.user.role === "superAdmin";
+
+		const { registeredBy, verificationStatus, ...guestData } = data;
+		const status = canVerify && verificationStatus === "verified" ? "verified" : "pending";
 
 
 		// Check that the guest does not exist
@@ -305,6 +310,7 @@ export async function createGuest(data: CreateNewGuest) {
 		const guest = await prisma.guest.create({
 			data: {
 				...guestData,
+				verificationStatus: status,
 				...(registeredBy && {
 					registeredBy: {
 						connect: { id: registeredBy },
@@ -312,6 +318,11 @@ export async function createGuest(data: CreateNewGuest) {
 				})
 			},
 		});
+
+		// A guest verified on creation is immediately bookable
+		if (guest.verificationStatus === "verified") {
+			revalidateTag("booking-form-data")
+		}
 
 		revalidatePath("/guests");
 

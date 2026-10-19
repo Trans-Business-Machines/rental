@@ -118,6 +118,7 @@ export function CancelRequestDialog({
             variant="outline"
             disabled={mutation.isPending}
             onClick={handleClose}
+            className="flex-0"
           >
             Keep Request
           </Button>
@@ -127,7 +128,7 @@ export function CancelRequestDialog({
               handleCancel();
             }}
             disabled={mutation.isPending || isReasonEmpty}
-            className="bg-destructive hover:bg-destructive/90"
+            className="flex-1 bg-destructive hover:bg-destructive/90"
           >
             {mutation.isPending ? (
               <span className="flex items-center gap-2">

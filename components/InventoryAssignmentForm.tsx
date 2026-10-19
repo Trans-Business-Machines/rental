@@ -255,8 +255,8 @@ export function InventoryAssignmentForm({
           <SelectContent>
             {availableItems.map((item) => (
               <SelectItem key={item.id} value={item.id}>
-                {item.itemName} — {formatQty(item.availableQuantity)}{" "}
-                {item.unitOfMeasure} in store
+                {item.itemName} ({formatQty(item.availableQuantity)}{" "}
+                {item.unitOfMeasure} in store)
               </SelectItem>
             ))}
           </SelectContent>
@@ -271,7 +271,7 @@ export function InventoryAssignmentForm({
         {!preselectedItemId && selectedUnit && availableItems.length === 0 && (
           <p className="text-xs text-muted-foreground">
             Nothing in stock at {selectedUnit.propertyName}. Restock an item
-            first, or check that it isn&apos;t a laundry commodity — those are
+            first, or check that it isn&apos;t a laundry commodity, since those are
             tracked with usage logs rather than assignments.
           </p>
         )}
@@ -355,6 +355,7 @@ export function InventoryAssignmentForm({
             variant="outline"
             onClick={onCancel}
             disabled={loading}
+            className="flex-0"
           >
             Cancel
           </Button>
@@ -362,6 +363,7 @@ export function InventoryAssignmentForm({
         <Button
           type="submit"
           disabled={loading || !selectedItem || !validQty || exceedsStock}
+          className="flex-1"
         >
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Assign

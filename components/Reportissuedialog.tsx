@@ -36,7 +36,7 @@ const ISSUE_TYPES: { value: IssueType; label: string; hint: string }[] = [
   {
     value: "missing",
     label: "Missing",
-    hint: "Not where it should be — lost, taken, or unaccounted for.",
+    hint: "Not where it should be: lost, taken, or unaccounted for.",
   },
   {
     value: "worn_out",
@@ -186,9 +186,9 @@ export function ReportIssueDialog({
     >
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
 
-      <DialogContent className="w-11/12 sm:max-w-md">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Report an issue — {item.itemName}</DialogTitle>
+          <DialogTitle>Report an issue with {item.itemName}</DialogTitle>
           <DialogDescription>
             Logged as open until someone records how it was resolved.
           </DialogDescription>
@@ -216,8 +216,8 @@ export function ReportIssueDialog({
                   </SelectItem>
                   {assignments.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.unit.name} — {formatQty(a.reportableQuantity)}{" "}
-                      {item.unitOfMeasure} reportable
+                      {a.unit.name} ({formatQty(a.reportableQuantity)}{" "}
+                      {item.unitOfMeasure} reportable)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -294,7 +294,7 @@ export function ReportIssueDialog({
             <InfoBanner>
               {selectedAssignment ? (
                 <>
-                  Store stock is unchanged — these {item.unitOfMeasure} left
+                  Store stock is unchanged because these {item.unitOfMeasure} left
                   when they were assigned to {selectedAssignment.unit.name}.
                   Discarding or replacing the issue later writes them off the
                   assignment.
@@ -329,12 +329,14 @@ export function ReportIssueDialog({
               variant="outline"
               onClick={() => setDialogOpen(false)}
               disabled={loading}
+              className="flex-0"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={loading || !issueType || !validQty || exceeds}
+              className="flex-1"
             >
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

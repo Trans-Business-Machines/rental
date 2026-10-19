@@ -85,12 +85,12 @@ export function InventoryAssignmentDialog({
     <Dialog open={isOpen} onOpenChange={setOpen}>
       {triggerNode && <DialogTrigger asChild>{triggerNode}</DialogTrigger>}
 
-      <DialogContent className="max-h-[90vh] w-9/12 overflow-y-auto md:w-[40rem]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Assign Inventory Item</DialogTitle>
           <DialogDescription>
             Send stock from a property&apos;s store to one of its units.
-            Laundry commodities aren&apos;t listed here — they&apos;re tracked
+            Laundry commodities aren&apos;t listed here because they&apos;re tracked
             with usage logs instead.
           </DialogDescription>
         </DialogHeader>
