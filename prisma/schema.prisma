@@ -65,6 +65,7 @@ enum InventoryCategory {
   bathroom
   utensils
   housekeeping
+  table_setting
 }
 
 enum UnitOfMeasure {

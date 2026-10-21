@@ -68,6 +68,11 @@ export const CATEGORY_DISPLAY: Record<
     badgeClassName:
       "border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-950 dark:text-teal-300",
   },
+  table_setting: {
+    label: "Table setting",
+    badgeClassName:
+      "border-lime-200 bg-lime-50 text-lime-700 dark:border-lime-800 dark:bg-lime-950 dark:text-lime-300",
+  },
 };
 
 export const INVENTORY_CATEGORIES = Object.keys(
@@ -114,6 +119,7 @@ export const ISSUE_TRACKED_CATEGORIES: InventoryCategory[] = [
   "linens",
   "bathroom",
   "utensils",
+  "table_setting",
 ];
 
 export function categoryRules(category: InventoryCategory) {

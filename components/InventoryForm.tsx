@@ -113,6 +113,12 @@ const CATEGORY_OPTIONS: CategoryOption[] = (
       hint: "Used centrally by housekeeping. Tracked with usage logs, not assignments.",
       defaultUom: "litres",
     },
+    {
+      value: "table_setting",
+      label: "Table setting",
+      hint: "Table mats, napkins and the like. Assigned to units and expected back. Issues can be reported.",
+      defaultUom: "pieces",
+    },
   ] satisfies CategoryOption[]
 ).sort((a, b) => a.label.localeCompare(b.label));
 
