@@ -58,8 +58,6 @@ import {
   getPeriodLabelSingular,
   calculateTotalNights,
   formatDateInTimezone,
-  maskPhone,
-  maskEmail,
   maskIdNumber,
   formatDateKE,
 } from "@/lib/utils";
@@ -272,7 +270,7 @@ export function BookingRequestDetails({
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
                   <p className="font-medium">
-                    {maskEmail(guest.email, userRole)}
+                    {guest.email}
                   </p>
                 </div>
               </div>
@@ -282,7 +280,7 @@ export function BookingRequestDetails({
                 <div>
                   <p className="text-sm text-muted-foreground">Phone</p>
                   <p className="font-medium">
-                    {maskPhone(guest.phone, userRole)}
+                    {guest.phone}
                   </p>
                 </div>
               </div>

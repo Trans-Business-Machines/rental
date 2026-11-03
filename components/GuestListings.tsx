@@ -10,7 +10,6 @@ import { useSoftDeleteGuest } from "@/hooks/useGuests";
 import { AlertDialog } from "@/components/AlertDialog";
 import { Footer } from "@/components/Footer";
 import type { Guest } from "@/lib/types/types";
-import { usePermissions } from "@/hooks/usePermissions";
 
 interface GuestListingsProps {
   guests: Guest[];
@@ -36,7 +35,6 @@ function GuestListings({
   const [guestToArchive, setGuestToArchive] = useState<number | null>(null);
   const { mutateAsync, isPending } = useSoftDeleteGuest();
 
-  const { role } = usePermissions();
 
   const handleClick = (guestId: number) => {
     setGuestToArchive(guestId);
@@ -69,7 +67,6 @@ function GuestListings({
             setEditGuest={setEditGuest}
             handleClick={handleClick}
             isArchivePending={isPending}
-            userRole={role}
           />
         ) : (
           <GuestCards
@@ -78,7 +75,6 @@ function GuestListings({
             setEditGuest={setEditGuest}
             handleClick={handleClick}
             isArchivePending={isPending}
-             userRole={role}
           />
         )}
 

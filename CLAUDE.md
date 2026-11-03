@@ -45,7 +45,7 @@ There is no test runner configured in this repo — verify changes via `type-che
 - `middleware.ts` gates all non-API routes on the session cookie; `/login`, `/invite`, `/setup`, `/forgot-password`, `/reset-password` are the public exceptions.
 - Inside server actions, call `requirePermission(resource, action)` or `requireRole([...])` from [lib/check-permissions.ts](lib/check-permissions.ts) — it throws `"Unauthorized: Insufficent permissions."` (note the existing typo — hooks match on this exact string for toast messages, so preserve it rather than "fixing" it). Use `getServerSession()` from the same file to read the current user.
 - Agents (`role === "agent"`) are scoped to their own data throughout — most `get*` actions filter `requestedById: user.id` when the caller is an agent. Preserve this scoping when adding new queries.
-- PII (phone, email, ID number) is masked for non-`superAdmin` roles via `maskPhone`/`maskEmail`/`maskIdNumber` in [lib/utils.ts](lib/utils.ts).
+- ID/passport numbers are masked for non-`superAdmin` roles via `maskIdNumber` in [lib/utils.ts](lib/utils.ts). Phone numbers and emails are intentionally shown unmasked to all roles.
 
 ### Data model conventions (see [prisma/schema.prisma](prisma/schema.prisma))
 

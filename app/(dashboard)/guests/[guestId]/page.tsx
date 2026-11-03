@@ -8,8 +8,6 @@ import { format } from "date-fns";
 import {
   formatDateInTimezone,
   cn,
-  maskEmail,
-  maskPhone,
   maskIdNumber,
 } from "@/lib/utils";
 import { getServerSession } from "@/lib/check-permissions";
@@ -180,7 +178,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                       Email Address
                     </p>
                     <p className="text-sm font-semibold text-foreground">
-                      {maskEmail(guest.email, userRole)}
+                      {guest.email}
                     </p>
                   </div>
                 </div>
@@ -194,7 +192,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                       Phone Number
                     </p>
                     <p className="text-sm font-semibold text-foreground">
-                      {maskPhone(guest.phone, userRole)}
+                      {guest.phone}
                     </p>
                   </div>
                 </div>
@@ -479,7 +477,7 @@ async function GuestDetailsPage({ params }: GuestDetailsPageProps) {
                           Contact Phone
                         </p>
                         <p className="text-sm font-semibold text-foreground">
-                          {maskPhone(guest.emergencyContactPhone, userRole)}
+                          {guest.emergencyContactPhone}
                         </p>
                       </div>
                     </div>

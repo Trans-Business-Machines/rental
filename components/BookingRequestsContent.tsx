@@ -45,7 +45,7 @@ import {
   useBookingRequests,
   useCancelBookingRequest,
 } from "@/hooks/useBookingRequests";
-import { cn, maskPhone, maskEmail } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type {
   BookingRequestStatus,
@@ -209,7 +209,7 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
                               {guest.firstName} {guest.lastName}
                             </p>
                             <p className="hidden md:block text-xs text-muted-foreground">
-                              {maskEmail(guest.email, userRole)}
+                              {guest.email}
                             </p>
                           </div>
                         </div>
@@ -231,7 +231,7 @@ export function BookingRequestsContent({ userRole }: { userRole: Role }) {
 
                       {/* Phone */}
                       <TableCell className="text-night hidden lg:table-cell">
-                        {maskPhone(guest.phone, userRole)}
+                        {guest.phone}
                       </TableCell>
 
                       {/* Check-in */}
