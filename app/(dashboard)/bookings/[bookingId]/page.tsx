@@ -33,8 +33,6 @@ import {
   formatDateKE,
   hasDiscount,
   getDurationLabel,
-  maskPhone,
-  maskEmail,
   maskIdNumber,
 } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -200,7 +198,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                       Email Address
                     </p>
                     <p className="text-sm text-foreground truncate">
-                      {maskEmail(booking.guest.email, user.role as Role)}
+                      {booking.guest.email}
                     </p>
                   </div>
                 </div>
@@ -214,7 +212,7 @@ async function BookingDetails({ params }: BookingDetailsPros) {
                       Phone Number
                     </p>
                     <p className="text-sm text-foreground">
-                      {maskPhone(booking.guest.phone, user.role as Role)}
+                      {booking.guest.phone}
                     </p>
                   </div>
                 </div>

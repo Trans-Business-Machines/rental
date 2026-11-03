@@ -8,7 +8,7 @@ import type { BookingStatus, UnitStatus, Guest, PriceDuration, Role } from "@/li
 // Constants
 export const LIMIT = 9;
 const TIMEZONE = "Africa/Nairobi";
-export const BUCKET = "media";
+export const BUCKET = "media_dev";
 
 
 nationalities.registerLocale(enLocale);
@@ -230,24 +230,6 @@ export const formatFileSize = (bytes: number) => {
 
 
 // ================= MASKING UTILITIES =================
-
-export function maskPhone(phone: string, role: Role) {
-  if (role === "superAdmin") return phone;
-  if (phone.length <= 4) return "****";
-  const start = phone.slice(0, 4);
-  const end = phone.slice(-2);
-  const masked = "*".repeat(phone.length - 6);
-  return `${start}${masked}${end}`;
-}
-
-export function maskEmail(email: string, role: Role) {
-  if (role === "superAdmin") return email;
-  const [local, domain] = email.split("@");
-  if (!domain) return "****";
-  const visible = local.slice(0, 2);
-  const masked = "*".repeat(Math.max(local.length - 2, 3));
-  return `${visible}${masked}@${domain}`;
-}
 
 export function maskIdNumber(id: string, role: Role) {
   if (role === "superAdmin") return id;

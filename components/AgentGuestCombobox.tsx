@@ -18,7 +18,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { cn, maskEmail } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useDebouncedCallback } from "use-debounce";
 import { useSearchGuestsForBooking } from "@/hooks/useGuests";
 import type { GuestSearchResult } from "@/lib/types/types";
@@ -98,7 +98,7 @@ export function GuestCombobox({
                   {value.firstName} {value.lastName}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {maskEmail(value.email, "agent")}
+                  {value.email}
                 </span>
               </div>
             ) : (
@@ -175,7 +175,7 @@ export function GuestCombobox({
                                 {guest.firstName} {guest.lastName}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {maskEmail(guest.email, "agent")}
+                                {guest.email}
                               </p>
                             </div>
                           </div>
@@ -228,7 +228,7 @@ export function GuestCombobox({
               {value.firstName} {value.lastName}
             </p>
             <p className="text-sm text-muted-foreground">
-              {maskEmail(value.email, "agent")}
+              {value.email}
             </p>
           </div>
           <Button

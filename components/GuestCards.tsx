@@ -24,7 +24,6 @@ import {
 import { formatDate } from "date-fns";
 import { cn, shouldDisableDelete } from "@/lib/utils";
 import Link from "next/link";
-import { maskPhone, maskEmail } from "@/lib/utils";
 import type { GuestsTableAndCardsProps } from "@/lib/types/types";
 
 function GuestCards({
@@ -33,7 +32,6 @@ function GuestCards({
   setIsDialogOpen,
   handleClick,
   isArchivePending,
-  userRole,
 }: GuestsTableAndCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -145,11 +143,11 @@ function GuestCards({
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-sm">
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">{maskEmail(guest.email, userRole)}</span>
+                <span className="text-muted-foreground">{guest.email}</span>
               </div>
               <div className="flex items-center space-x-2 text-sm">
                 <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">{maskPhone(guest.phone, userRole)}</span>
+                <span className="text-muted-foreground">{guest.phone}</span>
               </div>
             </div>
 

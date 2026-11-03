@@ -110,7 +110,6 @@ export interface BookingsTableAndCardsProps {
 export interface GuestsTableAndCardsProps {
     guests: Guest[];
     isArchivePending: boolean,
-    userRole: Role,
     setIsDialogOpen: (open: boolean) => void;
     setEditGuest: (guest: Guest) => void;
     handleClick: (guestId: number) => void
