@@ -35,11 +35,18 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 import { AppSkeleton } from "./AppSkeleton";
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { usePendingBookingRequestCount } from "@/hooks/useBookingRequests";
 import { useOpenIssueCount } from "@/hooks/useInventory";
 import type { Role } from "@/lib/types/types";
+
+/* ------------------   WHATSAPP  ------------------*/
+// wa.me requires the number in international format without "+" (0740199330 -> 254740199330).
+const WHATSAPP_NUMBER = "254740199330";
+const WHATSAPP_MESSAGE = "Hello I would like to inquire about Nordic Loft.";
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 
 /* ------------------   INTERFACES  ------------------*/
 interface LayoutProps {
@@ -324,6 +331,28 @@ export function Layout({ children }: LayoutProps) {
           </div>
 
           <div className="flex items-center gap-4">
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+            >
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Chat with us on WhatsApp"
+                title="Chat with us on WhatsApp"
+              >
+                <Image
+                  src="/images/whatsapp.png"
+                  alt="WhatsApp"
+                  width={28}
+                  height={28}
+                  className="size-7 object-contain"
+                />
+              </a>
+            </Button>
             <CurrencySelect />
             <div className="flex items-center gap-3">
               <div className="hidden md:block text-right">
