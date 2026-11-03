@@ -6,9 +6,9 @@ import enLocale from 'i18n-nationality/langs/en.json';
 import type { BookingStatus, UnitStatus, Guest, PriceDuration, Role } from "@/lib/types/types";
 
 // Constants
-export const LIMIT = 9;
+export const LIMIT = 12;
 const TIMEZONE = "Africa/Nairobi";
-export const BUCKET = "media_dev";
+export const BUCKET = "media";
 
 
 nationalities.registerLocale(enLocale);
