@@ -1,16 +1,21 @@
 import {
     keepPreviousData,
     useInfiniteQuery,
+    useMutation,
     useQuery,
     useQueryClient,
 } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
+    exportStockReport,
     getInventoryAssignments,
     getInventoryItemsBatch,
     getOpenIssueCount,
     type GetInventoryAssignmentsProps,
     type InventoryItemsBatchProps,
 } from "@/lib/actions/inventory";
+import type { StockReportFilters } from "@/lib/schemas/inventory";
+import { PDF_MIME, downloadBase64File } from "@/lib/export-utils";
 
 export type ItemListFilters = Omit<InventoryItemsBatchProps, "cursor">;
 export type AssignmentListFilters = Omit<GetInventoryAssignmentsProps, "cursor">;
@@ -114,5 +119,31 @@ export function useAssignmentsInfinite(
             initialData: { pages: [initialBatch], pageParams: [undefined] },
             initialDataUpdatedAt: Date.now(),
         }),
+    });
+}
+
+/** Generate the stock report PDF for one property and download it. */
+export function useExportStockReport() {
+    return useMutation({
+        mutationFn: async (filters: StockReportFilters) => {
+            const result = await exportStockReport(filters);
+            if (!result.success) throw new Error(result.message);
+            return result;
+        },
+        onSuccess: ({ file, filename, count }) => {
+            downloadBase64File(file, filename, PDF_MIME);
+            toast.success(`Stock report ready: ${count} item${count === 1 ? "" : "s"}.`);
+        },
+        onError: (error) => {
+            let errMsg = "Failed to generate the stock report";
+
+            if (error instanceof Error) {
+                errMsg = error.message.includes("Unauthorized: Insufficent permissions.")
+                    ? "Unauthorized Insufficent permissions."
+                    : error.message;
+            }
+
+            toast.error(errMsg);
+        },
     });
 }

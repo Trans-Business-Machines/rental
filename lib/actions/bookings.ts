@@ -3,8 +3,12 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { evaluateUnitStatus, normalizeCheckOutTo10amEAT } from "@/lib/utils"
-import { requirePermission, getServerSession } from "@/lib/check-permissions"
-import { LIMIT } from "@/lib/utils"
+import { requirePermission, requireRole, getServerSession } from "@/lib/check-permissions"
+import { LIMIT, calculateTotalAmount, getDurationLabel, maskIdNumber } from "@/lib/utils"
+import { kesToUsd } from "@/lib/currency"
+import { exportBookingsSchema, type ExportBookingsFilters } from "@/lib/schemas/booking"
+import { EXPORT_MAX_ROWS, eatDayRange, exportDateStamp, toExcelEAT } from "@/lib/export-utils"
+import ExcelJS from "exceljs"
 import { redirect } from "next/navigation";
 import type {
 	BookingStatus,
@@ -657,3 +661,142 @@ export const getBookingFormData = async () => {
 		guests: processedGuests,
 	};
 };
+// ================= BOOKINGS EXPORT =================
+
+const STATUS_LABELS: Record<BookingStatus, string> = {
+	pending: "Pending",
+	reserved: "Reserved",
+	checked_in: "Checked In",
+	checked_out: "Checked Out",
+	cancelled: "Cancelled",
+};
+
+export async function exportBookings(filters: ExportBookingsFilters) {
+	await requireRole(["admin", "superAdmin"], "Unauthorized: Insufficent permissions.");
+
+	const session = await getServerSession();
+	const userRole = session?.user?.role as Role;
+
+	const parsed = exportBookingsSchema.safeParse(filters);
+	if (!parsed.success) {
+		return { success: false as const, message: parsed.error.errors[0]?.message ?? "Invalid filters" };
+	}
+
+	const { propertyId, status, createdFrom, createdTo } = parsed.data;
+	const createdAt = eatDayRange(createdFrom, createdTo);
+
+	const where = {
+		deletedAt: null,
+		...(status !== "all" && { status }),
+		...(propertyId !== "all" && { propertyId: parseInt(propertyId) }),
+		...(createdAt && { createdAt }),
+	};
+
+	const total = await prisma.booking.count({ where });
+
+	if (total === 0) {
+		return { success: false as const, message: "No bookings match these filters." };
+	}
+
+	if (total > EXPORT_MAX_ROWS) {
+		return {
+			success: false as const,
+			message: `${total.toLocaleString()} bookings match — the export limit is ${EXPORT_MAX_ROWS.toLocaleString()}. Narrow the filters and try again.`,
+		};
+	}
+
+	const bookings = await prisma.booking.findMany({
+		where,
+		include: {
+			guest: true,
+			property: { select: { name: true } },
+			unit: { select: { name: true } },
+			requestedBy: { select: { name: true } },
+			approvedBy: { select: { name: true } },
+		},
+		orderBy: { createdAt: "asc" },
+	});
+
+	const workbook = new ExcelJS.Workbook();
+	workbook.created = new Date();
+	const sheet = workbook.addWorksheet("Bookings", {
+		views: [{ state: "frozen", ySplit: 1 }],
+	});
+
+	const dateFmt = "dd mmm yyyy hh:mm";
+	const kesFmt = "#,##0";
+	const usdFmt = "#,##0.00";
+
+	sheet.columns = [
+		{ header: "Booking ID", key: "id", width: 11 },
+		{ header: "Status", key: "status", width: 13 },
+		{ header: "Guest Name", key: "guestName", width: 24 },
+		{ header: "Phone", key: "phone", width: 16 },
+		{ header: "Email", key: "email", width: 28 },
+		{ header: "ID Type", key: "idType", width: 12 },
+		{ header: "ID / Passport No.", key: "idNumber", width: 18 },
+		{ header: "Property", key: "property", width: 22 },
+		{ header: "Unit", key: "unit", width: 16 },
+		{ header: "Check-in", key: "checkIn", width: 18, style: { numFmt: dateFmt } },
+		{ header: "Check-out", key: "checkOut", width: 18, style: { numFmt: dateFmt } },
+		{ header: "Duration", key: "duration", width: 12 },
+		{ header: "Period", key: "period", width: 8 },
+		{ header: "Guests", key: "guests", width: 8 },
+		{ header: "Unit Price (KES)", key: "unitPrice", width: 16, style: { numFmt: kesFmt } },
+		{ header: "Total (KES)", key: "totalKes", width: 14, style: { numFmt: kesFmt } },
+		{ header: "Total (USD)", key: "totalUsd", width: 13, style: { numFmt: usdFmt } },
+		{ header: "Payment Method", key: "paymentMethod", width: 16 },
+		{ header: "Payment Code", key: "paymentCode", width: 16 },
+		{ header: "Requested By", key: "requestedBy", width: 18 },
+		{ header: "Approved By", key: "approvedBy", width: 18 },
+		{ header: "Approved At", key: "approvedAt", width: 18, style: { numFmt: dateFmt } },
+		{ header: "Created At", key: "createdAt", width: 18, style: { numFmt: dateFmt } },
+	];
+
+	for (const booking of bookings) {
+		const { guest } = booking;
+		const idValue = guest.idType === "passport" ? guest.passportNumber : guest.idNumber;
+		// unitPrice is stored already-discounted and totalAmount may include legacy VAT, so derive the total
+		const totalKes = calculateTotalAmount(booking.unitPrice, booking.period);
+
+		sheet.addRow({
+			id: booking.id,
+			status: STATUS_LABELS[booking.status] ?? booking.status,
+			guestName: `${guest.firstName} ${guest.lastName}`,
+			phone: guest.phone,
+			email: guest.email,
+			idType: guest.idType === "passport" ? "Passport" : "National ID",
+			idNumber: idValue ? maskIdNumber(idValue, userRole) : "",
+			property: booking.property.name,
+			unit: booking.unit.name,
+			checkIn: toExcelEAT(booking.checkInDate),
+			checkOut: toExcelEAT(booking.checkOutDate),
+			duration: getDurationLabel(booking.priceDuration),
+			period: booking.period,
+			guests: booking.numberOfGuests,
+			unitPrice: booking.unitPrice,
+			totalKes,
+			totalUsd: Math.round(kesToUsd(totalKes) * 100) / 100,
+			paymentMethod: booking.paymentMethod,
+			paymentCode: booking.paymentCode,
+			requestedBy: booking.requestedBy?.name ?? "",
+			approvedBy: booking.approvedBy?.name ?? "",
+			approvedAt: toExcelEAT(booking.approvedAt),
+			createdAt: toExcelEAT(booking.createdAt),
+		});
+	}
+
+	const header = sheet.getRow(1);
+	header.font = { bold: true };
+	header.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF1F5F9" } };
+	sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columns.length } };
+
+	const buffer = await workbook.xlsx.writeBuffer();
+
+	return {
+		success: true as const,
+		file: Buffer.from(buffer).toString("base64"),
+		filename: `bookings-${exportDateStamp()}.xlsx`,
+		count: bookings.length,
+	};
+}

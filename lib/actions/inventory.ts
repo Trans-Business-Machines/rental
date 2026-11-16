@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getServerSession, requirePermission } from "@/lib/check-permissions";
+import { getServerSession, requirePermission, requireRole } from "@/lib/check-permissions";
 import { LIMIT } from "@/lib/utils";
 import {
 	INVENTORY_CATEGORIES,
@@ -19,6 +19,11 @@ import type {
 } from "@/prisma/generated/client";
 import { Prisma } from "@/prisma/generated/client";
 import { redirect } from "next/navigation";
+import { formatInTimeZone } from "date-fns-tz";
+import { getStockLevelLabel, stockLevelOf, type StockLevelFilter } from "@/lib/inventory-stock";
+import { stockReportSchema, type StockReportFilters } from "@/lib/schemas/inventory";
+import { EXPORT_TIMEZONE, exportDateStamp } from "@/lib/export-utils";
+import { renderStockReportPdf, type StockReportGroup } from "@/lib/pdf/StockReport";
 
 
 export type ActionErrorCode =
@@ -375,7 +380,7 @@ const TX_OPTS = {
 
 interface InventoryItemFilters {
 	search?: string;
-	status?: string;
+	stock?: string;
 	category?: string;
 	propertyId?: number;
 }
@@ -387,9 +392,28 @@ interface GetInventoryItemsProps extends InventoryItemFilters {
 /** Rows per infinite scroll batch on the inventory page. */
 const BATCH_SIZE = 30;
 
+/**
+ * Stock level as a query. Mirrors stockLevelOf() in lib/inventory-stock.ts;
+ * the threshold comparison uses a field reference so the database does it.
+ */
+function stockLevelWhere(stock: string): Prisma.InventoryItemWhereInput {
+	const restockAt = prisma.inventoryItem.fields.restockAt;
+
+	switch (stock as StockLevelFilter) {
+		case "out_of_stock":
+			return { availableQuantity: { lte: 0 } };
+		case "low_stock":
+			return { availableQuantity: { gt: 0, lte: restockAt } };
+		case "in_stock":
+			return { AND: [{ availableQuantity: { gt: 0 } }, { availableQuantity: { gt: restockAt } }] };
+		default:
+			return {};
+	}
+}
+
 function inventoryItemsWhere({
 	search = "",
-	status = "all",
+	stock = "all",
 	category = "all",
 	propertyId,
 }: InventoryItemFilters): Prisma.InventoryItemWhereInput {
@@ -399,9 +423,7 @@ function inventoryItemsWhere({
 		...(search && {
 			itemName: { contains: search, mode: "insensitive" as const },
 		}),
-		...(status !== "all" && {
-			status: status as Prisma.EnumInventoryItemStatusFilter["equals"],
-		}),
+		...stockLevelWhere(stock),
 		...(category !== "all" && { category: category as InventoryCategory }),
 	};
 }
@@ -2510,3 +2532,114 @@ export async function getIssueStats(propertyId?: number) {
 	}
 }
 
+/* ------------------------------------------------------------------ *
+ * STOCK REPORT (PDF)
+ * ------------------------------------------------------------------ */
+
+export async function exportStockReport(filters: StockReportFilters) {
+	await requireRole(["admin", "superAdmin"], "Unauthorized: Insufficent permissions.");
+
+	const session = await getServerSession();
+
+	const parsed = stockReportSchema.safeParse(filters);
+	if (!parsed.success) {
+		return { success: false as const, message: parsed.error.errors[0]?.message ?? "Invalid filters" };
+	}
+
+	const { propertyId, category, stock } = parsed.data;
+
+	const property = await prisma.property.findFirst({
+		where: { id: propertyId, deletedAt: null },
+		select: { name: true, address: true },
+	});
+
+	if (!property) {
+		return { success: false as const, message: "Property not found." };
+	}
+
+	const items = await prisma.inventoryItem.findMany({
+		where: {
+			...inventoryItemsWhere({ propertyId, category, stock }),
+			// Discontinued items aren't stocked any more
+			status: "active",
+		},
+		select: {
+			itemName: true,
+			category: true,
+			unitOfMeasure: true,
+			availableQuantity: true,
+			restockAt: true,
+			unitCost: true,
+			assignments: {
+				where: { status: { in: ["active", "partial"] } },
+				select: { quantity: true, returnedQuantity: true, writtenOffQuantity: true },
+			},
+		},
+		orderBy: { itemName: "asc" },
+	});
+
+	if (items.length === 0) {
+		return { success: false as const, message: "No items match these filters." };
+	}
+
+	const summary = {
+		items: items.length,
+		inStock: 0,
+		lowStock: 0,
+		outOfStock: 0,
+		totalValue: 0,
+		itemsWithoutCost: 0,
+	};
+	const groups = new Map<string, StockReportGroup>();
+
+	for (const item of items) {
+		const inStore = item.availableQuantity.toNumber();
+		const restockAt = item.restockAt.toNumber();
+		const level = stockLevelOf(inStore, restockAt);
+		const inUnits = item.assignments
+			.reduce((sum, a) => sum.add(outstandingOf(a)), new Prisma.Decimal(0))
+			.toNumber();
+		const stockValue = item.unitCost === null ? null : inStore * item.unitCost;
+
+		if (level === "in_stock") summary.inStock += 1;
+		else if (level === "low_stock") summary.lowStock += 1;
+		else summary.outOfStock += 1;
+
+		if (stockValue === null) summary.itemsWithoutCost += 1;
+		else summary.totalValue += stockValue;
+
+		const label = getCategoryDisplay(item.category).label;
+		const group = groups.get(label) ?? { category: label, rows: [] };
+		group.rows.push({
+			itemName: item.itemName,
+			unitOfMeasure: item.unitOfMeasure,
+			inStore,
+			inUnits,
+			restockAt,
+			level,
+			unitCost: item.unitCost,
+			stockValue,
+		});
+		groups.set(label, group);
+	}
+
+	const pdf = await renderStockReportPdf({
+		property,
+		generatedAt: `${formatInTimeZone(new Date(), EXPORT_TIMEZONE, "d MMM yyyy, HH:mm")} EAT`,
+		generatedBy: session?.user?.name ?? "Unknown",
+		categoryLabel: category === "all" ? "All categories" : getCategoryDisplay(category).label,
+		stockLabel: getStockLevelLabel(stock),
+		showCategoryBands: category === "all",
+		groups: [...groups.values()].sort((a, b) => a.category.localeCompare(b.category)),
+		summary,
+	});
+
+	const slug = property.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+	return {
+		success: true as const,
+		file: Buffer.from(pdf).toString("base64"),
+		filename: `stock-report-${slug || "property"}-${exportDateStamp()}.pdf`,
+		count: items.length,
+	};
+}

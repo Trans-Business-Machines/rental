@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalDay, isOrderedRange } from "@/lib/schemas/export";
 
 /**
  * Extracts total minutes from a datetime-local string (e.g. "2025-06-01T14:30")
@@ -58,3 +59,20 @@ export const BookingFormSchema = z
     });
 
 export type BookingFormData = z.infer<typeof BookingFormSchema>;
+// ================= BOOKINGS EXPORT =================
+
+export const exportBookingsSchema = z
+    .object({
+        propertyId: z.string().default("all"),
+        status: z
+            .enum(["all", "pending", "reserved", "checked_in", "checked_out", "cancelled"])
+            .default("all"),
+        createdFrom: optionalDay,
+        createdTo: optionalDay,
+    })
+    .refine((d) => isOrderedRange(d.createdFrom, d.createdTo), {
+        message: "Start date must be on or before the end date",
+        path: ["createdTo"],
+    });
+
+export type ExportBookingsFilters = z.input<typeof exportBookingsSchema>;

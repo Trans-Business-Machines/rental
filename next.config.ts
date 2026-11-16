@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Rendered server-side for the stock report; bundling it breaks its font/layout loaders.
+  serverExternalPackages: ["@react-pdf/renderer"],
   images: {
     remotePatterns: [
       {

@@ -8,7 +8,7 @@ import type { BookingStatus, UnitStatus, Guest, PriceDuration, Role } from "@/li
 // Constants
 export const LIMIT = 12;
 const TIMEZONE = "Africa/Nairobi";
-export const BUCKET = "media";
+export const BUCKET = "media_dev";
 
 
 nationalities.registerLocale(enLocale);
@@ -194,17 +194,6 @@ export const formatDateInTimezone = (
 
 }
 
-/*export function getStartOfDay(date: Date | string): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-export function getEndOfDay(date: Date | string): Date {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
-  return d;
-}*/
 
 export function formatDateKE(date: Date | string): string {
   return new Intl.DateTimeFormat("en-KE", {
@@ -232,7 +221,7 @@ export const formatFileSize = (bytes: number) => {
 // ================= MASKING UTILITIES =================
 
 export function maskIdNumber(id: string, role: Role) {
-  if (role === "superAdmin") return id;
+  if (role === "superAdmin" || role === "admin") return id;
   if (id.length <= 4) return "****";
   const start = id.slice(0, 2);
   const end = id.slice(-2);
