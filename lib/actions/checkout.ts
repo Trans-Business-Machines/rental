@@ -3,7 +3,11 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getServerSession, requirePermission } from "../check-permissions";
-import { LIMIT } from "@/lib/utils"
+import { LIMIT, formatDateKE, formatDateInTimezone } from "@/lib/utils"
+import { formatBoth } from "@/lib/currency";
+import { notifyGuestOfCheckout } from "@/lib/services/email";
+import { differenceInCalendarDays } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { categoryRules } from "@/lib/inventory-categories";
 import { Prisma } from "@/prisma/generated/client";
 import type {
@@ -26,6 +30,8 @@ export type AggregatedAssignment = {
 	unitOfMeasure: UnitOfMeasure;
 	/** Assigned minus returned, summed across the item's open assignments. */
 	totalQuantity: number;
+	/** Current replacement cost per unit, in KES; null when never recorded. */
+	unitCost: number | null;
 };
 
 type CheckoutData = {
@@ -190,9 +196,15 @@ export async function getCheckoutReportById(id: number) {
 	}
 }
 
+/** Nights between check-in and checkout, counted on the EAT calendar. */
+function nightsStayed(checkIn: Date, checkOut: Date) {
+	const day = (d: Date) => new Date(formatInTimeZone(d, "Africa/Nairobi", "yyyy-MM-dd"));
+	return Math.max(1, differenceInCalendarDays(day(checkOut), day(checkIn)));
+}
+
 export async function createCheckoutReport(
 	data: CheckoutData
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; emailSent?: boolean }> {
 	try {
 		// Check if current user can checkout a guest
 		await requirePermission("guest", "check-out");
@@ -222,9 +234,14 @@ export async function createCheckoutReport(
 			}
 		}
 
+		// Damaged/missing items with their names, for the guest's checkout email
+		let chargedItems: { itemName: string; damaged: number; missing: number }[] = [];
+
 		// Use transaction to ensure atomicity
 		const result = await prisma.$transaction(
 			async (tx) => {
+				chargedItems = [];
+
 				// 1. Create the checkout report
 				const report = await tx.checkoutReport.create({
 					data: {
@@ -288,6 +305,11 @@ export async function createCheckoutReport(
 					}
 
 					const { itemName, category, unitOfMeasure } = assignments[0].inventoryItem;
+					chargedItems.push({
+						itemName,
+						damaged: item.damagedCount,
+						missing: item.missingCount,
+					});
 
 					if (!categoryRules(category).canReportIssue) {
 						throw new CheckoutError(
@@ -406,9 +428,27 @@ export async function createCheckoutReport(
 			? " Damaged and missing items have been logged as issues in Inventory."
 			: "";
 
+		// After the commit, so a failed email can't undo the checkout
+		const { sent: emailSent } = await notifyGuestOfCheckout({
+			to: result.guest.email,
+			guestFirstName: result.guest.firstName,
+			propertyName: result.booking.property.name,
+			unitName: result.booking.unit.name,
+			checkInDate: formatDateKE(result.booking.checkInDate),
+			checkOutDate: formatDateInTimezone(actualCheckoutDate),
+			nights: nightsStayed(result.booking.checkInDate, actualCheckoutDate),
+			chargedItems,
+			damageTotal: result.totalDamageCost > 0 ? formatBoth(result.totalDamageCost) : null,
+		});
+
+		const emailNote = emailSent
+			? ` A checkout email was sent to ${result.guest.email}.`
+			: " The checkout email to the guest couldn't be sent.";
+
 		return {
 			success: true,
-			message: `${result.guest.firstName} ${result.guest.lastName} checked out successfully.${issuesRaised}`
+			message: `${result.guest.firstName} ${result.guest.lastName} checked out successfully.${issuesRaised}${emailNote}`,
+			emailSent,
 		};
 	} catch (error) {
 		console.error("Error creating checkout report:", error);
@@ -451,6 +491,7 @@ export async function getInventoryAssignmentsForUnit(
 						itemName: true,
 						category: true,
 						unitOfMeasure: true,
+						unitCost: true,
 					},
 				},
 			},
@@ -463,7 +504,7 @@ export async function getInventoryAssignmentsForUnit(
 		>();
 
 		for (const assignment of assignments) {
-			const { id: itemId, itemName, category, unitOfMeasure } = assignment.inventoryItem;
+			const { id: itemId, itemName, category, unitOfMeasure, unitCost } = assignment.inventoryItem;
 
 			if (!categoryRules(category).expectsReturn) continue;
 
@@ -480,6 +521,7 @@ export async function getInventoryAssignmentsForUnit(
 					itemName,
 					category,
 					unitOfMeasure,
+					unitCost,
 					totalQuantity: outstanding,
 				});
 			}

@@ -1,5 +1,6 @@
 import z from "zod";
 import { differenceInYears } from "date-fns";
+import { optionalDay, isOrderedRange } from "@/lib/schemas/export";
 
 const nameRegex = /^[A-Za-z]+$/;
 const phoneRegex = /^\+?(?=(?:\D*\d){7,15}\D*$)[\d\s\-]+$/;
@@ -130,3 +131,17 @@ export type GuestEditFormData = z.infer<typeof GuestEditSchema>;
 export type NewGuest = z.infer<typeof GuestSchema>;
 
 export type GuestIdTypes = Pick<NewGuest, "idType">["idType"];
+
+// ================= GUESTS EXPORT =================
+export const exportGuestsSchema = z
+    .object({
+        status: z.enum(["all", "pending", "verified", "rejected"]).default("all"),
+        addedFrom: optionalDay,
+        addedTo: optionalDay,
+    })
+    .refine((d) => isOrderedRange(d.addedFrom, d.addedTo), {
+        message: "Start date must be on or before the end date",
+        path: ["addedTo"],
+    });
+
+export type ExportGuestsFilters = z.input<typeof exportGuestsSchema>;

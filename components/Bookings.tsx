@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BookingEditDialog } from "@/components/booking-edit-dialog";
+import { BookingEditDialog } from "@/components/BookingEditDialog";
 import { useTableMode } from "@/hooks/useTableMode";
 import { SearchNotFound } from "./SearchNotFound";
 import { ItemsNotFound } from "./ItemsNotFound";

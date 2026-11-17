@@ -1,4 +1,4 @@
-import { createGuest, getGuests, getGuestStats } from "@/lib/actions/guests";
+import { createGuest, exportGuests, getGuests, getGuestStats } from "@/lib/actions/guests";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	updateGuest,
@@ -9,6 +9,8 @@ import {
 } from "@/lib/actions/guests";
 import { toast } from "sonner";
 import type { Guest, GuestUpdateFormData } from "@/lib/types/types";
+import type { ExportGuestsFilters } from "@/lib/schemas/guests";
+import { downloadBase64File } from "@/lib/export-utils";
 import { searchGuestsForBooking } from "@/lib/actions/guests";
 
 interface UseGuestsParams {
@@ -301,3 +303,29 @@ export function useSearchGuestsForBooking(query: string, enabled = true) {
 		enabled,
 	});
 }
+
+// Export guests to an .xlsx file and trigger a browser download
+export const useExportGuests = () => {
+	return useMutation({
+		mutationFn: async (filters: ExportGuestsFilters) => {
+			const result = await exportGuests(filters);
+			if (!result.success) throw new Error(result.message);
+			return result;
+		},
+		onSuccess: ({ file, filename, count }) => {
+			downloadBase64File(file, filename);
+			toast.success(`Exported ${count} guest${count === 1 ? "" : "s"}.`);
+		},
+		onError: (error) => {
+			let errMsg = "Failed to export guests";
+
+			if (error instanceof Error) {
+				errMsg = error.message.includes("Unauthorized: Insufficent permissions.")
+					? "Unauthorized Insufficent permissions."
+					: error.message;
+			}
+
+			toast.error(errMsg);
+		},
+	});
+};

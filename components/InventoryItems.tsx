@@ -20,6 +20,7 @@ import { useInventoryItemsInfinite } from "@/hooks/useInventory";
 import type { getInventoryItemsBatch } from "@/lib/actions/inventory";
 import type { PropertyNames } from "@/lib/types/types";
 import { CATEGORY_DISPLAY, INVENTORY_CATEGORIES } from "@/lib/inventory-categories";
+import { STOCK_LEVELS } from "@/lib/inventory-stock";
 
 /** Built from the enum config, so a new category appears here automatically. */
 const CATEGORY_OPTIONS = INVENTORY_CATEGORIES.map((value) => ({
@@ -29,14 +30,14 @@ const CATEGORY_OPTIONS = INVENTORY_CATEGORIES.map((value) => ({
 
 export interface InventoryItemsFilters {
   search: string;
-  status: string;
+  stock: string;
   category: string;
   propertyId: string;
 }
 
 const DEFAULT_FILTERS: InventoryItemsFilters = {
   search: "",
-  status: "all",
+  stock: "all",
   category: "all",
   propertyId: "all",
 };
@@ -45,7 +46,7 @@ const DEFAULT_FILTERS: InventoryItemsFilters = {
 function filtersFromParams(params: URLSearchParams): InventoryItemsFilters {
   return {
     search: params.get("search") || DEFAULT_FILTERS.search,
-    status: params.get("status") || DEFAULT_FILTERS.status,
+    stock: params.get("stock") || DEFAULT_FILTERS.stock,
     category: params.get("category") || DEFAULT_FILTERS.category,
     propertyId: params.get("propertyId") || DEFAULT_FILTERS.propertyId,
   };
@@ -79,7 +80,7 @@ function InventoryItems({
   } = useInventoryItemsInfinite(
     {
       search: applied.search,
-      status: applied.status,
+      stock: applied.stock,
       category: applied.category,
       propertyId:
         applied.propertyId !== "all" ? Number(applied.propertyId) : undefined,
@@ -120,8 +121,8 @@ function InventoryItems({
     if (filters.search) {
       params.set("search", filters.search);
     }
-    if (filters.status !== "all") {
-      params.set("status", filters.status);
+    if (filters.stock !== "all") {
+      params.set("stock", filters.stock);
     }
     if (filters.category !== "all") {
       params.set("category", filters.category);
@@ -235,21 +236,24 @@ function InventoryItems({
             </Select>
           </div>
 
-          {/* Status Filter */}
+          {/* Stock level Filter */}
           <div className="md:flex-1">
             <Select
-              value={filters.status}
+              value={filters.stock}
               onValueChange={(value) =>
-                setFilters((prev) => ({ ...prev, status: value }))
+                setFilters((prev) => ({ ...prev, stock: value }))
               }
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="All Status" />
+                <SelectValue placeholder="All Stock Levels" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="discontinued">Discontinued</SelectItem>
+                <SelectItem value="all">All Stock Levels</SelectItem>
+                {STOCK_LEVELS.map((level) => (
+                  <SelectItem key={level.value} value={level.value}>
+                    {level.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

@@ -8,10 +8,13 @@ import {
 	restoreBooking,
 	softDeleteBooking,
 	deleteBooking,
-	getSoftDeletedBookings
+	getSoftDeletedBookings,
+	exportBookings
 } from "@/lib/actions/bookings";
 import { checkoutKeys } from "@/hooks/useGuestCheckout";
 import type { CreateBookingData, UpdatedBookingData } from "@/lib/types/types"
+import type { ExportBookingsFilters } from "@/lib/schemas/booking"
+import { downloadBase64File } from "@/lib/export-utils"
 
 interface Booking {
 	id: number;
@@ -264,3 +267,30 @@ export const useDeleteBooking = () => {
 		}
 	})
 }
+
+
+// Export bookings to an .xlsx file and trigger a browser download
+export const useExportBookings = () => {
+	return useMutation({
+		mutationFn: async (filters: ExportBookingsFilters) => {
+			const result = await exportBookings(filters);
+			if (!result.success) throw new Error(result.message);
+			return result;
+		},
+		onSuccess: ({ file, filename, count }) => {
+			downloadBase64File(file, filename);
+			toast.success(`Exported ${count} booking${count === 1 ? "" : "s"}.`);
+		},
+		onError: (error) => {
+			let errMsg = "Failed to export bookings"
+
+			if (error instanceof Error) {
+				errMsg = error.message.includes("Unauthorized: Insufficent permissions.")
+					? "Unauthorized Insufficent permissions."
+					: error.message
+			}
+
+			toast.error(errMsg)
+		}
+	})
+};

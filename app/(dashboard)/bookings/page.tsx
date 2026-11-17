@@ -1,4 +1,5 @@
 import { BookingDialog } from "@/components/BookingDialog";
+import { ExportBookingsDialog } from "./_components/ExportBookingsDialog";
 import {
   getBookings,
   getBookingStats,
@@ -81,6 +82,7 @@ export default async function BookingsPage({
     ]);
 
   const isAgent = user.role === "agent";
+  const canExport = user.role === "admin" || user.role === "superAdmin";
 
   const subtitleSuffix = isAgent
     ? "from your requests"
@@ -134,7 +136,14 @@ export default async function BookingsPage({
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            {canExport && (
+              <ExportBookingsDialog
+                properties={propertiesResponse}
+                initialStatus={status}
+                initialPropertyId={propertyId}
+              />
+            )}
             {isAgent ? (
               <Button asChild>
                 <Link

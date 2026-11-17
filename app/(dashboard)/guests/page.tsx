@@ -33,6 +33,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { UnauthorizedUI } from "./unauthorised-ui";
 import GuestListings from "@/components/GuestListings";
 import Link from "next/link";
+import { ExportGuestsDialog } from "./_components/ExportGuestsDialog";
 
 interface GuestFilters {
   search: string;
@@ -43,6 +44,7 @@ export default function GuestsPage() {
   // Get role of the current session user
   const { isSuperAdmin, isUser, isAdmin, isAgent } = usePermissions();
   const isAdminOrUser = isSuperAdmin || isAdmin || isUser;
+  const canExport = isSuperAdmin || isAdmin;
 
   // Get URL params object and router object
   const router = useRouter();
@@ -214,6 +216,7 @@ export default function GuestsPage() {
 
         {isAdminOrUser && (
           <div className="flex gap-3">
+            {canExport && <ExportGuestsDialog initialStatus={urlStatus} />}
             <GuestDialog />
             <Button asChild>
               <Link href="/checkout" className="flex items-center gap-3">

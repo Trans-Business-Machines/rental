@@ -2,8 +2,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { requirePermission, getServerSession } from "@/lib/check-permissions"
-import { LIMIT, BUCKET } from "@/lib/utils"
+import { requirePermission, requireRole, getServerSession } from "@/lib/check-permissions"
+import { LIMIT, BUCKET, maskIdNumber } from "@/lib/utils"
+import { exportGuestsSchema, type ExportGuestsFilters } from "@/lib/schemas/guests"
+import { EXPORT_MAX_ROWS, eatDayRange, exportDateStamp, toExcelEAT } from "@/lib/export-utils"
+import ExcelJS from "exceljs"
 import type {
 	GuestUpdateFormData,
 	CreateNewGuest,
@@ -543,4 +546,109 @@ export async function cleanupFailedBookingGuest(guestId: number) {
 	await prisma.guest.delete({ where: { id: guestId } });
 
 	return { success: true, message: "Cleanup completed" };
+}
+
+// ================= GUESTS EXPORT =================
+
+export async function exportGuests(filters: ExportGuestsFilters) {
+	await requireRole(["admin", "superAdmin"], "Unauthorized: Insufficent permissions.");
+
+	const session = await getServerSession();
+	const userRole = session?.user?.role as Role;
+
+	const parsed = exportGuestsSchema.safeParse(filters);
+	if (!parsed.success) {
+		return { success: false as const, message: parsed.error.errors[0]?.message ?? "Invalid filters" };
+	}
+
+	const { status, addedFrom, addedTo } = parsed.data;
+	const createdAt = eatDayRange(addedFrom, addedTo);
+
+	const where = {
+		deletedAt: null,
+		...(status !== "all" && { verificationStatus: status }),
+		...(createdAt && { createdAt }),
+	};
+
+	const total = await prisma.guest.count({ where });
+
+	if (total === 0) {
+		return { success: false as const, message: "No guests match these filters." };
+	}
+
+	if (total > EXPORT_MAX_ROWS) {
+		return {
+			success: false as const,
+			message: `${total.toLocaleString()} guests match — the export limit is ${EXPORT_MAX_ROWS.toLocaleString()}. Narrow the filters and try again.`,
+		};
+	}
+
+	const guests = await prisma.guest.findMany({
+		where,
+		select: {
+			firstName: true,
+			lastName: true,
+			email: true,
+			phone: true,
+			idType: true,
+			idNumber: true,
+			passportNumber: true,
+			dateOfBirth: true,
+			nationality: true,
+			totalStays: true,
+			lastStay: true,
+		},
+		orderBy: { createdAt: "asc" },
+	});
+
+	const workbook = new ExcelJS.Workbook();
+	workbook.created = new Date();
+	const sheet = workbook.addWorksheet("Guests", {
+		views: [{ state: "frozen", ySplit: 1 }],
+	});
+
+	const dayFmt = "dd mmm yyyy";
+
+	sheet.columns = [
+		{ header: "Name", key: "name", width: 26 },
+		{ header: "Email", key: "email", width: 30 },
+		{ header: "Phone", key: "phone", width: 16 },
+		{ header: "ID Type", key: "idType", width: 12 },
+		{ header: "ID / Passport No.", key: "idNumber", width: 18 },
+		{ header: "DOB", key: "dob", width: 13, style: { numFmt: dayFmt } },
+		{ header: "Nationality", key: "nationality", width: 16 },
+		{ header: "Total Stays", key: "totalStays", width: 11 },
+		{ header: "Last Stay", key: "lastStay", width: 13, style: { numFmt: dayFmt } },
+	];
+
+	for (const guest of guests) {
+		const idValue = guest.idType === "passport" ? guest.passportNumber : guest.idNumber;
+
+		sheet.addRow({
+			name: `${guest.firstName} ${guest.lastName}`,
+			email: guest.email,
+			phone: guest.phone,
+			idType: guest.idType === "passport" ? "Passport" : "National ID",
+			idNumber: idValue ? maskIdNumber(idValue, userRole) : "",
+			// dateOfBirth is stored as a string; fall back to the raw value if it doesn't parse
+			dob: toExcelEAT(new Date(guest.dateOfBirth)) ?? guest.dateOfBirth,
+			nationality: guest.nationality,
+			totalStays: guest.totalStays ?? 0,
+			lastStay: toExcelEAT(guest.lastStay),
+		});
+	}
+
+	const header = sheet.getRow(1);
+	header.font = { bold: true };
+	header.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF1F5F9" } };
+	sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columns.length } };
+
+	const buffer = await workbook.xlsx.writeBuffer();
+
+	return {
+		success: true as const,
+		file: Buffer.from(buffer).toString("base64"),
+		filename: `guests-${exportDateStamp()}.xlsx`,
+		count: guests.length,
+	};
 }

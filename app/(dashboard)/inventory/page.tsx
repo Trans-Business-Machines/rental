@@ -21,6 +21,7 @@ import {
 } from "@/lib/actions/inventory";
 import { InventoryIssues } from "@/components/Inventoryissues";
 import Link from "next/link";
+import { StockReportDialog } from "@/components/StockReportDialog";
 import type { Role } from "@/lib/types/types";
 
 interface InventoryPageSearchParams {
@@ -30,7 +31,7 @@ interface InventoryPageSearchParams {
     search?: string;
     issueStatus?: string;
     issueType?: string;
-    status?: string;
+    stock?: string;
     assignmentStatus?: string;
     category?: string;
     propertyId?: string;
@@ -65,6 +66,7 @@ export default async function InventoryPage({
   }
 
   const userRole = user.role as Role;
+  const canExport = userRole === "admin" || userRole === "superAdmin";
 
   if (userRole === "agent") {
     return <UnauthorizedUI />;
@@ -75,7 +77,7 @@ export default async function InventoryPage({
   const tab = params.tab || "inventory";
   const page = Number(params.page) || 1;
   const search = params.search || "";
-  const status = params.status || "all";
+  const stock = params.stock || "all";
   // Assignments open on what's out in units; "all" has to be asked for.
   const assignmentStatus = (params.assignmentStatus ||
     "outstanding") as AssignmentFilter;
@@ -93,7 +95,7 @@ export default async function InventoryPage({
     tab === "inventory"
       ? getInventoryItemsBatch({
           search,
-          status,
+          stock,
           category,
           // Items are property-scoped now, so this filter applies here too.
           propertyId: propertyId !== "all" ? Number(propertyId) : undefined,
@@ -169,6 +171,9 @@ export default async function InventoryPage({
           </p>
         </div>
         <div className="flex space-x-2">
+          {tab === "inventory" && canExport && (
+            <StockReportDialog properties={propertiesResponse} />
+          )}
           {tab === "assignments" ? (
             <InventoryAssignmentDialog />
           ) : (
@@ -213,7 +218,7 @@ export default async function InventoryPage({
             initialBatch={inventoryItemsResponse}
             initialFilters={{
               search,
-              status,
+              stock,
               category,
               propertyId,
             }}
