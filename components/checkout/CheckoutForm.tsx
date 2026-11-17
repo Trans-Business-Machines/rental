@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { CheckoutFormSchema, CheckoutFormData } from "@/lib/schemas/checkout";
+import {
+  CheckoutFormSchema,
+  CheckoutFormData,
+  hasFlaggedItems,
+  suggestedReplacementCost,
+} from "@/lib/schemas/checkout";
 import { ProgressBar } from "@/components/checkout/ProgressBar";
 import { Step1InspectionDetails } from "@/components/checkout/Step1InspectionDetails";
 import { Step2InventoryChecklist } from "@/components/checkout/Step2InventoryChecklist";
@@ -35,6 +40,9 @@ export function CheckoutForm({
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { currentUser } = usePermissions();
+  // Last cost we prefilled, so a manual edit survives Back → Continue
+  // unless the damaged/missing counts (and thus the suggestion) change.
+  const lastSuggestedCost = useRef<number | null>(null);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -101,6 +109,16 @@ export function CheckoutForm({
         );
         return;
       }
+
+      // No issues: nothing to charge. Issues: prefill from item unit costs,
+      // leaving the field editable for the inspector to adjust.
+      const suggested = hasFlaggedItems(checkoutItems)
+        ? suggestedReplacementCost(checkoutItems)
+        : 0;
+      if (suggested !== lastSuggestedCost.current) {
+        setValue("overallDamageCost", suggested, { shouldValidate: true });
+        lastSuggestedCost.current = suggested;
+      }
     }
 
     setCurrentStep((prev) => prev + 1);
@@ -123,10 +141,7 @@ export function CheckoutForm({
       return;
     }
 
-    // Check if any items have damage/missing
-    const hasIssues = data.checkoutItems.some(
-      (item) => item.damagedCount > 0 || item.missingCount > 0,
-    );
+    const hasIssues = hasFlaggedItems(data.checkoutItems);
 
     if (hasIssues) {
       if (!data.overallDamageCost || data.overallDamageCost <= 0) {
@@ -158,7 +173,7 @@ export function CheckoutForm({
         guestId: selectedBooking.guestId,
         checkoutDate: new Date(data.checkoutDate),
         inspector: currentUser?.name || "system",
-        overallDamageCost: data.overallDamageCost,
+        overallDamageCost: hasIssues ? data.overallDamageCost : 0,
         notes: data.notes,
         checkoutItems,
       };
@@ -170,7 +185,12 @@ export function CheckoutForm({
         return;
       }
 
-      toast.success(result.message);
+      // Checkout succeeded either way; a failed guest email is only a warning
+      if (result.emailSent === false) {
+        toast.warning(result.message, { duration: 8000 });
+      } else {
+        toast.success(result.message);
+      }
 
       // Invalidate the necessary Queries, ["booking-form-data"]
       await Promise.all([

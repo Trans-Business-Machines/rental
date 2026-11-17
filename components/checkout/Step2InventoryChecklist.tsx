@@ -43,6 +43,7 @@ export function Step2InventoryChecklist({
         totalQuantity: item.totalQuantity,
         damagedCount: 0,
         missingCount: 0,
+        unitCost: item.unitCost,
       }));
       replace(initialItems);
     }

@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Edit, Eye, Search, Calendar, Loader2 } from "lucide-react";
-import { BookingEditDialog } from "@/components/booking-edit-dialog";
+import { BookingEditDialog } from "@/components/BookingEditDialog";
 import { BookingViewDialog } from "./booking-view-dialog";
 import { SearchNotFound } from "@/components/SearchNotFound";
 import { ItemsNotFound } from "@/components/ItemsNotFound";

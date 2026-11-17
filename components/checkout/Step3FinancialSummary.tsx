@@ -5,7 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UseFormWatch, UseFormRegister, FieldErrors } from "react-hook-form";
-import { CheckoutFormData } from "@/lib/schemas/checkout";
+import {
+  CheckoutFormData,
+  itemReplacementCost,
+  suggestedReplacementCost,
+} from "@/lib/schemas/checkout";
+import { formatMoney } from "@/lib/currency";
 import {
   AlertCircle,
   CheckCircle2,
@@ -61,6 +66,13 @@ export function Step3FinancialSummary({
   const itemsWithIssues = checkoutItems.filter(
     (item) => item.damagedCount > 0 || item.missingCount > 0,
   );
+  const hasIssues = itemsWithIssues.length > 0;
+  const suggestedCost = suggestedReplacementCost(itemsWithIssues);
+  const itemsMissingUnitCost = itemsWithIssues.filter(
+    (item) => item.unitCost === null,
+  );
+  // The cost input is in KES, so the breakdown is too.
+  const kes = (amount: number) => formatMoney(amount, "KSH");
 
   return (
     <div className="space-y-6 pb-12 md:pb-6">
@@ -192,24 +204,33 @@ export function Step3FinancialSummary({
                   className="flex justify-between items-start p-3 bg-gray-50 rounded"
                 >
                   <div>
-                    <p className="font-medium text-sm capitalize">{item.itemName}</p>
+                    <p className="font-medium text-sm capitalize">
+                      {item.itemName}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {item.category} • {item.totalQuantity} total
                     </p>
                   </div>
-                  <div className="flex gap-3 text-xs font-medium">
-                    {item.damagedCount > 0 && (
-                      <span className="text-amber-500 flex items-center gap-1">
-                        <AlertCircle className="size-3.5" />
-                        {item.damagedCount} damaged
-                      </span>
-                    )}
-                    {item.missingCount > 0 && (
-                      <span className="text-red-500 flex items-center gap-1">
-                        <XCircle className="size-3.5" />
-                        {item.missingCount} missing
-                      </span>
-                    )}
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex gap-3 text-xs font-medium">
+                      {item.damagedCount > 0 && (
+                        <span className="text-amber-500 flex items-center gap-1">
+                          <AlertCircle className="size-3.5" />
+                          {item.damagedCount} damaged
+                        </span>
+                      )}
+                      {item.missingCount > 0 && (
+                        <span className="text-red-500 flex items-center gap-1">
+                          <XCircle className="size-3.5" />
+                          {item.missingCount} missing
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {item.unitCost === null
+                        ? "No unit cost recorded"
+                        : `${item.damagedCount + item.missingCount} × ${kes(item.unitCost)} = ${kes(itemReplacementCost(item))}`}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -229,32 +250,52 @@ export function Step3FinancialSummary({
               {/* Financial Details - damage cost label */}
               <Label htmlFor="overallDamageCost">
                 Total Damage / Replacement Cost (KES){" "}
-                {itemsWithIssues.length > 0 && (
-                  <span className="text-red-500">*</span>
-                )}
+                {hasIssues && <span className="text-red-500">*</span>}
               </Label>
-              <Input
-                id="overallDamageCost"
-                type="number"
-                placeholder="Enter the damage cost, e.g 500 or 0 when no items have been damaged."
-                min="0"
-                {...register("overallDamageCost", { valueAsNumber: true })}
-                className={cn("py-3",
-                  errors.overallDamageCost && "border-red-500",
-                  itemsWithIssues.length > 0 &&
+              {hasIssues ? (
+                <Input
+                  id="overallDamageCost"
+                  type="number"
+                  placeholder="Enter the damage cost, e.g 500"
+                  min="0"
+                  {...register("overallDamageCost", { valueAsNumber: true })}
+                  className={cn(
+                    "py-3",
+                    errors.overallDamageCost && "border-red-500",
                     (!formData.overallDamageCost ||
                       formData.overallDamageCost <= 0) &&
-                    "border-red-500",
-                )}
-              />
-              {errors.overallDamageCost && (
+                      "border-red-500",
+                  )}
+                />
+              ) : (
+                // Unregistered on purpose: RHF drops values of disabled
+                // registered inputs. The form value is set to 0 on Continue.
+                <Input
+                  id="overallDamageCost"
+                  type="number"
+                  value={0}
+                  disabled
+                  readOnly
+                  className="py-3"
+                />
+              )}
+              {hasIssues && errors.overallDamageCost && (
                 <p className="text-sm text-red-500 mt-1">
                   {errors.overallDamageCost.message}
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
-                Enter the total cost for all damaged and missing items
+                {hasIssues
+                  ? `Prefilled from item unit costs (${kes(suggestedCost)}). Adjust if needed.`
+                  : "No damaged or missing items, so there is nothing to charge."}
               </p>
+              {itemsMissingUnitCost.length > 0 && (
+                <p className="text-xs text-amber-600">
+                  No unit cost recorded for{" "}
+                  {itemsMissingUnitCost.map((i) => i.itemName).join(", ")} — add
+                  their cost to the total manually.
+                </p>
+              )}
             </div>
 
             <div className="flex justify-between items-center pt-2 border-t">
@@ -277,7 +318,7 @@ export function Step3FinancialSummary({
             {/* Notes label */}
             <Label htmlFor="notes">
               Notes{" "}
-              {itemsWithIssues.length > 0 ? (
+              {hasIssues ? (
                 <span className="text-red-500">*</span>
               ) : (
                 "(Optional)"
@@ -289,7 +330,7 @@ export function Step3FinancialSummary({
               rows={6}
               {...register("notes")}
               className={cn(
-                itemsWithIssues.length > 0 &&
+                hasIssues &&
                   (!formData.notes || formData.notes.trim() === "") &&
                   "border-red-500",
               )}
